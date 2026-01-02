@@ -3,6 +3,7 @@ use dep::aztec::{
 };
 
 use crate::{types::GameConfig, DarkForest};
+use dep::darkforest_nft::NFT;
 
 pub global PLANETHASH_KEY: Field = 42;
 pub global SPACETYPE_KEY: Field = 43;
@@ -123,10 +124,23 @@ pub unconstrained fn setup_with_params(
         planet_rarity,
         max_location_id,
     );
+    let nft_initializer_call_interface =
+        NFT::interface().constructor(admin);
+    let nft_contract_address =
+        env.deploy("../nft/NFT").with_public_initializer(
+            admin,
+            nft_initializer_call_interface,
+        );
+
     let initializer_call_interface =
-        DarkForest::interface().constructor(admin, config);
+        DarkForest::interface().constructor(admin, config, nft_contract_address);
     let contract_address =
         env.deploy("DarkForest").with_public_initializer(admin, initializer_call_interface);
+
+    env.call_public(
+        admin,
+        NFT::at(nft_contract_address).set_minter(contract_address),
+    );
 
     (env, contract_address, admin)
 }

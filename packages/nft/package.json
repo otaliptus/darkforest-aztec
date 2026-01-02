@@ -1,14 +1,12 @@
 {
-    "name": "@darkforest-aztec/contracts",
+    "name": "@darkforest-aztec/nft",
     "version": "0.0.1",
     "private": true,
     "type": "module",
     "scripts": {
-        "clean": "rm -rf ./src/artifacts ./target",
+        "clean": "rm -rf ./target",
         "compile": "aztec compile",
-        "codegen": "aztec codegen target --outdir src/artifacts",
-        "test": "yarn test:nr",
-        "test:nr": "yarn workspace @darkforest-aztec/nft compile && cp ../nft/target/darkforest_nft-NFT.json ./darkforest_nft-NFT.json && aztec test"
+        "test:nr": "aztec test"
     },
     "dependencies": {
         "@aztec/accounts": "3.0.0-devnet.20251212",

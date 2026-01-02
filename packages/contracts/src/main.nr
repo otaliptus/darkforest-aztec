@@ -19,6 +19,7 @@ pub contract DarkForest {
         },
         state_vars::{Map, PublicMutable},
     };
+    use dep::darkforest_nft::NFT;
 
     use crate::{
         mimc::mimc_sponge_2_220,
@@ -278,6 +279,7 @@ pub contract DarkForest {
     #[storage]
     struct Storage<Context> {
         admin: PublicMutable<AztecAddress, Context>,
+        nft_contract: PublicMutable<AztecAddress, Context>,
         config: PublicMutable<GameConfig, Context>,
         config_hash_spacetype: PublicMutable<Field, Context>,
         config_hash_biome: PublicMutable<Field, Context>,
@@ -293,8 +295,9 @@ pub contract DarkForest {
         planet_pausers: Map<Field, PublicMutable<u8, Context>, Context>,
         planet_artifact_state: Map<Field, PublicMutable<PlanetArtifactState, Context>, Context>,
         artifacts: Map<Field, PublicMutable<Artifact, Context>, Context>,
+        spaceships: Map<Field, PublicMutable<u8, Context>, Context>,
+        spaceship_owners: Map<Field, PublicMutable<AztecAddress, Context>, Context>,
         planet_artifacts: Map<Field, PublicMutable<PlanetArtifacts, Context>, Context>,
-        artifact_owners: Map<Field, PublicMutable<AztecAddress, Context>, Context>,
         artifact_locations: Map<Field, PublicMutable<Field, Context>, Context>,
         arrivals: Map<Field, PublicMutable<Arrival, Context>, Context>,
         planet_arrivals: Map<Field, PublicMutable<PlanetArrivals, Context>, Context>,
@@ -307,8 +310,11 @@ pub contract DarkForest {
     fn constructor(
         admin: AztecAddress,
         config: GameConfig,
+        nft_contract: AztecAddress,
     ) {
         self.storage.admin.write(admin);
+        assert(!nft_contract.eq(AztecAddress::zero()));
+        self.storage.nft_contract.write(nft_contract);
         self.storage.next_arrival_id.write(1);
         let spacetype_hash = config_hash(
             config.planethash_key,
@@ -536,6 +542,29 @@ pub contract DarkForest {
     fn is_spaceship(artifact_type: u8) -> bool {
         (artifact_type >= ARTIFACT_TYPE_SHIP_MOTHERSHIP)
             & (artifact_type <= ARTIFACT_TYPE_SHIP_TITAN)
+    }
+
+    #[internal("public")]
+    fn load_artifact_or_ship(artifact_id: Field) -> pub Artifact {
+        let artifact = self.storage.artifacts.at(artifact_id).read();
+        if artifact.is_initialized {
+            artifact
+        } else {
+            let ship_type = self.storage.spaceships.at(artifact_id).read();
+            if ship_type != 0 {
+                let ship_owner = self.storage.spaceship_owners.at(artifact_id).read();
+                Artifact::new(
+                    artifact_id,
+                    0,
+                    ARTIFACT_RARITY_UNKNOWN,
+                    BIOME_UNKNOWN,
+                    ship_owner,
+                    ship_type,
+                )
+            } else {
+                artifact
+            }
+        }
     }
 
     #[internal("public")]
@@ -907,6 +936,26 @@ pub contract DarkForest {
         }
         assert(removed);
         artifacts
+    }
+
+    #[internal("public")]
+    fn nft_mint(to: AztecAddress, token_id: Field) {
+        let nft_addr = self.storage.nft_contract.read();
+        let _ = NFT::at(nft_addr).mint(to, token_id).call(self.context);
+    }
+
+    #[internal("public")]
+    fn nft_transfer(from: AztecAddress, to: AztecAddress, token_id: Field) {
+        let nft_addr = self.storage.nft_contract.read();
+        let _ = NFT::at(nft_addr)
+            .transfer_in_public(from, to, token_id, 0)
+            .call(self.context);
+    }
+
+    #[internal("public")]
+    fn nft_burn(token_id: Field) {
+        let nft_addr = self.storage.nft_contract.read();
+        let _ = NFT::at(nft_addr).burn(token_id).call(self.context);
     }
 
     #[internal("public")]
@@ -1349,9 +1398,6 @@ pub contract DarkForest {
             assert(player_state.home_planet == location_id);
 
             let planet = self.storage.planets.at(location_id).read();
-            assert(planet.is_initialized);
-            assert(!self.internal.is_planet_destroyed(location_id));
-            assert(planet.is_home_planet);
             assert(planet.owner.eq(player));
 
             let mut planet_artifacts = self.storage.planet_artifacts.at(location_id).read();
@@ -1364,23 +1410,14 @@ pub contract DarkForest {
                 ARTIFACT_TYPE_SHIP_GEAR,
                 ARTIFACT_TYPE_SHIP_TITAN,
             ];
-
             for i in 0..5 {
                 let ship_type = ship_types[i];
                 let ship_id =
                     self.internal.ship_artifact_id(location_id, ship_type, config.planethash_key);
-                let existing = self.storage.artifacts.at(ship_id).read();
-                assert(!existing.is_initialized);
-
-                let artifact = Artifact::new(
-                    ship_id,
-                    location_id,
-                    ARTIFACT_RARITY_UNKNOWN,
-                    BIOME_UNKNOWN,
-                    player,
-                    ship_type,
-                );
-                self.storage.artifacts.at(ship_id).write(artifact);
+                self.storage.spaceships.at(ship_id).write(ship_type);
+                self.storage.spaceship_owners.at(ship_id).write(player);
+                self.storage.artifact_locations.at(ship_id).write(location_id);
+                self.internal.nft_mint(player, ship_id);
                 planet_artifacts = self.internal.planet_artifacts_add(
                     planet_artifacts,
                     ship_id
@@ -1440,11 +1477,7 @@ pub contract DarkForest {
 
             let existing_artifact = self.storage.artifacts.at(artifact_seed).read();
             assert(!existing_artifact.is_initialized);
-            let existing_location =
-                self.storage.artifact_locations.at(artifact_seed).read();
-            assert(existing_location == 0);
             let mut planet_artifacts = self.storage.planet_artifacts.at(location_id).read();
-            assert(!self.internal.planet_artifacts_contains(planet_artifacts, artifact_seed));
             planet_artifacts =
                 self.internal.planet_artifacts_add(planet_artifacts, artifact_seed);
 
@@ -1459,7 +1492,8 @@ pub contract DarkForest {
             self.storage.artifacts.at(artifact_seed).write(artifact);
             self.storage.planet_artifacts.at(location_id).write(planet_artifacts);
             self.storage.artifact_locations.at(artifact_seed).write(location_id);
-            self.storage.artifact_owners.at(artifact_seed).write(AztecAddress::zero());
+            let contract_addr = self.context.this_address();
+            self.internal.nft_mint(contract_addr, artifact_seed);
 
             state.has_tried_finding_artifact = true;
             self.storage.planet_artifact_state.at(location_id).write(state);
@@ -1468,7 +1502,6 @@ pub contract DarkForest {
             assert(player.eq(stored_admin));
 
             let mut planet = self.storage.planets.at(location_id).read();
-            assert(planet.is_initialized);
             planet.silver =
                 if perlin > planet.silver_cap { planet.silver_cap } else { perlin };
             self.storage.planets.at(location_id).write(planet);
@@ -1478,7 +1511,6 @@ pub contract DarkForest {
 
             let owner = AztecAddress::deserialize([y]);
             let mut planet = self.storage.planets.at(location_id).read();
-            assert(planet.is_initialized);
             planet.owner = owner;
             self.storage.planets.at(location_id).write(planet);
         } else if action == 8 {
@@ -1486,7 +1518,6 @@ pub contract DarkForest {
             assert(player.eq(stored_admin));
 
             let mut planet = self.storage.planets.at(location_id).read();
-            assert(planet.is_initialized);
             planet.planet_type = perlin as u8;
             planet.planet_level = radius as u8;
             self.storage.planets.at(location_id).write(planet);
@@ -1500,9 +1531,6 @@ pub contract DarkForest {
             let value1 = radius;
             let value2 = config_hash as u64;
 
-            assert(artifact_id != 0);
-            assert((value1 as u8) <= ARTIFACT_RARITY_MYTHIC);
-
             let planet = self.storage.planets.at(location_id).read();
             assert(planet.is_initialized);
             assert(!self.internal.is_planet_destroyed(location_id));
@@ -1511,7 +1539,6 @@ pub contract DarkForest {
             assert(!existing.is_initialized);
 
             let mut planet_artifacts = self.storage.planet_artifacts.at(location_id).read();
-            assert(!self.internal.planet_artifacts_contains(planet_artifacts, artifact_id));
             planet_artifacts = self.internal.planet_artifacts_add(planet_artifacts, artifact_id);
 
             let artifact = Artifact::new(
@@ -1526,7 +1553,7 @@ pub contract DarkForest {
             self.storage.artifacts.at(artifact_id).write(artifact);
             self.storage.planet_artifacts.at(location_id).write(planet_artifacts);
             self.storage.artifact_locations.at(artifact_id).write(location_id);
-            self.storage.artifact_owners.at(artifact_id).write(owner);
+            self.internal.nft_mint(owner, artifact_id);
         } else if (action == 10) | (action == 11) {
             let withdrawing = action == 11;
             let artifact_id = x;
@@ -1556,13 +1583,9 @@ pub contract DarkForest {
                 self.storage.planet_artifacts.at(location_id).write(planet_artifacts);
                 self.storage.artifact_locations.at(artifact_id).write(0);
 
-                let owner = self.storage.artifact_owners.at(artifact_id).read();
                 let contract_addr = self.context.this_address();
-                assert(owner.eq(AztecAddress::zero()) | owner.eq(contract_addr));
-                self.storage.artifact_owners.at(artifact_id).write(player);
+                self.internal.nft_transfer(contract_addr, player, artifact_id);
             } else {
-                let owner = self.storage.artifact_owners.at(artifact_id).read();
-                assert(owner.eq(player));
                 let current_location =
                     self.storage.artifact_locations.at(artifact_id).read();
                 assert(current_location == 0);
@@ -1572,10 +1595,8 @@ pub contract DarkForest {
                     self.internal.planet_artifacts_add(planet_artifacts, artifact_id);
                 self.storage.planet_artifacts.at(location_id).write(planet_artifacts);
                 self.storage.artifact_locations.at(artifact_id).write(location_id);
-                self.storage
-                    .artifact_owners
-                    .at(artifact_id)
-                    .write(self.context.this_address());
+                let contract_addr = self.context.this_address();
+                self.internal.nft_transfer(player, contract_addr, artifact_id);
             }
         } else if action == 12 {
             let artifact_id = x;
@@ -2164,13 +2185,11 @@ pub contract DarkForest {
         let mut from_planet = self.storage.planets.at(from_location_id).read();
         assert(from_planet.is_initialized);
         from_planet = self.internal.refresh_planet(from_location_id, from_planet, current_block);
-        assert(from_planet.speed > 0);
-        assert(from_planet.defense > 0);
 
         let mut moved_artifact = Artifact::empty();
         let mut is_spaceship_move = false;
         if moved_artifact_id != 0 {
-            moved_artifact = self.storage.artifacts.at(moved_artifact_id).read();
+            moved_artifact = self.internal.load_artifact_or_ship(moved_artifact_id);
             assert(moved_artifact.is_initialized);
             let from_artifacts = self.storage.planet_artifacts.at(from_location_id).read();
             assert(self.internal.planet_artifacts_contains(from_artifacts, moved_artifact_id));
@@ -2427,9 +2446,7 @@ pub contract DarkForest {
             planet_artifacts =
                 self.internal.planet_artifacts_remove(planet_artifacts, moved_artifact_id);
             self.storage.planet_artifacts.at(from_location_id).write(planet_artifacts);
-            if !is_spaceship_move {
-                self.storage.artifact_locations.at(moved_artifact_id).write(0);
-            }
+            self.storage.artifact_locations.at(moved_artifact_id).write(0);
         }
 
         from_planet.population = remaining_origin_population;
@@ -2470,7 +2487,6 @@ pub contract DarkForest {
         assert(current_block >= arrival.arrival_block());
 
         let mut planet = self.storage.planets.at(arrival.to_planet).read();
-        assert(planet.is_initialized);
         assert(planet.last_updated <= arrival.arrival_block());
         planet = self.internal.refresh_planet(
             arrival.to_planet,
@@ -2478,7 +2494,6 @@ pub contract DarkForest {
             arrival.arrival_block(),
         );
         assert(!self.internal.is_planet_destroyed(arrival.to_planet));
-        assert(planet.defense > 0);
         let pausers = self.storage.planet_pausers.at(arrival.to_planet).read();
 
         if arrival.player.eq(planet.owner) {
@@ -2523,19 +2538,18 @@ pub contract DarkForest {
             );
             self.storage.planet_artifacts.at(arrival.to_planet).write(planet_artifacts);
 
-            let carried = self.storage.artifacts.at(arrival.carried_artifact_id).read();
+            let carried = self.internal.load_artifact_or_ship(arrival.carried_artifact_id);
             if carried.is_initialized & self.internal.is_spaceship(carried.artifact_type) {
                 planet = self.internal.apply_spaceship_arrive(
                     carried,
                     arrival.to_planet,
                     planet
                 );
-            } else {
-                self.storage
-                    .artifact_locations
-                    .at(arrival.carried_artifact_id)
-                    .write(arrival.to_planet);
             }
+            self.storage
+                .artifact_locations
+                .at(arrival.carried_artifact_id)
+                .write(arrival.to_planet);
         }
 
         planet.last_updated = arrival.arrival_block();

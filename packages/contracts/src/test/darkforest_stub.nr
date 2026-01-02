@@ -8,6 +8,7 @@ use crate::{
 use dep::aztec::protocol_types::address::AztecAddress;
 use dep::aztec::protocol_types::storage::map::derive_storage_slot_in_map;
 use dep::aztec::protocol_types::traits::ToField;
+use dep::darkforest_nft::NFT;
 
 pub global INIT_X: Field = 990;
 pub global INIT_Y: Field = 0;
@@ -1380,25 +1381,31 @@ unconstrained fn test_find_artifact_success() {
     );
     assert_eq(stored_artifact_id, expected_seed);
 
-    let mut stored_owner = AztecAddress::zero();
     let mut stored_location: Field = 0;
-    let owner_ref = &mut stored_owner;
+    let mut nft_contract = AztecAddress::zero();
     let location_ref = &mut stored_location;
+    let nft_contract_ref = &mut nft_contract;
     env.public_context_at(contract_address, |context| {
-        let owner_slot = derive_storage_slot_in_map(
-            DarkForest::storage_layout().artifact_owners.slot,
-            expected_seed,
-        );
-        *owner_ref = context.storage_read(owner_slot);
         let location_slot = derive_storage_slot_in_map(
             DarkForest::storage_layout().artifact_locations.slot,
             expected_seed,
         );
         *location_ref = context.storage_read(location_slot);
+        *nft_contract_ref = context.storage_read(DarkForest::storage_layout().nft_contract.slot);
     });
 
-    assert_eq(stored_owner, AztecAddress::zero());
     assert_eq(stored_location, ruins_location_id);
+
+    let mut stored_owner = AztecAddress::zero();
+    let owner_ref = &mut stored_owner;
+    env.public_context_at(nft_contract, |context| {
+        let owner_slot = derive_storage_slot_in_map(
+            NFT::storage_layout().public_owners.slot,
+            expected_seed,
+        );
+        *owner_ref = context.storage_read(owner_slot);
+    });
+    assert_eq(stored_owner, contract_address);
 
     let perlin = expected_perlin(ruins_x, ruins_y);
     let space_type = expected_space_type(perlin);
@@ -1763,6 +1770,24 @@ unconstrained fn test_spacetime_rip_withdraw_deposit_roundtrip() {
     });
     assert(artifact_id != 0);
 
+    let mut nft_contract = AztecAddress::zero();
+    let nft_contract_ref = &mut nft_contract;
+    env.public_context_at(contract_address, |context| {
+        let nft_slot = DarkForest::storage_layout().nft_contract.slot;
+        *nft_contract_ref = context.storage_read(nft_slot);
+    });
+
+    let mut nft_owner_after_find = AztecAddress::zero();
+    let nft_owner_after_find_ref = &mut nft_owner_after_find;
+    env.public_context_at(nft_contract, |context| {
+        let owner_slot = derive_storage_slot_in_map(
+            NFT::storage_layout().public_owners.slot,
+            artifact_id,
+        );
+        *nft_owner_after_find_ref = context.storage_read(owner_slot);
+    });
+    assert_eq(nft_owner_after_find, contract_address);
+
     env.call_private(
         admin,
         DarkForest::at(contract_address).admin_set_planet_type_and_level(
@@ -1781,18 +1806,11 @@ unconstrained fn test_spacetime_rip_withdraw_deposit_roundtrip() {
         )
     );
 
-    let mut stored_owner = AztecAddress::zero();
     let mut stored_location: Field = 0;
     let mut stored_slot0: Field = 0;
-    let owner_ref = &mut stored_owner;
     let location_ref = &mut stored_location;
     let slot0_ref = &mut stored_slot0;
     env.public_context_at(contract_address, |context| {
-        let owner_slot = derive_storage_slot_in_map(
-            DarkForest::storage_layout().artifact_owners.slot,
-            artifact_id,
-        );
-        *owner_ref = context.storage_read(owner_slot);
         let location_slot = derive_storage_slot_in_map(
             DarkForest::storage_layout().artifact_locations.slot,
             artifact_id,
@@ -1805,9 +1823,19 @@ unconstrained fn test_spacetime_rip_withdraw_deposit_roundtrip() {
         *slot0_ref = context.storage_read(list_slot);
     });
 
-    assert_eq(stored_owner, player);
     assert_eq(stored_location, 0);
     assert_eq(stored_slot0, 0);
+
+    let mut nft_owner_after_withdraw = AztecAddress::zero();
+    let nft_owner_after_withdraw_ref = &mut nft_owner_after_withdraw;
+    env.public_context_at(nft_contract, |context| {
+        let owner_slot = derive_storage_slot_in_map(
+            NFT::storage_layout().public_owners.slot,
+            artifact_id,
+        );
+        *nft_owner_after_withdraw_ref = context.storage_read(owner_slot);
+    });
+    assert_eq(nft_owner_after_withdraw, player);
 
     env.call_private(
         player,
@@ -1818,18 +1846,11 @@ unconstrained fn test_spacetime_rip_withdraw_deposit_roundtrip() {
         )
     );
 
-    let mut stored_owner_after_deposit = AztecAddress::zero();
     let mut stored_location_after_deposit: Field = 0;
     let mut stored_slot0_after_deposit: Field = 0;
-    let owner_dep_ref = &mut stored_owner_after_deposit;
     let location_dep_ref = &mut stored_location_after_deposit;
     let slot0_dep_ref = &mut stored_slot0_after_deposit;
     env.public_context_at(contract_address, |context| {
-        let owner_slot = derive_storage_slot_in_map(
-            DarkForest::storage_layout().artifact_owners.slot,
-            artifact_id,
-        );
-        *owner_dep_ref = context.storage_read(owner_slot);
         let location_slot = derive_storage_slot_in_map(
             DarkForest::storage_layout().artifact_locations.slot,
             artifact_id,
@@ -1842,9 +1863,19 @@ unconstrained fn test_spacetime_rip_withdraw_deposit_roundtrip() {
         *slot0_dep_ref = context.storage_read(list_slot);
     });
 
-    assert_eq(stored_owner_after_deposit, contract_address);
     assert_eq(stored_location_after_deposit, ruins_location_id);
     assert_eq(stored_slot0_after_deposit, artifact_id);
+
+    let mut nft_owner_after_deposit = AztecAddress::zero();
+    let nft_owner_after_deposit_ref = &mut nft_owner_after_deposit;
+    env.public_context_at(nft_contract, |context| {
+        let owner_slot = derive_storage_slot_in_map(
+            NFT::storage_layout().public_owners.slot,
+            artifact_id,
+        );
+        *nft_owner_after_deposit_ref = context.storage_read(owner_slot);
+    });
+    assert_eq(nft_owner_after_deposit, contract_address);
 
     env.call_private(
         player,
@@ -1855,18 +1886,11 @@ unconstrained fn test_spacetime_rip_withdraw_deposit_roundtrip() {
         )
     );
 
-    let mut stored_owner_final = AztecAddress::zero();
     let mut stored_location_final: Field = 0;
     let mut stored_slot0_final: Field = 0;
-    let owner_final_ref = &mut stored_owner_final;
     let location_final_ref = &mut stored_location_final;
     let slot0_final_ref = &mut stored_slot0_final;
     env.public_context_at(contract_address, |context| {
-        let owner_slot = derive_storage_slot_in_map(
-            DarkForest::storage_layout().artifact_owners.slot,
-            artifact_id,
-        );
-        *owner_final_ref = context.storage_read(owner_slot);
         let location_slot = derive_storage_slot_in_map(
             DarkForest::storage_layout().artifact_locations.slot,
             artifact_id,
@@ -1879,9 +1903,145 @@ unconstrained fn test_spacetime_rip_withdraw_deposit_roundtrip() {
         *slot0_final_ref = context.storage_read(list_slot);
     });
 
-    assert_eq(stored_owner_final, player);
     assert_eq(stored_location_final, 0);
     assert_eq(stored_slot0_final, 0);
+
+    let mut nft_owner_final = AztecAddress::zero();
+    let nft_owner_final_ref = &mut nft_owner_final;
+    env.public_context_at(nft_contract, |context| {
+        let owner_slot = derive_storage_slot_in_map(
+            NFT::storage_layout().public_owners.slot,
+            artifact_id,
+        );
+        *nft_owner_final_ref = context.storage_read(owner_slot);
+    });
+    assert_eq(nft_owner_final, player);
+
+    let mut nft_owner_final = AztecAddress::zero();
+    let nft_owner_final_ref = &mut nft_owner_final;
+    env.public_context_at(nft_contract, |context| {
+        let owner_slot = derive_storage_slot_in_map(
+            NFT::storage_layout().public_owners.slot,
+            artifact_id,
+        );
+        *nft_owner_final_ref = context.storage_read(owner_slot);
+    });
+    assert_eq(nft_owner_final, player);
+}
+
+#[test(should_fail)]
+unconstrained fn test_fail_withdraw_not_planet_owner() {
+    let (mut env, contract_address, admin) = utils::setup();
+    let player = env.create_light_account();
+    let other = env.create_light_account();
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).init_player(
+            INIT_X,
+            INIT_Y,
+            INIT_RADIUS,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+        )
+    );
+
+    let location_id = expected_location_id(INIT_X, INIT_Y);
+    env.call_private(
+        admin,
+        DarkForest::at(contract_address).admin_set_planet_type_and_level(
+            location_id,
+            PLANET_TYPE_TRADING_POST,
+            9,
+        )
+    );
+
+    let artifact_id: Field = 9100;
+    env.call_private(
+        admin,
+        DarkForest::at(contract_address).admin_create_artifact_on_planet(
+            location_id,
+            artifact_id,
+            ARTIFACT_TYPE_MONOLITH,
+            ARTIFACT_RARITY_COMMON,
+            BIOME_OCEAN,
+            contract_address,
+        )
+    );
+
+    env.call_private(
+        other,
+        DarkForest::at(contract_address).trade_artifact(
+            location_id,
+            artifact_id,
+            true,
+        )
+    );
+}
+
+#[test(should_fail)]
+unconstrained fn test_fail_deposit_not_artifact_owner() {
+    let (mut env, contract_address, admin) = utils::setup();
+    let player = env.create_light_account();
+    let other = env.create_light_account();
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).init_player(
+            INIT_X,
+            INIT_Y,
+            INIT_RADIUS,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+        )
+    );
+
+    let location_id = expected_location_id(INIT_X, INIT_Y);
+    env.call_private(
+        admin,
+        DarkForest::at(contract_address).admin_set_planet_type_and_level(
+            location_id,
+            PLANET_TYPE_TRADING_POST,
+            9,
+        )
+    );
+
+    let artifact_id: Field = 9101;
+    env.call_private(
+        admin,
+        DarkForest::at(contract_address).admin_create_artifact_on_planet(
+            location_id,
+            artifact_id,
+            ARTIFACT_TYPE_MONOLITH,
+            ARTIFACT_RARITY_COMMON,
+            BIOME_OCEAN,
+            contract_address,
+        )
+    );
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).trade_artifact(
+            location_id,
+            artifact_id,
+            true,
+        )
+    );
+
+    env.call_private(
+        other,
+        DarkForest::at(contract_address).trade_artifact(
+            location_id,
+            artifact_id,
+            false,
+        )
+    );
 }
 
 #[test(should_fail)]
@@ -2112,6 +2272,150 @@ unconstrained fn test_activate_wormhole_and_move_speedup() {
 
     assert_eq(arrival_type, ARRIVAL_TYPE_WORMHOLE);
     assert_eq((arrival_block - departure_block) as u64, expected_travel);
+}
+
+#[test]
+unconstrained fn test_wormhole_arrival_applies_combat() {
+    let (mut env, contract_address, admin) = utils::setup();
+    let player = env.create_light_account();
+    let defender = env.create_light_account();
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).init_player(
+            INIT_X,
+            INIT_Y,
+            INIT_RADIUS,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+        )
+    );
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).reveal_location(
+            CAPTURE_X_2,
+            CAPTURE_Y_2,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+        )
+    );
+
+    let home_location_id = expected_location_id(INIT_X, INIT_Y);
+    let target_location_id = expected_location_id(CAPTURE_X_2, CAPTURE_Y_2);
+
+    env.call_private(
+        admin,
+        DarkForest::at(contract_address).admin_set_planet_owner(
+            target_location_id,
+            player,
+        )
+    );
+
+    let artifact_id: Field = 9002;
+    env.call_private(
+        admin,
+        DarkForest::at(contract_address).admin_create_artifact_on_planet(
+            home_location_id,
+            artifact_id,
+            ARTIFACT_TYPE_WORMHOLE,
+            ARTIFACT_RARITY_RARE,
+            BIOME_OCEAN,
+            contract_address,
+        )
+    );
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).set_artifact_activation(
+            home_location_id,
+            artifact_id,
+            target_location_id,
+            true,
+        )
+    );
+
+    env.call_private(
+        admin,
+        DarkForest::at(contract_address).admin_set_planet_owner(
+            target_location_id,
+            defender,
+        )
+    );
+
+    let mut initial_owner = AztecAddress::zero();
+    let mut initial_population: u64 = 0;
+    let initial_owner_ref = &mut initial_owner;
+    let initial_population_ref = &mut initial_population;
+    env.public_context_at(contract_address, |context| {
+        let planet_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().planets.slot,
+            target_location_id,
+        );
+        *initial_owner_ref = context.storage_read(planet_slot + 1);
+        *initial_population_ref = context.storage_read(planet_slot + 3);
+    });
+    assert_eq(initial_owner, defender);
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).move(
+            INIT_X,
+            INIT_Y,
+            CAPTURE_X_2,
+            CAPTURE_Y_2,
+            utils::WORLD_RADIUS,
+            CAPTURE_DIST_MAX,
+            MOVE_POP_MOVED,
+            0,
+            0,
+            false,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+        )
+    );
+
+    let mut arrival_type: u8 = 0;
+    let arrival_type_ref = &mut arrival_type;
+    env.public_context_at(contract_address, |context| {
+        let arrival_slot =
+            derive_storage_slot_in_map(DarkForest::storage_layout().arrivals.slot, 1);
+        let meta = context.storage_read(arrival_slot + 4);
+        let (_, _, stored_arrival_type) = unpack_arrival_meta(meta);
+        *arrival_type_ref = stored_arrival_type;
+    });
+    assert_eq(arrival_type, ARRIVAL_TYPE_WORMHOLE);
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).resolve_arrival(1)
+    );
+
+    let mut final_owner = AztecAddress::zero();
+    let mut final_population: u64 = 0;
+    let final_owner_ref = &mut final_owner;
+    let final_population_ref = &mut final_population;
+    env.public_context_at(contract_address, |context| {
+        let planet_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().planets.slot,
+            target_location_id,
+        );
+        *final_owner_ref = context.storage_read(planet_slot + 1);
+        *final_population_ref = context.storage_read(planet_slot + 3);
+    });
+
+    if final_owner == defender {
+        assert(final_population < initial_population);
+    }
 }
 
 #[test]
@@ -2693,6 +2997,15 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
         )
     );
 
+    env.public_context_at(contract_address, |context| {
+        let location_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().artifact_locations.slot,
+            ship_id,
+        );
+        let stored_location = context.storage_read(location_slot);
+        assert_eq(stored_location, 0);
+    });
+
     let mut travel_time = (MOVE_DIST_MAX * 100) / home_speed;
     if travel_time == 0 {
         travel_time = 1;
@@ -2720,6 +3033,15 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
         player,
         DarkForest::at(contract_address).resolve_arrival(1)
     );
+
+    env.public_context_at(contract_address, |context| {
+        let location_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().artifact_locations.slot,
+            ship_id,
+        );
+        let stored_location = context.storage_read(location_slot);
+        assert_eq(stored_location, target_location_id);
+    });
 
     let mut target_pop_growth: u64 = 0;
     let mut target_doublers: u64 = 0;
@@ -2789,6 +3111,15 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
         DarkForest::at(contract_address).resolve_arrival(2)
     );
 
+    env.public_context_at(contract_address, |context| {
+        let location_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().artifact_locations.slot,
+            ship_id,
+        );
+        let stored_location = context.storage_read(location_slot);
+        assert_eq(stored_location, second_location_id);
+    });
+
     let mut origin_pop_growth: u64 = 0;
     let mut origin_doublers: u64 = 0;
     let mut second_pop_growth: u64 = 0;
@@ -2825,6 +3156,126 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
     assert_eq(origin_doublers, 0);
     assert_eq(second_pop_growth, base_second_pop_growth * 2);
     assert_eq(second_doublers, 1);
+}
+
+#[test]
+unconstrained fn test_spaceship_location_mapping_updates() {
+    let (mut env, contract_address, _) = utils::setup();
+    let player = env.create_light_account();
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).init_player(
+            INIT_X,
+            INIT_Y,
+            INIT_RADIUS,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+        )
+    );
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).reveal_location(
+            MOVE_X_2,
+            MOVE_Y_2,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+        )
+    );
+
+    let home_location_id = expected_location_id(INIT_X, INIT_Y);
+    let target_location_id = expected_location_id(MOVE_X_2, MOVE_Y_2);
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).give_space_ships(home_location_id)
+    );
+
+    let ship_id = expected_ship_id(home_location_id, ARTIFACT_TYPE_SHIP_MOTHERSHIP);
+
+    let mut home_speed: u64 = 0;
+    let home_speed_ref = &mut home_speed;
+    env.public_context_at(contract_address, |context| {
+        let home_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().planets.slot,
+            home_location_id,
+        );
+        *home_speed_ref = context.storage_read(home_slot + 10);
+    });
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).move(
+            INIT_X,
+            INIT_Y,
+            MOVE_X_2,
+            MOVE_Y_2,
+            utils::WORLD_RADIUS,
+            MOVE_DIST_MAX,
+            0,
+            0,
+            ship_id,
+            false,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+        )
+    );
+
+    env.public_context_at(contract_address, |context| {
+        let location_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().artifact_locations.slot,
+            ship_id,
+        );
+        let stored_location = context.storage_read(location_slot);
+        assert_eq(stored_location, 0);
+    });
+
+    let mut travel_time = (MOVE_DIST_MAX * 100) / home_speed;
+    if travel_time == 0 {
+        travel_time = 1;
+    }
+    let mut advance_blocks = travel_time - 1;
+    assert(advance_blocks <= MAX_ADVANCE_BLOCKS);
+    for i in 0..MAX_ADVANCE_BLOCKS {
+        if (i as u64) < advance_blocks {
+            env.call_private(
+                player,
+                DarkForest::at(contract_address).reveal_location(
+                    (9000 + (i as u64)) as Field,
+                    0,
+                    utils::PLANETHASH_KEY,
+                    utils::SPACETYPE_KEY,
+                    utils::PERLIN_LENGTH_SCALE,
+                    utils::PERLIN_MIRROR_X,
+                    utils::PERLIN_MIRROR_Y,
+                )
+            );
+        }
+    }
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).resolve_arrival(1)
+    );
+
+    env.public_context_at(contract_address, |context| {
+        let location_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().artifact_locations.slot,
+            ship_id,
+        );
+        let stored_location = context.storage_read(location_slot);
+        assert_eq(stored_location, target_location_id);
+    });
 }
 
 #[test(should_fail)]
