@@ -1,0 +1,15 @@
+{
+    "name": "darkforest-aztec",
+    "private": true,
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "scripts": {
+        "contracts:compile": "yarn workspace @darkforest-aztec/contracts compile",
+        "contracts:test:nr": "yarn workspace @darkforest-aztec/contracts test:nr",
+        "client:dev": "yarn workspace @darkforest-aztec/client dev",
+        "client:build": "yarn workspace @darkforest-aztec/client build"
+    },
+    "packageManager": "yarn@1.22.22"
+}

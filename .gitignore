@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.env.*
+target
+store
+src/artifacts
+.tsbuildinfo

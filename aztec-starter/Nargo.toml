@@ -1,0 +1,8 @@
+[package]
+name = "pod_racing_contract"
+type = "contract"
+authors = [ "" ]
+compiler_version = ">=0.18.0"
+
+[dependencies]
+aztec = { git = "https://github.com/AztecProtocol/aztec-nr/", tag = "v3.0.0-devnet.20251212", directory = "aztec" }
