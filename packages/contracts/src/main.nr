@@ -20,7 +20,7 @@ pub contract DarkForest {
         state_vars::{Map, PublicMutable},
     };
     use dep::darkforest_nft::NFT;
-
+    use dep::std::field::bn254;
     use crate::{
         mimc::mimc_sponge_2_220,
         perlin::multi_scale_perlin,
@@ -1328,7 +1328,27 @@ pub contract DarkForest {
     ) {
         let config = self.storage.config.read();
         let current_block = self.context.block_number();
+        if (action < 2) | (action == 5) {
+            assert(bn254::lt(location_id, config.max_location_id));
+        }
+        if action < 2 {
+            let stored = self.storage.config_hash_spacetype.read();
+            assert(config_hash == stored);
+        }
         if action == 0 {
+            assert(radius <= config.world_radius);
+            if config.spawn_rim_area != 0 {
+                let radius_u = radius as u128;
+                let world_u = config.world_radius as u128;
+                let lhs = ((radius_u * radius_u * 314u128) / 100u128)
+                    + (config.spawn_rim_area as u128);
+                let rhs = (world_u * world_u * 314u128) / 100u128;
+                assert(lhs >= rhs);
+            }
+            assert(
+                (perlin >= config.init_perlin_min)
+                & (perlin < config.init_perlin_max)
+            );
             let existing_player = self.storage.players.at(player).read();
             assert(!existing_player.is_initialized);
 
@@ -1442,6 +1462,8 @@ pub contract DarkForest {
             state.prospected_block_number = current_block;
             self.storage.planet_artifact_state.at(location_id).write(state);
         } else if action == 5 {
+            let stored = self.storage.config_hash_biome.read();
+            assert(config_hash == stored);
             let biomebase = perlin;
             let planet = self.storage.planets.at(location_id).read();
             assert(planet.is_initialized);
@@ -2164,15 +2186,19 @@ pub contract DarkForest {
         config_hash: Field,
         abandoning: bool,
     ) {
-        let mask_64: u128 = (1u128 << 64) - 1;
         let is_arrival = config_hash == 0;
         if is_arrival {
-            let arrival_id = (move_config & mask_64) as u64;
+            let arrival_id = move_config as u64;
             self.internal.execute_arrival(arrival_id);
-        }
-        if !is_arrival {
+        } else {
+        let config = self.storage.config.read();
+        let radius = move_config as u64;
+        assert(radius <= config.world_radius);
+        let stored = self.storage.config_hash_spacetype.read();
+        assert(config_hash == stored);
+        assert(bn254::lt(to_location_id, config.max_location_id));
         let dist_max = (move_config >> 64) as u64;
-        let mut pop_moved = (move_resources & mask_64) as u64;
+        let mut pop_moved = move_resources as u64;
         let mut silver_moved = (move_resources >> 64) as u64;
 
         let current_block = self.context.block_number();

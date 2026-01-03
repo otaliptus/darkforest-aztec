@@ -458,6 +458,50 @@ unconstrained fn test_init_player_real_planet_rarity() {
 }
 
 #[test(should_fail)]
+unconstrained fn test_fail_init_player_bad_config_hash() {
+    let (mut env, contract_address, _) = utils::setup();
+    let player = env.create_light_account();
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).init_player(
+            INIT_X,
+            INIT_Y,
+            INIT_RADIUS,
+            utils::PLANETHASH_KEY + 1,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+        )
+    );
+}
+
+#[test(should_fail)]
+unconstrained fn test_fail_init_player_location_out_of_range() {
+    let (mut env, contract_address, _) = utils::setup_with_params(
+        utils::DEFAULT_REVEAL_COOLDOWN,
+        utils::PLANET_RARITY,
+        0,
+    );
+    let player = env.create_light_account();
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).init_player(
+            INIT_X,
+            INIT_Y,
+            INIT_RADIUS,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+        )
+    );
+}
+
+#[test(should_fail)]
 unconstrained fn test_fail_init_player_duplicate() {
     let (mut env, contract_address, _) = utils::setup();
     let player = env.create_light_account();
@@ -599,6 +643,25 @@ unconstrained fn test_reveal_location_sets_coords() {
     });
 }
 
+#[test(should_fail)]
+unconstrained fn test_fail_reveal_bad_config_hash() {
+    let (mut env, contract_address, _) = utils::setup();
+    let player = env.create_light_account();
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).reveal_location(
+            REVEAL_X,
+            REVEAL_Y,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY + 1,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+        )
+    );
+}
+
 #[test]
 unconstrained fn test_move_creates_arrival() {
     let (mut env, contract_address, _) = utils::setup();
@@ -683,6 +746,47 @@ unconstrained fn test_move_creates_arrival() {
         let stored_arrival_id = unpack_u64_low(packed);
         assert_eq(stored_arrival_id, 1);
     });
+}
+
+#[test(should_fail)]
+unconstrained fn test_fail_move_radius_above_world() {
+    let (mut env, contract_address, _) = utils::setup();
+    let player = env.create_light_account();
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).init_player(
+            INIT_X,
+            INIT_Y,
+            INIT_RADIUS,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+        )
+    );
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).move(
+            INIT_X,
+            INIT_Y,
+            MOVE_X_2,
+            MOVE_Y_2,
+            utils::WORLD_RADIUS + 1,
+            MOVE_DIST_MAX,
+            MOVE_POP_MOVED,
+            0,
+            0,
+            false,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+        )
+    );
 }
 
 #[test(should_fail)]
