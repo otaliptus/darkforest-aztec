@@ -10,7 +10,8 @@ import { SponsoredFPCContract } from "@aztec/noir-contracts.js/SponsoredFPC";
 import { TestWallet } from "@aztec/test-wallet/client/lazy";
 import type { NoirCompiledContract } from "@aztec/stdlib/noir";
 import type { ClientAccountConfig, ClientConfig } from "../config";
-import type { PerlinConfig } from "./types";
+import type { OnChainConfig, PerlinConfig } from "./types";
+import { getStorageSlots, readGameConfig, type StorageSlots } from "./storage";
 
 import darkforestArtifactJson from "../../../../packages/contracts/target/darkforest_contract-DarkForest.json";
 import nftArtifactJson from "../../../../packages/contracts/darkforest_nft-NFT.json";
@@ -23,14 +24,43 @@ const DARKFOREST_ARTIFACT = loadContractArtifact(
 const NFT_ARTIFACT = loadContractArtifact(nftArtifactJson as unknown as NoirCompiledContract);
 
 export type DarkForestClient = {
+    node: ReturnType<typeof createAztecNodeClient>;
     wallet: TestWallet;
     account: AccountManager;
     darkforest: Contract;
+    darkforestAddress: AztecAddress;
     nft?: Contract;
+    nftAddress?: AztecAddress;
+    nftStorageSlots?: StorageSlots;
     perlinConfig: PerlinConfig;
+    gameConfig: OnChainConfig;
+    storageSlots: StorageSlots;
     sponsoredFee?: SponsoredFeePaymentMethod;
     initPlayer: (x: bigint, y: bigint, radius: bigint) => Promise<SentTx>;
     revealLocation: (x: bigint, y: bigint) => Promise<SentTx>;
+    move: (
+        x1: bigint,
+        y1: bigint,
+        x2: bigint,
+        y2: bigint,
+        radius: bigint,
+        distMax: bigint,
+        popMoved: bigint,
+        silverMoved: bigint,
+        movedArtifactId: bigint,
+        abandoning: boolean
+    ) => Promise<SentTx>;
+    upgradePlanet: (locationId: bigint, branch: number) => Promise<SentTx>;
+    prospectPlanet: (locationId: bigint) => Promise<SentTx>;
+    findArtifact: (x: bigint, y: bigint, biomebase: bigint) => Promise<SentTx>;
+    tradeArtifact: (locationId: bigint, artifactId: bigint, withdrawing: boolean) => Promise<SentTx>;
+    setArtifactActivation: (
+        locationId: bigint,
+        artifactId: bigint,
+        wormholeTo: bigint,
+        activate: boolean
+    ) => Promise<SentTx>;
+    giveSpaceShips: (locationId: bigint) => Promise<SentTx>;
     stop: () => Promise<void> | void;
 };
 
@@ -40,7 +70,8 @@ export function buildInitPlayerArgs(
     x: bigint,
     y: bigint,
     radius: bigint,
-    config: PerlinConfig
+    config: PerlinConfig,
+    gameConfig: OnChainConfig
 ) {
     return [
         x,
@@ -51,10 +82,21 @@ export function buildInitPlayerArgs(
         config.perlinLengthScale,
         config.perlinMirrorX,
         config.perlinMirrorY,
+        gameConfig.configHashSpacetype,
+        gameConfig.maxLocationId,
+        gameConfig.worldRadius,
+        gameConfig.spawnRimArea,
+        gameConfig.initPerlinMin,
+        gameConfig.initPerlinMax,
     ] as const;
 }
 
-export function buildRevealLocationArgs(x: bigint, y: bigint, config: PerlinConfig) {
+export function buildRevealLocationArgs(
+    x: bigint,
+    y: bigint,
+    config: PerlinConfig,
+    gameConfig: OnChainConfig
+) {
     return [
         x,
         y,
@@ -63,6 +105,29 @@ export function buildRevealLocationArgs(x: bigint, y: bigint, config: PerlinConf
         config.perlinLengthScale,
         config.perlinMirrorX,
         config.perlinMirrorY,
+        gameConfig.configHashSpacetype,
+        gameConfig.maxLocationId,
+    ] as const;
+}
+
+export function buildFindArtifactArgs(
+    x: bigint,
+    y: bigint,
+    biomebase: bigint,
+    config: PerlinConfig,
+    gameConfig: OnChainConfig
+) {
+    return [
+        x,
+        y,
+        biomebase,
+        gameConfig.planethashKey,
+        gameConfig.biomebaseKey,
+        config.perlinLengthScale,
+        config.perlinMirrorX,
+        config.perlinMirrorY,
+        gameConfig.configHashBiome,
+        gameConfig.maxLocationId,
     ] as const;
 }
 
@@ -197,7 +262,24 @@ export async function connectDarkForest(
         log
     );
 
+    const storageSlots = getStorageSlots(darkforestArtifactJson, "DarkForest");
+    logStep(log, "Reading DarkForest config from public storage...");
+    const gameConfig = await readGameConfig(node, darkforestAddress, storageSlots);
+    logStep(log, "Loaded DarkForest config.", {
+        worldRadius: gameConfig.worldRadius.toString(),
+        maxLocationId: gameConfig.maxLocationId.toString(),
+    });
+
+    const perlinConfig: PerlinConfig = {
+        planethashKey: gameConfig.planethashKey,
+        spacetypeKey: gameConfig.spacetypeKey,
+        perlinLengthScale: gameConfig.perlinLengthScale,
+        perlinMirrorX: gameConfig.perlinMirrorX,
+        perlinMirrorY: gameConfig.perlinMirrorY,
+    };
+
     let nft: Contract | undefined;
+    let nftStorageSlots: StorageSlots | undefined;
     if (config.nftAddress) {
         const nftAddress = parseAddress(config.nftAddress, "NFT");
         nft = await registerContractInstance(
@@ -208,6 +290,7 @@ export async function connectDarkForest(
             "NFT",
             log
         );
+        nftStorageSlots = getStorageSlots(nftArtifactJson, "NFT");
     }
 
     let sponsoredFee: SponsoredFeePaymentMethod | undefined;
@@ -229,20 +312,76 @@ export async function connectDarkForest(
         : { from: account.address };
 
     return {
+        node,
         wallet,
         account,
         darkforest,
+        darkforestAddress,
         nft,
-        perlinConfig: config.perlin,
+        nftAddress: config.nftAddress ? AztecAddress.fromString(config.nftAddress) : undefined,
+        nftStorageSlots,
+        perlinConfig,
+        gameConfig,
+        storageSlots,
         sponsoredFee,
         initPlayer: (x, y, radius) =>
             darkforest.methods
-                .init_player(...buildInitPlayerArgs(x, y, radius, config.perlin))
+                .init_player(...buildInitPlayerArgs(x, y, radius, perlinConfig, gameConfig))
                 .send(sendOptions),
         revealLocation: (x, y) =>
             darkforest.methods
-                .reveal_location(...buildRevealLocationArgs(x, y, config.perlin))
+                .reveal_location(...buildRevealLocationArgs(x, y, perlinConfig, gameConfig))
                 .send(sendOptions),
+        move: (
+            x1,
+            y1,
+            x2,
+            y2,
+            radius,
+            distMax,
+            popMoved,
+            silverMoved,
+            movedArtifactId,
+            abandoning
+        ) =>
+            darkforest.methods
+                .move(
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                    radius,
+                    distMax,
+                    popMoved,
+                    silverMoved,
+                    movedArtifactId,
+                    abandoning,
+                    perlinConfig.planethashKey,
+                    perlinConfig.spacetypeKey,
+                    perlinConfig.perlinLengthScale,
+                    perlinConfig.perlinMirrorX,
+                    perlinConfig.perlinMirrorY,
+                    gameConfig.configHashSpacetype,
+                    gameConfig.maxLocationId,
+                    gameConfig.worldRadius
+                )
+                .send(sendOptions),
+        upgradePlanet: (locationId, branch) =>
+            darkforest.methods.upgrade_planet(locationId, branch).send(sendOptions),
+        prospectPlanet: (locationId) =>
+            darkforest.methods.prospect_planet(locationId).send(sendOptions),
+        findArtifact: (x, y, biomebase) =>
+            darkforest.methods
+                .find_artifact(...buildFindArtifactArgs(x, y, biomebase, perlinConfig, gameConfig))
+                .send(sendOptions),
+        tradeArtifact: (locationId, artifactId, withdrawing) =>
+            darkforest.methods.trade_artifact(locationId, artifactId, withdrawing).send(sendOptions),
+        setArtifactActivation: (locationId, artifactId, wormholeTo, activate) =>
+            darkforest.methods
+                .set_artifact_activation(locationId, artifactId, wormholeTo, activate)
+                .send(sendOptions),
+        giveSpaceShips: (locationId) =>
+            darkforest.methods.give_space_ships(locationId).send(sendOptions),
         stop: () => wallet.stop(),
     };
 }

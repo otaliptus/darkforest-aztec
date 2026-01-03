@@ -770,17 +770,6 @@ pub contract DarkForest {
     }
 
     #[internal("public")]
-    fn planet_artifacts_is_empty(artifacts: PlanetArtifacts) -> bool {
-        let mut empty = true;
-        for i in 0..(MAX_PLANET_ARTIFACTS as u32) {
-            if artifacts.ids[i] != 0 {
-                empty = false;
-            }
-        }
-        empty
-    }
-
-    #[internal("public")]
     fn planet_has_arrivals(location_id: Field) -> bool {
         let arrival_list = self.storage.planet_arrivals.at(location_id).read();
         let mut has = false;
@@ -950,12 +939,6 @@ pub contract DarkForest {
         let _ = NFT::at(nft_addr)
             .transfer_in_public(from, to, token_id, 0)
             .call(self.context);
-    }
-
-    #[internal("public")]
-    fn nft_burn(token_id: Field) {
-        let nft_addr = self.storage.nft_contract.read();
-        let _ = NFT::at(nft_addr).burn(token_id).call(self.context);
     }
 
     #[internal("public")]
@@ -1268,6 +1251,12 @@ pub contract DarkForest {
         perlin_length_scale: u64,
         perlin_mirror_x: bool,
         perlin_mirror_y: bool,
+        expected_config_hash: Field,
+        max_location_id: Field,
+        world_radius: u64,
+        spawn_rim_area: u64,
+        init_perlin_min: u64,
+        init_perlin_max: u64,
     ) {
         let player = self.context.msg_sender().unwrap();
 
@@ -1299,6 +1288,21 @@ pub contract DarkForest {
         );
 
         let location_id = mimc_sponge_2_220(x, y, planethash_key);
+        assert(cfg_hash == expected_config_hash);
+        assert(bn254::lt(location_id, max_location_id));
+        assert(radius <= world_radius);
+        if spawn_rim_area != 0 {
+            let radius_u = radius as u128;
+            let world_u = world_radius as u128;
+            let lhs = ((radius_u * radius_u * 314u128) / 100u128)
+                + (spawn_rim_area as u128);
+            let rhs = (world_u * world_u * 314u128) / 100u128;
+            assert(lhs >= rhs);
+        }
+        assert(
+            (perlin_u64 >= init_perlin_min)
+            & (perlin_u64 < init_perlin_max)
+        );
 
         self.enqueue(
             DarkForest::at(self.context.this_address()).apply_player_action(
@@ -1334,6 +1338,10 @@ pub contract DarkForest {
         if action < 2 {
             let stored = self.storage.config_hash_spacetype.read();
             assert(config_hash == stored);
+        }
+        if (action >= 6) & (action <= 9) {
+            let stored_admin = self.storage.admin.read();
+            assert(player.eq(stored_admin));
         }
         if action == 0 {
             assert(radius <= config.world_radius);
@@ -1421,7 +1429,6 @@ pub contract DarkForest {
             assert(planet.owner.eq(player));
 
             let mut planet_artifacts = self.storage.planet_artifacts.at(location_id).read();
-            assert(self.internal.planet_artifacts_is_empty(planet_artifacts));
 
             let ship_types: [u8; 5] = [
                 ARTIFACT_TYPE_SHIP_MOTHERSHIP,
@@ -1520,45 +1527,26 @@ pub contract DarkForest {
             state.has_tried_finding_artifact = true;
             self.storage.planet_artifact_state.at(location_id).write(state);
         } else if action == 6 {
-            let stored_admin = self.storage.admin.read();
-            assert(player.eq(stored_admin));
-
             let mut planet = self.storage.planets.at(location_id).read();
             planet.silver =
                 if perlin > planet.silver_cap { planet.silver_cap } else { perlin };
             self.storage.planets.at(location_id).write(planet);
         } else if action == 7 {
-            let stored_admin = self.storage.admin.read();
-            assert(player.eq(stored_admin));
-
             let owner = AztecAddress::deserialize([y]);
             let mut planet = self.storage.planets.at(location_id).read();
             planet.owner = owner;
             self.storage.planets.at(location_id).write(planet);
         } else if action == 8 {
-            let stored_admin = self.storage.admin.read();
-            assert(player.eq(stored_admin));
-
             let mut planet = self.storage.planets.at(location_id).read();
             planet.planet_type = perlin as u8;
             planet.planet_level = radius as u8;
             self.storage.planets.at(location_id).write(planet);
         } else if action == 9 {
-            let stored_admin = self.storage.admin.read();
-            assert(player.eq(stored_admin));
-
             let artifact_id = x;
             let owner = AztecAddress::deserialize([y]);
             let value0 = perlin;
             let value1 = radius;
             let value2 = config_hash as u64;
-
-            let planet = self.storage.planets.at(location_id).read();
-            assert(planet.is_initialized);
-            assert(!self.internal.is_planet_destroyed(location_id));
-
-            let existing = self.storage.artifacts.at(artifact_id).read();
-            assert(!existing.is_initialized);
 
             let mut planet_artifacts = self.storage.planet_artifacts.at(location_id).read();
             planet_artifacts = self.internal.planet_artifacts_add(planet_artifacts, artifact_id);
@@ -1733,6 +1721,8 @@ pub contract DarkForest {
         perlin_length_scale: u64,
         perlin_mirror_x: bool,
         perlin_mirror_y: bool,
+        expected_config_hash: Field,
+        max_location_id: Field,
     ) {
         let player = self.context.msg_sender().unwrap();
 
@@ -1758,6 +1748,8 @@ pub contract DarkForest {
         );
 
         let location_id = mimc_sponge_2_220(x, y, planethash_key);
+        assert(cfg_hash == expected_config_hash);
+        assert(bn254::lt(location_id, max_location_id));
 
         self.enqueue(
             DarkForest::at(self.context.this_address()).apply_player_action(
@@ -1962,6 +1954,8 @@ pub contract DarkForest {
         perlin_length_scale: u64,
         perlin_mirror_x: bool,
         perlin_mirror_y: bool,
+        expected_config_hash: Field,
+        max_location_id: Field,
     ) {
         let player = self.context.msg_sender().unwrap();
         let location_id = mimc_sponge_2_220(x, y, planethash_key);
@@ -1986,6 +1980,8 @@ pub contract DarkForest {
             perlin_mirror_x,
             perlin_mirror_y,
         );
+        assert(cfg_hash == expected_config_hash);
+        assert(bn254::lt(location_id, max_location_id));
 
         self.enqueue(
             DarkForest::at(self.context.this_address()).apply_player_action(
@@ -2111,6 +2107,9 @@ pub contract DarkForest {
         perlin_length_scale: u64,
         perlin_mirror_x: bool,
         perlin_mirror_y: bool,
+        expected_config_hash: Field,
+        max_location_id: Field,
+        world_radius: u64,
     ) {
         let player = self.context.msg_sender().unwrap();
 
@@ -2152,6 +2151,9 @@ pub contract DarkForest {
 
         let from_location_id = mimc_sponge_2_220(x1, y1, planethash_key);
         let to_location_id = mimc_sponge_2_220(x2, y2, planethash_key);
+        assert(cfg_hash == expected_config_hash);
+        assert(radius <= world_radius);
+        assert(bn254::lt(to_location_id, max_location_id));
 
         let move_config: u128 =
             ((dist_max as u128) << 64) | (radius as u128);

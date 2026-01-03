@@ -20,6 +20,9 @@ const CLIENT_ENV_PATH = path.join(ROOT_DIR, "apps", "client", ".env.local");
 
 const SPONSORED_FPC_SALT = new Fr(0);
 
+const FIELD_MODULUS =
+    21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+
 const CONFIG = {
     planethash_key: 42n,
     spacetype_key: 43n,
@@ -33,9 +36,8 @@ const CONFIG = {
     spawn_rim_area: 0,
     location_reveal_cooldown: 0,
     planet_rarity: 1,
-    max_location_id: BigInt(
-        "1335952323720658888076562850662675481478782006861330221172986095372058624"
-    ),
+    // Dev-friendly: allow almost any location id.
+    max_location_id: FIELD_MODULUS - 1n,
 };
 
 const DEFAULT_INIT = { x: "990", y: "0", radius: "1000" };

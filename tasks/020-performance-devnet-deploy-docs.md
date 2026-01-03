@@ -23,3 +23,9 @@ Meet the < 60s turn target and provide a complete devnet deployment + documentat
 - `yarn contracts:compile`
 - `yarn contracts:test:nr`
 - `yarn client:build`
+
+## Status
+- Pending; start after ticket 019 flow verification.
+
+## Notes
+- Initial local proofs: init/reveal ~50–65s end-to-end (2026-01-03), close to the 60s target.

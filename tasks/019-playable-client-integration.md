@@ -27,3 +27,9 @@ Deliver a playable Dark Forest web client wired to Aztec contracts with core v0.
 ## Tests
 - `yarn client:build`
 - Manual local run: connect, init, reveal, move, upgrade, prospect/find, artifact trade.
+
+## Status
+- Client reads on-chain GameConfig + config hashes for private calls.
+- Vite VK tree error resolved by aligning bb-prover prebundle with pxe graph.
+- init_player + reveal_location confirmed with real proofs on local node.
+- Remaining gameplay flows still need end-to-end verification.

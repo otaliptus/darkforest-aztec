@@ -22,14 +22,16 @@ export default defineConfig({
             "hash.js",
             "hash.js/lib/hash.js",
             "lodash.chunk",
+            "lodash.times",
+            "lodash.isequal",
+            "@aztec/bb-prover/client/lazy",
         ],
         exclude: [
             "@aztec/noir-acvm_js",
             "@aztec/noir-noirc_abi",
             "@aztec/bb.js",
-            "@aztec/bb-prover",
         ],
-        needsInterop: ["sha3", "hash.js", "lodash.chunk"],
+        needsInterop: ["sha3", "hash.js", "lodash.chunk", "lodash.times", "lodash.isequal"],
     },
     assetsInclude: ["**/*.wasm", "**/*.wasm.gz"],
     server: {

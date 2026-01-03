@@ -2,14 +2,85 @@ import { useMemo, useState } from "react";
 import type { DarkForestClient, ClientLogFn } from "./scripts/darkforest";
 import { connectDarkForest } from "./scripts/darkforest";
 import { CLIENT_CONFIG, DEFAULT_INIT, DEFAULT_REVEAL } from "./config";
+import {
+    fieldToSignedInt,
+    locationIdFromCoords,
+    multiScalePerlin,
+    toField,
+} from "./scripts/hashing";
+import {
+    readArtifactBundle,
+    readLocationBundle,
+    readPlayerBundle,
+} from "./scripts/chain";
+
+const KNOWN_LOCATIONS_KEY = "df-known-locations";
+
+type KnownLocation = {
+    locationId: bigint;
+    x: bigint;
+    y: bigint;
+    source: string;
+};
+
+type LocationBundle = Awaited<ReturnType<typeof readLocationBundle>>;
+type PlayerBundle = Awaited<ReturnType<typeof readPlayerBundle>>;
+type ArtifactBundle = Awaited<ReturnType<typeof readArtifactBundle>>;
+
+const loadKnownLocations = (): KnownLocation[] => {
+    if (typeof window === "undefined") return [];
+    const raw = window.localStorage.getItem(KNOWN_LOCATIONS_KEY);
+    if (!raw) return [];
+    try {
+        const parsed = JSON.parse(raw);
+        if (!Array.isArray(parsed)) return [];
+        return parsed
+            .map((entry) => ({
+                locationId: BigInt(entry.locationId),
+                x: BigInt(entry.x),
+                y: BigInt(entry.y),
+                source: String(entry.source ?? "manual"),
+            }))
+            .filter((entry) => entry.locationId !== undefined);
+    } catch {
+        return [];
+    }
+};
+
+const persistKnownLocations = (locations: KnownLocation[]) => {
+    if (typeof window === "undefined") return;
+    const payload = locations.map((entry) => ({
+        locationId: entry.locationId.toString(),
+        x: entry.x.toString(),
+        y: entry.y.toString(),
+        source: entry.source,
+    }));
+    window.localStorage.setItem(KNOWN_LOCATIONS_KEY, JSON.stringify(payload));
+};
 
 const toBigInt = (value: string, label: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+        throw new Error(`Missing ${label}.`);
+    }
     try {
-        return BigInt(value);
+        return BigInt(trimmed);
     } catch {
         throw new Error(`Invalid ${label}: ${value}`);
     }
 };
+
+const formatBigInt = (value?: bigint | null) =>
+    value === undefined || value === null ? "--" : value.toString();
+
+const shortAddress = (value: string) => {
+    if (!value) return "--";
+    if (value.length <= 14) return value;
+    return `${value.slice(0, 8)}...${value.slice(-6)}`;
+};
+
+const sumBigInt = (values: bigint[]) =>
+    values.reduce((acc, value) => acc + value, 0n);
 
 export default function App() {
     const [client, setClient] = useState<DarkForestClient | null>(null);
@@ -18,22 +89,73 @@ export default function App() {
     const [busy, setBusy] = useState(false);
     const [logs, setLogs] = useState<Array<{ ts: string; message: string }>>([]);
 
+    const [knownLocations, setKnownLocations] = useState<KnownLocation[]>(
+        () => loadKnownLocations()
+    );
+    const [locationData, setLocationData] = useState<
+        Record<string, LocationBundle>
+    >({});
+    const [artifactData, setArtifactData] = useState<
+        Record<string, ArtifactBundle>
+    >({});
+    const [playerBundle, setPlayerBundle] = useState<PlayerBundle | null>(null);
+    const [selectedId, setSelectedId] = useState<string | null>(null);
+
     const [initX, setInitX] = useState(DEFAULT_INIT.x);
     const [initY, setInitY] = useState(DEFAULT_INIT.y);
     const [initRadius, setInitRadius] = useState(DEFAULT_INIT.radius);
     const [revealX, setRevealX] = useState(DEFAULT_REVEAL.x);
     const [revealY, setRevealY] = useState(DEFAULT_REVEAL.y);
+    const [trackX, setTrackX] = useState("");
+    const [trackY, setTrackY] = useState("");
 
-    const missingAddress = useMemo(
-        () => !CLIENT_CONFIG.darkforestAddress,
-        []
-    );
+    const [moveFromX, setMoveFromX] = useState("");
+    const [moveFromY, setMoveFromY] = useState("");
+    const [moveToX, setMoveToX] = useState("");
+    const [moveToY, setMoveToY] = useState("");
+    const [moveRadius, setMoveRadius] = useState("");
+    const [moveDistMax, setMoveDistMax] = useState("");
+    const [movePop, setMovePop] = useState("0");
+    const [moveSilver, setMoveSilver] = useState("0");
+    const [moveArtifactId, setMoveArtifactId] = useState("0");
+    const [moveAbandoning, setMoveAbandoning] = useState(false);
+
+    const [upgradeBranch, setUpgradeBranch] = useState("0");
+    const [findX, setFindX] = useState("");
+    const [findY, setFindY] = useState("");
+    const [tradeArtifactId, setTradeArtifactId] = useState("0");
+    const [tradeWithdraw, setTradeWithdraw] = useState(false);
+    const [activateArtifactId, setActivateArtifactId] = useState("0");
+    const [activateWormholeTo, setActivateWormholeTo] = useState("0");
+    const [activateToggle, setActivateToggle] = useState(true);
+
+    const missingAddress = useMemo(() => !CLIENT_CONFIG.darkforestAddress, []);
+
+    const knownById = useMemo(() => {
+        const map = new Map<string, KnownLocation>();
+        for (const location of knownLocations) {
+            map.set(location.locationId.toString(), location);
+        }
+        return map;
+    }, [knownLocations]);
+
+    const selectedLocation = selectedId ? knownById.get(selectedId) : undefined;
+    const selectedBundle = selectedId ? locationData[selectedId] : undefined;
+    const selectedPlanet = selectedBundle?.planet;
+
+    const playerAddress = client?.account.address.toString() ?? "";
+    const ownedPlanets = Object.entries(locationData)
+        .filter(([_, bundle]) => bundle.planet.isInitialized)
+        .filter(([_, bundle]) => bundle.planet.owner.toString() === playerAddress)
+        .map(([_, bundle]) => bundle.planet);
+    const totalPopulation = sumBigInt(ownedPlanets.map((planet) => planet.population));
+    const totalSilver = sumBigInt(ownedPlanets.map((planet) => planet.silver));
 
     const pushLog = (message: string) => {
         const ts = new Date().toLocaleTimeString();
         setLogs((prev) => {
             const next = [...prev, { ts, message }];
-            return next.length > 200 ? next.slice(next.length - 200) : next;
+            return next.length > 250 ? next.slice(next.length - 250) : next;
         });
     };
 
@@ -45,6 +167,112 @@ export default function App() {
 
     const clearLogs = () => setLogs([]);
 
+    const refreshPlayer = async (nextClient?: DarkForestClient) => {
+        const activeClient = nextClient ?? client;
+        if (!activeClient) return;
+        const bundle = await readPlayerBundle(
+            activeClient.node,
+            activeClient.darkforestAddress,
+            activeClient.storageSlots,
+            activeClient.account.address
+        );
+        setPlayerBundle(bundle);
+    };
+
+    const refreshLocations = async (
+        locations: KnownLocation[],
+        nextClient?: DarkForestClient
+    ) => {
+        const activeClient = nextClient ?? client;
+        if (!activeClient) return;
+        if (locations.length === 0) {
+            setLocationData({});
+            setArtifactData({});
+            return;
+        }
+
+        const bundles = await Promise.all(
+            locations.map((location) =>
+                readLocationBundle(
+                    activeClient.node,
+                    activeClient.darkforestAddress,
+                    activeClient.storageSlots,
+                    location.locationId
+                )
+            )
+        );
+
+        const nextLocationData: Record<string, LocationBundle> = {};
+        bundles.forEach((bundle, index) => {
+            nextLocationData[locations[index].locationId.toString()] = bundle;
+        });
+
+        const updatedLocations = [...locations];
+        let updated = false;
+        bundles.forEach((bundle, index) => {
+            if (bundle.revealed.locationId === 0n) return;
+            const signedX = fieldToSignedInt(bundle.revealed.x);
+            const signedY = fieldToSignedInt(bundle.revealed.y);
+            const current = updatedLocations[index];
+            if (current.x !== signedX || current.y !== signedY) {
+                updatedLocations[index] = {
+                    ...current,
+                    x: signedX,
+                    y: signedY,
+                    source: "revealed",
+                };
+                updated = true;
+            }
+        });
+
+        if (updated) {
+            setKnownLocations(updatedLocations);
+            persistKnownLocations(updatedLocations);
+        }
+
+        setLocationData(nextLocationData);
+
+        const artifactIds = new Set<bigint>();
+        bundles.forEach((bundle) => {
+            bundle.artifacts.ids.forEach((id) => {
+                if (id !== 0n) artifactIds.add(id);
+            });
+        });
+
+        if (artifactIds.size === 0) {
+            setArtifactData({});
+            return;
+        }
+
+        const artifactList = Array.from(artifactIds);
+        const artifactBundles = await Promise.all(
+            artifactList.map((id) =>
+                readArtifactBundle(
+                    activeClient.node,
+                    activeClient.darkforestAddress,
+                    activeClient.storageSlots,
+                    id,
+                    activeClient.nftAddress,
+                    activeClient.nftStorageSlots
+                )
+            )
+        );
+
+        const nextArtifactData: Record<string, ArtifactBundle> = {};
+        artifactBundles.forEach((bundle, index) => {
+            nextArtifactData[artifactList[index].toString()] = bundle;
+        });
+        setArtifactData(nextArtifactData);
+    };
+
+    const refreshAll = async (
+        nextClient?: DarkForestClient,
+        locations?: KnownLocation[]
+    ) => {
+        await refreshPlayer(nextClient);
+        await refreshLocations(locations ?? knownLocations, nextClient);
+    };
+
     const connect = async () => {
         setError(null);
         setBusy(true);
@@ -55,6 +283,7 @@ export default function App() {
             setClient(nextClient);
             setStatus(`Connected: ${nextClient.account.address.toString()}`);
             pushLog(`Connected: ${nextClient.account.address.toString()}`);
+            await refreshAll(nextClient);
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             setError(message);
@@ -65,17 +294,14 @@ export default function App() {
         }
     };
 
-    const runTx = async (
-        label: string,
-        fn: () => ReturnType<DarkForestClient["initPlayer"]>
-    ) => {
+    const runTx = async (label: string, fn: () => Promise<unknown>) => {
         if (!client) return;
         setError(null);
         setBusy(true);
         setStatus(`${label}: proving...`);
         pushLog(`${label}: proving...`);
         try {
-            const tx = await fn();
+            const tx = (await fn()) as { getTxHash: () => Promise<{ toString: () => string }>; wait: () => Promise<void> };
             const hash = await tx.getTxHash();
             setStatus(`${label}: sent ${hash.toString()}`);
             pushLog(`${label}: sent ${hash.toString()}`);
@@ -92,135 +318,766 @@ export default function App() {
         }
     };
 
-    const initPlayer = async () => {
-        await runTx("Init player", () =>
-            client!.initPlayer(
-                toBigInt(initX, "init x"),
-                toBigInt(initY, "init y"),
-                toBigInt(initRadius, "init radius")
-            )
+    const addKnownLocation = (location: KnownLocation) => {
+        const existing = knownLocations.find(
+            (entry) => entry.locationId === location.locationId
         );
+        if (existing) {
+            const next = knownLocations.map((entry) =>
+                entry.locationId === location.locationId ? location : entry
+            );
+            setKnownLocations(next);
+            persistKnownLocations(next);
+            void refreshLocations(next);
+            return next;
+        }
+        const next = [...knownLocations, location];
+        setKnownLocations(next);
+        persistKnownLocations(next);
+        void refreshLocations(next);
+        return next;
+    };
+
+    const handleTrack = async () => {
+        if (!client) {
+            setError("Connect first.");
+            return;
+        }
+        try {
+            const x = toBigInt(trackX, "track x");
+            const y = toBigInt(trackY, "track y");
+            const locationId = locationIdFromCoords(
+                toField(x),
+                toField(y),
+                client.gameConfig.planethashKey
+            );
+            addKnownLocation({ locationId, x, y, source: "manual" });
+            setSelectedId(locationId.toString());
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            setError(message);
+        }
+    };
+
+    const initPlayer = async () => {
+        if (!client) return;
+        const x = toField(toBigInt(initX, "init x"));
+        const y = toField(toBigInt(initY, "init y"));
+        const radius = toBigInt(initRadius, "init radius");
+        await runTx("Init player", () => client.initPlayer(x, y, radius));
+        const nextLocations = addKnownLocation({
+            locationId: locationIdFromCoords(x, y, client.gameConfig.planethashKey),
+            x: toBigInt(initX, "init x"),
+            y: toBigInt(initY, "init y"),
+            source: "init",
+        });
+        await refreshAll(undefined, nextLocations);
     };
 
     const revealLocation = async () => {
-        await runTx("Reveal", () =>
-            client!.revealLocation(
-                toBigInt(revealX, "reveal x"),
-                toBigInt(revealY, "reveal y")
+        if (!client) return;
+        const x = toField(toBigInt(revealX, "reveal x"));
+        const y = toField(toBigInt(revealY, "reveal y"));
+        await runTx("Reveal", () => client.revealLocation(x, y));
+        const nextLocations = addKnownLocation({
+            locationId: locationIdFromCoords(x, y, client.gameConfig.planethashKey),
+            x: toBigInt(revealX, "reveal x"),
+            y: toBigInt(revealY, "reveal y"),
+            source: "reveal",
+        });
+        await refreshAll(undefined, nextLocations);
+    };
+
+    const runMove = async () => {
+        if (!client) return;
+        const x1 = toField(toBigInt(moveFromX, "from x"));
+        const y1 = toField(toBigInt(moveFromY, "from y"));
+        const x2 = toField(toBigInt(moveToX, "to x"));
+        const y2 = toField(toBigInt(moveToY, "to y"));
+        const radius = toBigInt(moveRadius, "radius");
+        const distMax = toBigInt(moveDistMax, "dist max");
+        const popMoved = toBigInt(movePop, "population");
+        const silverMoved = toBigInt(moveSilver, "silver");
+        const movedArtifactId = toBigInt(moveArtifactId, "artifact id");
+        await runTx("Move", () =>
+            client.move(
+                x1,
+                y1,
+                x2,
+                y2,
+                radius,
+                distMax,
+                popMoved,
+                silverMoved,
+                movedArtifactId,
+                moveAbandoning
             )
         );
+        const nextLocations = addKnownLocation({
+            locationId: locationIdFromCoords(x2, y2, client.gameConfig.planethashKey),
+            x: toBigInt(moveToX, "to x"),
+            y: toBigInt(moveToY, "to y"),
+            source: "move",
+        });
+        await refreshAll(undefined, nextLocations);
     };
+
+    const runUpgrade = async () => {
+        if (!client || !selectedId) return;
+        await runTx("Upgrade", () =>
+            client.upgradePlanet(BigInt(selectedId), Number(upgradeBranch))
+        );
+        await refreshAll();
+    };
+
+    const runProspect = async () => {
+        if (!client || !selectedId) return;
+        await runTx("Prospect", () =>
+            client.prospectPlanet(BigInt(selectedId))
+        );
+        await refreshAll();
+    };
+
+    const runFindArtifact = async () => {
+        if (!client) return;
+        const x = toField(toBigInt(findX, "find x"));
+        const y = toField(toBigInt(findY, "find y"));
+        const biomebase = multiScalePerlin(
+            x,
+            y,
+            client.gameConfig.biomebaseKey,
+            client.perlinConfig.perlinLengthScale,
+            client.perlinConfig.perlinMirrorX,
+            client.perlinConfig.perlinMirrorY
+        );
+        await runTx("Find artifact", () =>
+            client.findArtifact(x, y, biomebase)
+        );
+        const nextLocations = addKnownLocation({
+            locationId: locationIdFromCoords(x, y, client.gameConfig.planethashKey),
+            x: toBigInt(findX, "find x"),
+            y: toBigInt(findY, "find y"),
+            source: "find",
+        });
+        await refreshAll(undefined, nextLocations);
+    };
+
+    const runTradeArtifact = async () => {
+        if (!client || !selectedId) return;
+        const artifactId = toBigInt(tradeArtifactId, "artifact id");
+        await runTx("Trade artifact", () =>
+            client.tradeArtifact(BigInt(selectedId), artifactId, tradeWithdraw)
+        );
+        await refreshAll();
+    };
+
+    const runSetArtifactActivation = async () => {
+        if (!client || !selectedId) return;
+        const artifactId = toBigInt(activateArtifactId, "artifact id");
+        const wormholeTo = toBigInt(activateWormholeTo, "wormhole to");
+        await runTx("Toggle artifact", () =>
+            client.setArtifactActivation(
+                BigInt(selectedId),
+                artifactId,
+                wormholeTo,
+                activateToggle
+            )
+        );
+        await refreshAll();
+    };
+
+    const runGiveSpaceShips = async () => {
+        if (!client || !selectedId) return;
+        await runTx("Give spaceships", () =>
+            client.giveSpaceShips(BigInt(selectedId))
+        );
+        await refreshAll();
+    };
+
+    const applySelectedTo = (setterX: (value: string) => void, setterY: (value: string) => void) => {
+        if (!selectedLocation) return;
+        setterX(selectedLocation.x.toString());
+        setterY(selectedLocation.y.toString());
+    };
+
+    const applyMoveDefaults = () => {
+        if (!client || !selectedPlanet) return;
+        setMoveRadius(client.gameConfig.worldRadius.toString());
+        setMoveDistMax(selectedPlanet.range.toString());
+    };
+
+    const worldRadius = client ? Number(client.gameConfig.worldRadius) : 1000;
+    const mapRadius = Number.isFinite(worldRadius) && worldRadius > 0 ? worldRadius : 1000;
+    const viewBox = `${-mapRadius} ${-mapRadius} ${mapRadius * 2} ${mapRadius * 2}`;
+
+    const parseOptional = (value: string) => {
+        const trimmed = value.trim();
+        if (!trimmed) return null;
+        try {
+            return BigInt(trimmed);
+        } catch {
+            return null;
+        }
+    };
+
+    const trackXValue = parseOptional(trackX);
+    const trackYValue = parseOptional(trackY);
+    const trackLocationId =
+        client && trackXValue !== null && trackYValue !== null
+            ? locationIdFromCoords(
+                  toField(trackXValue),
+                  toField(trackYValue),
+                  client.gameConfig.planethashKey
+              )
+            : null;
+    const trackValid =
+        trackLocationId && client
+            ? trackLocationId < client.gameConfig.maxLocationId
+            : false;
+
+    const selectedStats = selectedPlanet
+        ? [
+              { label: "Population", value: formatBigInt(selectedPlanet.population) },
+              { label: "Silver", value: formatBigInt(selectedPlanet.silver) },
+              { label: "Range", value: formatBigInt(selectedPlanet.range) },
+              { label: "Speed", value: formatBigInt(selectedPlanet.speed) },
+              { label: "Defense", value: formatBigInt(selectedPlanet.defense) },
+              { label: "Perlin", value: formatBigInt(selectedPlanet.perlin) },
+              { label: "Planet level", value: String(selectedPlanet.planetLevel) },
+              { label: "Planet type", value: String(selectedPlanet.planetType) },
+              { label: "Space type", value: String(selectedPlanet.spaceType) },
+              { label: "Home planet", value: selectedPlanet.isHomePlanet ? "yes" : "no" },
+          ]
+        : [];
+
+    const artifactList = Object.entries(artifactData).map(([id, bundle]) => ({
+        id,
+        artifact: bundle.artifact,
+        owner: bundle.owner?.toString() ?? "",
+        locationId: bundle.locationId,
+    }));
 
     return (
         <div className="app">
-            <header className="header">
-                <h1>Dark Forest on Aztec</h1>
-                <p>Client onboarding wired to Aztec local network.</p>
+            <header className="hero">
+                <div>
+                    <p className="eyebrow">Aztec Devnet</p>
+                    <h1>Dark Forest Atlas</h1>
+                    <p className="subtitle">
+                        Private validators, public galaxy. Track, reveal, and command
+                        planets from a live Aztec deployment.
+                    </p>
+                </div>
+                <div className="status-card">
+                    <div>
+                        <span>Status</span>
+                        <strong>{status}</strong>
+                        {error && <em>{error}</em>}
+                    </div>
+                    <button
+                        className="primary"
+                        onClick={connect}
+                        disabled={busy || missingAddress}
+                    >
+                        {client ? "Reconnect" : "Connect wallet"}
+                    </button>
+                    {missingAddress && (
+                        <p className="hint">
+                            Set VITE_DARKFOREST_ADDRESS in apps/client/.env.local.
+                        </p>
+                    )}
+                </div>
             </header>
 
-            <section className="panel">
-                <h2>Connection</h2>
-                <div className="stack">
-                    <div className="row">
-                        <span className="label">Node URL</span>
-                        <span className="value">{CLIENT_CONFIG.nodeUrl}</span>
-                    </div>
-                    <div className="row">
-                        <span className="label">DarkForest</span>
-                        <span className="value">
-                            {CLIENT_CONFIG.darkforestAddress || "(set VITE_DARKFOREST_ADDRESS)"}
-                        </span>
-                    </div>
-                    <div className="row">
-                        <span className="label">NFT</span>
-                        <span className="value">
-                            {CLIENT_CONFIG.nftAddress || "(optional)"}
-                        </span>
-                    </div>
-                    <div className="row">
-                        <span className="label">Sponsored FPC</span>
-                        <span className="value">
-                            {CLIENT_CONFIG.sponsoredFpcAddress ?? "(default salt=0)"}
-                        </span>
-                    </div>
-                </div>
-
-                <button
-                    className="primary"
-                    onClick={connect}
-                    disabled={busy || missingAddress}
-                >
-                    {client ? "Reconnect" : "Connect wallet"}
-                </button>
-                {missingAddress && (
-                    <p className="hint">Set VITE_DARKFOREST_ADDRESS in apps/client/.env.local.</p>
-                )}
-            </section>
-
-            <section className="panel">
-                <h2>Init Player</h2>
-                <div className="grid">
-                    <label>
-                        <span>Init X</span>
-                        <input value={initX} onChange={(e) => setInitX(e.target.value)} />
-                    </label>
-                    <label>
-                        <span>Init Y</span>
-                        <input value={initY} onChange={(e) => setInitY(e.target.value)} />
-                    </label>
-                    <label>
-                        <span>Init Radius</span>
-                        <input
-                            value={initRadius}
-                            onChange={(e) => setInitRadius(e.target.value)}
-                        />
-                    </label>
-                </div>
-                <button className="primary" onClick={initPlayer} disabled={!client || busy}>
-                    Send init_player
-                </button>
-            </section>
-
-            <section className="panel">
-                <h2>Reveal Location</h2>
-                <div className="grid">
-                    <label>
-                        <span>Reveal X</span>
-                        <input value={revealX} onChange={(e) => setRevealX(e.target.value)} />
-                    </label>
-                    <label>
-                        <span>Reveal Y</span>
-                        <input value={revealY} onChange={(e) => setRevealY(e.target.value)} />
-                    </label>
-                </div>
-                <button className="primary" onClick={revealLocation} disabled={!client || busy}>
-                    Send reveal_location
-                </button>
-            </section>
-
-            <section className="panel">
-                <h2>Status</h2>
-                <p className="status">{status}</p>
-                {error && <p className="error">{error}</p>}
-            </section>
-
-            <section className="panel">
-                <h2>Logs</h2>
-                <div className="logs">
-                    {logs.length === 0 && <p className="hint">No logs yet.</p>}
-                    {logs.map((entry, index) => (
-                        <div key={`${entry.ts}-${index}`} className="log-row">
-                            <span className="log-ts">{entry.ts}</span>
-                            <span className="log-msg">{entry.message}</span>
+            <div className="layout">
+                <aside className="sidebar">
+                    <section className="panel">
+                        <h2>Connection</h2>
+                        <div className="stack">
+                            <div className="row">
+                                <span className="label">Node URL</span>
+                                <span className="value">{CLIENT_CONFIG.nodeUrl}</span>
+                            </div>
+                            <div className="row">
+                                <span className="label">DarkForest</span>
+                                <span className="value">
+                                    {CLIENT_CONFIG.darkforestAddress || "(set address)"}
+                                </span>
+                            </div>
+                            <div className="row">
+                                <span className="label">NFT</span>
+                                <span className="value">
+                                    {CLIENT_CONFIG.nftAddress || "(optional)"}
+                                </span>
+                            </div>
+                            <div className="row">
+                                <span className="label">Account</span>
+                                <span className="value" title={playerAddress}>
+                                    {shortAddress(playerAddress)}
+                                </span>
+                            </div>
                         </div>
-                    ))}
-                </div>
-                {logs.length > 0 && (
-                    <button className="primary" onClick={clearLogs} disabled={busy}>
-                        Clear logs
-                    </button>
-                )}
-            </section>
+                        <button
+                            className="ghost"
+                            onClick={() => refreshAll()}
+                            disabled={!client || busy}
+                        >
+                            Refresh state
+                        </button>
+                    </section>
+
+                    <section className="panel">
+                        <h2>Player</h2>
+                        <div className="stack">
+                            <div className="row">
+                                <span className="label">Initialized</span>
+                                <span className="value">
+                                    {playerBundle?.player.isInitialized ? "yes" : "no"}
+                                </span>
+                            </div>
+                            <div className="row">
+                                <span className="label">Home planet</span>
+                                <span className="value">
+                                    {formatBigInt(playerBundle?.player.homePlanet)}
+                                </span>
+                            </div>
+                            <div className="row">
+                                <span className="label">Last reveal block</span>
+                                <span className="value">
+                                    {playerBundle?.player.lastRevealBlock ?? "--"}
+                                </span>
+                            </div>
+                            <div className="row">
+                                <span className="label">Space junk</span>
+                                <span className="value">
+                                    {formatBigInt(playerBundle?.spaceJunk)} /{" "}
+                                    {formatBigInt(playerBundle?.spaceJunkLimit)}
+                                </span>
+                            </div>
+                            <div className="row">
+                                <span className="label">Claimed ships</span>
+                                <span className="value">
+                                    {formatBigInt(playerBundle?.claimedShips)}
+                                </span>
+                            </div>
+                            <div className="row">
+                                <span className="label">Total energy</span>
+                                <span className="value">{formatBigInt(totalPopulation)}</span>
+                            </div>
+                            <div className="row">
+                                <span className="label">Total silver</span>
+                                <span className="value">{formatBigInt(totalSilver)}</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="panel">
+                        <h2>Track Coordinates</h2>
+                        <div className="grid">
+                            <label>
+                                <span>X</span>
+                                <input value={trackX} onChange={(e) => setTrackX(e.target.value)} />
+                            </label>
+                            <label>
+                                <span>Y</span>
+                                <input value={trackY} onChange={(e) => setTrackY(e.target.value)} />
+                            </label>
+                        </div>
+                        <button className="primary" onClick={handleTrack} disabled={!client || busy}>
+                            Add to galaxy
+                        </button>
+                        {trackLocationId && (
+                            <p className="hint">
+                                Location id: {trackLocationId.toString()}{" "}
+                                {trackValid ? "(valid)" : "(invalid)"}
+                            </p>
+                        )}
+                    </section>
+                </aside>
+
+                <main className="main">
+                    <section className="panel galaxy-panel">
+                        <div className="panel-header">
+                            <h2>Galaxy View</h2>
+                            <div className="legend">
+                                <span className="legend-item owned">Owned</span>
+                                <span className="legend-item neutral">Neutral</span>
+                                <span className="legend-item hostile">Other</span>
+                            </div>
+                        </div>
+                        <div className="galaxy-grid">
+                            <svg className="galaxy-map" viewBox={viewBox}>
+                                <circle className="galaxy-boundary" cx={0} cy={0} r={mapRadius} />
+                                <line className="axis" x1={-mapRadius} y1={0} x2={mapRadius} y2={0} />
+                                <line className="axis" x1={0} y1={-mapRadius} x2={0} y2={mapRadius} />
+                                {knownLocations.map((location) => {
+                                    const id = location.locationId.toString();
+                                    const bundle = locationData[id];
+                                    const planet = bundle?.planet;
+                                    const owner = planet?.owner.toString() ?? "";
+                                    const isZeroOwner = planet ? planet.owner.isZero() : true;
+                                    const isOwned = owner && !isZeroOwner && owner === playerAddress;
+                                    const isOther = owner && !isZeroOwner && owner !== playerAddress;
+                                    const className = isOwned
+                                        ? "planet-point owned"
+                                        : isOther
+                                          ? "planet-point hostile"
+                                          : "planet-point neutral";
+                                    return (
+                                        <circle
+                                            key={id}
+                                            className={`${className}${selectedId === id ? " selected" : ""}`}
+                                            cx={Number(location.x)}
+                                            cy={-Number(location.y)}
+                                            r={selectedId === id ? 14 : 10}
+                                            onClick={() => setSelectedId(id)}
+                                        />
+                                    );
+                                })}
+                            </svg>
+                            <div className="planet-list">
+                                <h3>Tracked</h3>
+                                <div className="planet-rows">
+                                    {knownLocations.length === 0 && (
+                                        <p className="hint">No tracked locations yet.</p>
+                                    )}
+                                    {knownLocations.map((location) => {
+                                        const id = location.locationId.toString();
+                                        const bundle = locationData[id];
+                                        const planet = bundle?.planet;
+                                        const owner = planet?.owner.toString() ?? "";
+                                        const isZeroOwner = planet ? planet.owner.isZero() : true;
+                                        return (
+                                            <button
+                                                key={id}
+                                                className={`planet-row${selectedId === id ? " active" : ""}`}
+                                                onClick={() => setSelectedId(id)}
+                                            >
+                                                <span>{shortAddress(id)}</span>
+                                                <span className="row-meta">
+                                                    x {location.x.toString()} y {location.y.toString()}
+                                                </span>
+                                                <span className="row-owner">
+                                                    {owner === playerAddress && !isZeroOwner
+                                                        ? "owned"
+                                                        : owner && !isZeroOwner
+                                                          ? "other"
+                                                          : "neutral"}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="panel">
+                        <h2>Selected Planet</h2>
+                        {selectedLocation ? (
+                            <div className="stack">
+                                <div className="row">
+                                    <span className="label">Location id</span>
+                                    <span className="value">{selectedLocation.locationId.toString()}</span>
+                                </div>
+                                <div className="row">
+                                    <span className="label">Coords</span>
+                                    <span className="value">
+                                        {selectedLocation.x.toString()}, {selectedLocation.y.toString()}
+                                    </span>
+                                </div>
+                                <div className="row">
+                                    <span className="label">Owner</span>
+                                    <span className="value">
+                                        {selectedPlanet
+                                            ? shortAddress(selectedPlanet.owner.toString())
+                                            : "--"}
+                                    </span>
+                                </div>
+                                <div className="stat-grid">
+                                    {selectedStats.map((stat) => (
+                                        <div key={stat.label} className="stat">
+                                            <span>{stat.label}</span>
+                                            <strong>{stat.value}</strong>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="hint">Select a location to inspect planet details.</p>
+                        )}
+                    </section>
+
+                    <section className="panel actions-panel">
+                        <h2>Actions</h2>
+                        <div className="action-grid">
+                            <div className="action-card">
+                                <h3>Init Player</h3>
+                                <div className="grid">
+                                    <label>
+                                        <span>X</span>
+                                        <input value={initX} onChange={(e) => setInitX(e.target.value)} />
+                                    </label>
+                                    <label>
+                                        <span>Y</span>
+                                        <input value={initY} onChange={(e) => setInitY(e.target.value)} />
+                                    </label>
+                                    <label>
+                                        <span>Spawn radius</span>
+                                        <input
+                                            value={initRadius}
+                                            onChange={(e) => setInitRadius(e.target.value)}
+                                        />
+                                    </label>
+                                </div>
+                                <button className="primary" onClick={initPlayer} disabled={!client || busy}>
+                                    Send init_player
+                                </button>
+                            </div>
+
+                            <div className="action-card">
+                                <h3>Reveal</h3>
+                                <div className="grid">
+                                    <label>
+                                        <span>X</span>
+                                        <input value={revealX} onChange={(e) => setRevealX(e.target.value)} />
+                                    </label>
+                                    <label>
+                                        <span>Y</span>
+                                        <input value={revealY} onChange={(e) => setRevealY(e.target.value)} />
+                                    </label>
+                                </div>
+                                <button className="ghost" onClick={() => applySelectedTo(setRevealX, setRevealY)}>
+                                    Use selected
+                                </button>
+                                <button className="primary" onClick={revealLocation} disabled={!client || busy}>
+                                    Send reveal_location
+                                </button>
+                            </div>
+
+                            <div className="action-card wide">
+                                <h3>Move</h3>
+                                <div className="grid">
+                                    <label>
+                                        <span>From X</span>
+                                        <input value={moveFromX} onChange={(e) => setMoveFromX(e.target.value)} />
+                                    </label>
+                                    <label>
+                                        <span>From Y</span>
+                                        <input value={moveFromY} onChange={(e) => setMoveFromY(e.target.value)} />
+                                    </label>
+                                    <label>
+                                        <span>To X</span>
+                                        <input value={moveToX} onChange={(e) => setMoveToX(e.target.value)} />
+                                    </label>
+                                    <label>
+                                        <span>To Y</span>
+                                        <input value={moveToY} onChange={(e) => setMoveToY(e.target.value)} />
+                                    </label>
+                                    <label>
+                                        <span>Radius</span>
+                                        <input value={moveRadius} onChange={(e) => setMoveRadius(e.target.value)} />
+                                    </label>
+                                    <label>
+                                        <span>Dist max</span>
+                                        <input value={moveDistMax} onChange={(e) => setMoveDistMax(e.target.value)} />
+                                    </label>
+                                    <label>
+                                        <span>Pop moved</span>
+                                        <input value={movePop} onChange={(e) => setMovePop(e.target.value)} />
+                                    </label>
+                                    <label>
+                                        <span>Silver moved</span>
+                                        <input value={moveSilver} onChange={(e) => setMoveSilver(e.target.value)} />
+                                    </label>
+                                    <label>
+                                        <span>Artifact id</span>
+                                        <input value={moveArtifactId} onChange={(e) => setMoveArtifactId(e.target.value)} />
+                                    </label>
+                                    <label className="checkbox">
+                                        <span>Abandoning</span>
+                                        <input
+                                            type="checkbox"
+                                            checked={moveAbandoning}
+                                            onChange={(e) => setMoveAbandoning(e.target.checked)}
+                                        />
+                                    </label>
+                                </div>
+                                <div className="row actions-row">
+                                    <button className="ghost" onClick={() => applySelectedTo(setMoveFromX, setMoveFromY)}>
+                                        From selected
+                                    </button>
+                                    <button className="ghost" onClick={() => applySelectedTo(setMoveToX, setMoveToY)}>
+                                        To selected
+                                    </button>
+                                    <button className="ghost" onClick={applyMoveDefaults}>
+                                        Use planet range
+                                    </button>
+                                </div>
+                                <button className="primary" onClick={runMove} disabled={!client || busy}>
+                                    Send move
+                                </button>
+                            </div>
+
+                            <div className="action-card">
+                                <h3>Upgrade</h3>
+                                <label>
+                                    <span>Branch (0 def, 1 range, 2 speed)</span>
+                                    <input value={upgradeBranch} onChange={(e) => setUpgradeBranch(e.target.value)} />
+                                </label>
+                                <button className="primary" onClick={runUpgrade} disabled={!client || busy || !selectedId}>
+                                    Upgrade selected
+                                </button>
+                            </div>
+
+                            <div className="action-card">
+                                <h3>Prospect</h3>
+                                <button className="primary" onClick={runProspect} disabled={!client || busy || !selectedId}>
+                                    Prospect selected
+                                </button>
+                            </div>
+
+                            <div className="action-card">
+                                <h3>Find Artifact</h3>
+                                <div className="grid">
+                                    <label>
+                                        <span>X</span>
+                                        <input value={findX} onChange={(e) => setFindX(e.target.value)} />
+                                    </label>
+                                    <label>
+                                        <span>Y</span>
+                                        <input value={findY} onChange={(e) => setFindY(e.target.value)} />
+                                    </label>
+                                </div>
+                                <button className="ghost" onClick={() => applySelectedTo(setFindX, setFindY)}>
+                                    Use selected
+                                </button>
+                                <button className="primary" onClick={runFindArtifact} disabled={!client || busy}>
+                                    Find artifact
+                                </button>
+                            </div>
+
+                            <div className="action-card">
+                                <h3>Trade Artifact</h3>
+                                <label>
+                                    <span>Artifact id</span>
+                                    <input value={tradeArtifactId} onChange={(e) => setTradeArtifactId(e.target.value)} />
+                                </label>
+                                <label className="checkbox">
+                                    <span>Withdraw</span>
+                                    <input
+                                        type="checkbox"
+                                        checked={tradeWithdraw}
+                                        onChange={(e) => setTradeWithdraw(e.target.checked)}
+                                    />
+                                </label>
+                                <button
+                                    className="primary"
+                                    onClick={runTradeArtifact}
+                                    disabled={!client || busy || !selectedId}
+                                >
+                                    Trade on selected
+                                </button>
+                            </div>
+
+                            <div className="action-card">
+                                <h3>Activate Artifact</h3>
+                                <label>
+                                    <span>Artifact id</span>
+                                    <input
+                                        value={activateArtifactId}
+                                        onChange={(e) => setActivateArtifactId(e.target.value)}
+                                    />
+                                </label>
+                                <label>
+                                    <span>Wormhole to</span>
+                                    <input
+                                        value={activateWormholeTo}
+                                        onChange={(e) => setActivateWormholeTo(e.target.value)}
+                                    />
+                                </label>
+                                <label className="checkbox">
+                                    <span>Activate</span>
+                                    <input
+                                        type="checkbox"
+                                        checked={activateToggle}
+                                        onChange={(e) => setActivateToggle(e.target.checked)}
+                                    />
+                                </label>
+                                <button
+                                    className="primary"
+                                    onClick={runSetArtifactActivation}
+                                    disabled={!client || busy || !selectedId}
+                                >
+                                    Toggle on selected
+                                </button>
+                            </div>
+
+                            <div className="action-card">
+                                <h3>Give Space Ships</h3>
+                                <button
+                                    className="primary"
+                                    onClick={runGiveSpaceShips}
+                                    disabled={!client || busy || !selectedId}
+                                >
+                                    Claim ships on selected
+                                </button>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section className="panel">
+                        <h2>Artifacts</h2>
+                        {artifactList.length === 0 ? (
+                            <p className="hint">No artifacts found on tracked planets.</p>
+                        ) : (
+                            <div className="artifact-table">
+                                {artifactList.map((entry) => (
+                                    <div key={entry.id} className="artifact-row">
+                                        <div>
+                                            <strong>{shortAddress(entry.id)}</strong>
+                                            <span className="meta">
+                                                type {entry.artifact.artifactType} rarity{" "}
+                                                {entry.artifact.rarity}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="label">Owner</span>
+                                            <span className="value">
+                                                {entry.owner ? shortAddress(entry.owner) : "unknown"}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <span className="label">Location</span>
+                                            <span className="value">
+                                                {formatBigInt(entry.locationId)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </section>
+
+                    <section className="panel">
+                        <h2>Logs</h2>
+                        <div className="logs">
+                            {logs.length === 0 && <p className="hint">No logs yet.</p>}
+                            {logs.map((entry, index) => (
+                                <div key={`${entry.ts}-${index}`} className="log-row">
+                                    <span className="log-ts">{entry.ts}</span>
+                                    <span className="log-msg">{entry.message}</span>
+                                </div>
+                            ))}
+                        </div>
+                        {logs.length > 0 && (
+                            <button className="ghost" onClick={clearLogs} disabled={busy}>
+                                Clear logs
+                            </button>
+                        )}
+                    </section>
+                </main>
+            </div>
         </div>
     );
 }

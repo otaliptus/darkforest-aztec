@@ -387,6 +387,12 @@ unconstrained fn test_init_player_sets_home_and_planet() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -442,6 +448,12 @@ unconstrained fn test_init_player_real_planet_rarity() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::REAL_MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -473,6 +485,12 @@ unconstrained fn test_fail_init_player_bad_config_hash() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::REAL_MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 }
@@ -497,6 +515,12 @@ unconstrained fn test_fail_init_player_location_out_of_range() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 }
@@ -517,6 +541,12 @@ unconstrained fn test_fail_init_player_duplicate() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
     env.call_private(
@@ -530,6 +560,12 @@ unconstrained fn test_fail_init_player_duplicate() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 }
@@ -577,6 +613,12 @@ unconstrained fn test_fail_init_player_home_constraints() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 }
@@ -597,6 +639,12 @@ unconstrained fn test_fail_init_outside_ring() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 }
@@ -616,6 +664,8 @@ unconstrained fn test_reveal_location_sets_coords() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -658,6 +708,8 @@ unconstrained fn test_fail_reveal_bad_config_hash() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 }
@@ -678,6 +730,12 @@ unconstrained fn test_move_creates_arrival() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -710,6 +768,9 @@ unconstrained fn test_move_creates_arrival() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 
@@ -764,6 +825,12 @@ unconstrained fn test_fail_move_radius_above_world() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -785,6 +852,9 @@ unconstrained fn test_fail_move_radius_above_world() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 }
@@ -805,6 +875,12 @@ unconstrained fn test_fail_move_too_much_population() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -826,6 +902,9 @@ unconstrained fn test_fail_move_too_much_population() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 }
@@ -846,6 +925,12 @@ unconstrained fn test_apply_arrival_captures_unowned_planet() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -867,6 +952,9 @@ unconstrained fn test_apply_arrival_captures_unowned_planet() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 
@@ -902,6 +990,12 @@ unconstrained fn test_fail_arrival_too_early() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -923,6 +1017,9 @@ unconstrained fn test_fail_arrival_too_early() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 
@@ -947,6 +1044,8 @@ unconstrained fn test_fail_reveal_duplicate() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
     env.call_private(
@@ -959,6 +1058,8 @@ unconstrained fn test_fail_reveal_duplicate() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 }
@@ -978,6 +1079,8 @@ unconstrained fn test_fail_reveal_cooldown() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
     env.call_private(
@@ -990,6 +1093,8 @@ unconstrained fn test_fail_reveal_cooldown() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 }
@@ -1010,6 +1115,12 @@ unconstrained fn test_upgrade_planet_success() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1061,6 +1172,8 @@ unconstrained fn test_upgrade_planet_success() {
                             utils::PERLIN_LENGTH_SCALE,
                             utils::PERLIN_MIRROR_X,
                             utils::PERLIN_MIRROR_Y,
+                            utils::spacetype_config_hash(),
+                            utils::MAX_LOCATION_ID,
                         )
                     );
 
@@ -1117,6 +1230,9 @@ unconstrained fn test_upgrade_planet_success() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 
@@ -1138,6 +1254,8 @@ unconstrained fn test_upgrade_planet_success() {
                     utils::PERLIN_LENGTH_SCALE,
                     utils::PERLIN_MIRROR_X,
                     utils::PERLIN_MIRROR_Y,
+                    utils::spacetype_config_hash(),
+                    utils::MAX_LOCATION_ID,
                 )
             );
         }
@@ -1242,6 +1360,12 @@ unconstrained fn test_fail_upgrade_invalid_branch() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1271,6 +1395,12 @@ unconstrained fn test_prospect_planet_success() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1299,6 +1429,8 @@ unconstrained fn test_prospect_planet_success() {
                             utils::PERLIN_LENGTH_SCALE,
                             utils::PERLIN_MIRROR_X,
                             utils::PERLIN_MIRROR_Y,
+                            utils::spacetype_config_hash(),
+                            utils::MAX_LOCATION_ID,
                         )
                     );
 
@@ -1356,6 +1488,12 @@ unconstrained fn test_fail_prospect_non_ruins() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1382,6 +1520,12 @@ unconstrained fn test_find_artifact_success() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1422,6 +1566,8 @@ unconstrained fn test_find_artifact_success() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -1450,6 +1596,8 @@ unconstrained fn test_find_artifact_success() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::biome_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -1572,6 +1720,12 @@ unconstrained fn test_fail_find_artifact_not_prospected() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1612,6 +1766,8 @@ unconstrained fn test_fail_find_artifact_not_prospected() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -1635,6 +1791,8 @@ unconstrained fn test_fail_find_artifact_not_prospected() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::biome_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 }
@@ -1655,6 +1813,12 @@ unconstrained fn test_fail_find_artifact_already_tried() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1695,6 +1859,8 @@ unconstrained fn test_fail_find_artifact_already_tried() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -1723,6 +1889,8 @@ unconstrained fn test_fail_find_artifact_already_tried() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::biome_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -1737,6 +1905,8 @@ unconstrained fn test_fail_find_artifact_already_tried() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::biome_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 }
@@ -1757,6 +1927,12 @@ unconstrained fn test_fail_find_artifact_non_ruins() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1772,6 +1948,8 @@ unconstrained fn test_fail_find_artifact_non_ruins() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::biome_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 }
@@ -1792,6 +1970,12 @@ unconstrained fn test_spacetime_rip_withdraw_deposit_roundtrip() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1832,6 +2016,8 @@ unconstrained fn test_spacetime_rip_withdraw_deposit_roundtrip() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -1860,6 +2046,8 @@ unconstrained fn test_spacetime_rip_withdraw_deposit_roundtrip() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::biome_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -2050,6 +2238,12 @@ unconstrained fn test_fail_withdraw_not_planet_owner() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -2103,6 +2297,12 @@ unconstrained fn test_fail_deposit_not_artifact_owner() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -2164,6 +2364,12 @@ unconstrained fn test_fail_withdraw_not_trading_post() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -2204,6 +2410,8 @@ unconstrained fn test_fail_withdraw_not_trading_post() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -2232,6 +2440,8 @@ unconstrained fn test_fail_withdraw_not_trading_post() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::biome_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -2272,6 +2482,12 @@ unconstrained fn test_activate_wormhole_and_move_speedup() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -2285,6 +2501,8 @@ unconstrained fn test_activate_wormhole_and_move_speedup() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -2340,6 +2558,9 @@ unconstrained fn test_activate_wormhole_and_move_speedup() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 
@@ -2395,6 +2616,12 @@ unconstrained fn test_wormhole_arrival_applies_combat() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -2408,6 +2635,8 @@ unconstrained fn test_wormhole_arrival_applies_combat() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -2485,6 +2714,9 @@ unconstrained fn test_wormhole_arrival_applies_combat() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 
@@ -2538,6 +2770,12 @@ unconstrained fn test_photoid_auto_deactivate_and_upgrade() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -2551,6 +2789,8 @@ unconstrained fn test_photoid_auto_deactivate_and_upgrade() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -2599,6 +2839,8 @@ unconstrained fn test_photoid_auto_deactivate_and_upgrade() {
                 utils::PERLIN_LENGTH_SCALE,
                 utils::PERLIN_MIRROR_X,
                 utils::PERLIN_MIRROR_Y,
+                utils::spacetype_config_hash(),
+                utils::MAX_LOCATION_ID,
             )
         );
     }
@@ -2621,6 +2863,9 @@ unconstrained fn test_photoid_auto_deactivate_and_upgrade() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 
@@ -2696,6 +2941,12 @@ unconstrained fn test_bloom_filter_burns_and_caps() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -2772,6 +3023,12 @@ unconstrained fn test_black_domain_destroys_planet() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -2837,6 +3094,12 @@ unconstrained fn test_fail_activate_artifact_cooldown() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -2850,6 +3113,8 @@ unconstrained fn test_fail_activate_artifact_cooldown() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -2924,6 +3189,12 @@ unconstrained fn test_give_space_ships_once() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -2980,6 +3251,12 @@ unconstrained fn test_fail_give_space_ships_twice() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -3010,6 +3287,12 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -3023,6 +3306,8 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -3036,6 +3321,8 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -3098,6 +3385,9 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 
@@ -3128,6 +3418,8 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
                     utils::PERLIN_LENGTH_SCALE,
                     utils::PERLIN_MIRROR_X,
                     utils::PERLIN_MIRROR_Y,
+                    utils::spacetype_config_hash(),
+                    utils::MAX_LOCATION_ID,
                 )
             );
         }
@@ -3184,6 +3476,9 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 
@@ -3205,6 +3500,8 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
                     utils::PERLIN_LENGTH_SCALE,
                     utils::PERLIN_MIRROR_X,
                     utils::PERLIN_MIRROR_Y,
+                    utils::spacetype_config_hash(),
+                    utils::MAX_LOCATION_ID,
                 )
             );
         }
@@ -3278,6 +3575,12 @@ unconstrained fn test_spaceship_location_mapping_updates() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -3291,6 +3594,8 @@ unconstrained fn test_spaceship_location_mapping_updates() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -3332,6 +3637,9 @@ unconstrained fn test_spaceship_location_mapping_updates() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 
@@ -3362,6 +3670,8 @@ unconstrained fn test_spaceship_location_mapping_updates() {
                     utils::PERLIN_LENGTH_SCALE,
                     utils::PERLIN_MIRROR_X,
                     utils::PERLIN_MIRROR_Y,
+                    utils::spacetype_config_hash(),
+                    utils::MAX_LOCATION_ID,
                 )
             );
         }
@@ -3398,6 +3708,12 @@ unconstrained fn test_fail_spaceship_move_nonzero_pop() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -3426,6 +3742,9 @@ unconstrained fn test_fail_spaceship_move_nonzero_pop() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 }
@@ -3446,6 +3765,12 @@ unconstrained fn test_artifact_voyage_moves_artifact() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -3459,6 +3784,8 @@ unconstrained fn test_artifact_voyage_moves_artifact() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -3496,6 +3823,9 @@ unconstrained fn test_artifact_voyage_moves_artifact() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 
@@ -3527,6 +3857,8 @@ unconstrained fn test_artifact_voyage_moves_artifact() {
                     utils::PERLIN_LENGTH_SCALE,
                     utils::PERLIN_MIRROR_X,
                     utils::PERLIN_MIRROR_Y,
+                    utils::spacetype_config_hash(),
+                    utils::MAX_LOCATION_ID,
                 )
             );
         }
@@ -3577,6 +3909,12 @@ unconstrained fn test_fail_artifact_voyage_destination_full() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -3590,6 +3928,8 @@ unconstrained fn test_fail_artifact_voyage_destination_full() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -3642,6 +3982,9 @@ unconstrained fn test_fail_artifact_voyage_destination_full() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 }
@@ -3662,6 +4005,12 @@ unconstrained fn test_abandon_planet_success() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -3704,6 +4053,8 @@ unconstrained fn test_abandon_planet_success() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -3717,6 +4068,8 @@ unconstrained fn test_abandon_planet_success() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -3748,6 +4101,9 @@ unconstrained fn test_abandon_planet_success() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 
@@ -3783,6 +4139,12 @@ unconstrained fn test_fail_abandon_with_incoming_arrival() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -3796,6 +4158,8 @@ unconstrained fn test_fail_abandon_with_incoming_arrival() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -3809,6 +4173,8 @@ unconstrained fn test_fail_abandon_with_incoming_arrival() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -3839,6 +4205,9 @@ unconstrained fn test_fail_abandon_with_incoming_arrival() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 
@@ -3860,6 +4229,9 @@ unconstrained fn test_fail_abandon_with_incoming_arrival() {
             utils::PERLIN_LENGTH_SCALE,
             utils::PERLIN_MIRROR_X,
             utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
         )
     );
 }

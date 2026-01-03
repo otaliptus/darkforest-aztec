@@ -53,3 +53,11 @@ VITE_INIT_RADIUS=1000
 VITE_REVEAL_X=123
 VITE_REVEAL_Y=456
 ```
+
+### Playable client workflow
+
+1. Deploy contracts and set `VITE_DARKFOREST_ADDRESS` (and `VITE_NFT_ADDRESS` for artifact ownership).
+2. Run `yarn client:dev` and connect the wallet.
+3. Use **Track Coordinates** to add locations to the galaxy (or use `init_player` / `reveal_location`).
+4. Select a location from the galaxy or list, then use actions like **move**, **upgrade**, **prospect**, **find artifact**, **trade**, or **activate**.
+5. The client reads public storage live; tracked locations persist in localStorage.

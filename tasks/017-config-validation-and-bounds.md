@@ -23,3 +23,9 @@ Enforce v0.6 configuration checks in the Aztec Noir private validators so action
 
 ## Tests
 - `yarn contracts:test:nr`
+
+## Status
+- Added private-validator config/bounds checks using explicit parameters (expected config hash + bounds) for `init_player`, `reveal_location`, `move`, and `find_artifact`.
+- Added config hash helpers in test utils and updated test calls to supply the new params.
+- Fix: `test_init_player_real_planet_rarity` now passes real max location id.
+- Tests: `yarn contracts:test:nr` ran but `nargo test` was killed with exit 137 (likely OOM). No failures observed before termination.

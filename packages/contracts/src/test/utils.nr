@@ -2,7 +2,7 @@ use dep::aztec::{
     protocol_types::address::AztecAddress, test::helpers::test_environment::TestEnvironment,
 };
 
-use crate::{types::GameConfig, DarkForest};
+use crate::{types::GameConfig, utils::config_hash, DarkForest};
 use dep::darkforest_nft::NFT;
 
 pub global PLANETHASH_KEY: Field = 42;
@@ -90,6 +90,26 @@ pub global PLANET_TYPE_WEIGHTS: [[[u64; 5]; 10]; 4] = [
         [7, 4, 2, 2, 1],
     ],
 ];
+
+pub fn spacetype_config_hash() -> Field {
+    config_hash(
+        PLANETHASH_KEY,
+        SPACETYPE_KEY,
+        PERLIN_LENGTH_SCALE,
+        PERLIN_MIRROR_X,
+        PERLIN_MIRROR_Y,
+    )
+}
+
+pub fn biome_config_hash() -> Field {
+    config_hash(
+        PLANETHASH_KEY,
+        BIOMEBASE_KEY,
+        PERLIN_LENGTH_SCALE,
+        PERLIN_MIRROR_X,
+        PERLIN_MIRROR_Y,
+    )
+}
 
 pub unconstrained fn setup() -> (TestEnvironment, AztecAddress, AztecAddress) {
     setup_with_params(DEFAULT_REVEAL_COOLDOWN, PLANET_RARITY, MAX_LOCATION_ID)
