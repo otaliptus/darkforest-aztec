@@ -28,3 +28,28 @@ Client:
 ```bash
 yarn client:dev
 ```
+
+### Client config (local)
+
+Create `apps/client/.env.local` with:
+
+```bash
+VITE_DARKFOREST_ADDRESS=0x...
+VITE_NFT_ADDRESS=0x...
+VITE_AZTEC_NODE_URL=http://localhost:8080
+```
+
+Optional overrides (defaults match contract tests):
+
+```bash
+VITE_PLANETHASH_KEY=42
+VITE_SPACETYPE_KEY=43
+VITE_PERLIN_LENGTH_SCALE=1024
+VITE_PERLIN_MIRROR_X=false
+VITE_PERLIN_MIRROR_Y=false
+VITE_INIT_X=990
+VITE_INIT_Y=0
+VITE_INIT_RADIUS=1000
+VITE_REVEAL_X=123
+VITE_REVEAL_Y=456
+```

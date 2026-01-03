@@ -12,6 +12,8 @@
 │       ├── src
 │       │   ├── App.tsx
 │       │   ├── main.tsx
+│       │   ├── scripts
+│       │   │   └── darkforest.ts
 │       │   └── styles.css
 │       ├── tsconfig.json
 │       └── vite.config.ts
@@ -3123,6 +3125,8 @@
 │   │       └── tsconfig.ref.json
 │   ├── README.md
 │   └── yarn.lock
+├── docs
+│   └── v06-aztec-crosswalk.md
 ├── grant_proposal.md
 ├── noir
 │   ├── acvm-repo
@@ -13896,16 +13900,32 @@
 ├── package.json
 ├── packages
 │   ├── contracts
+│   │   ├── darkforest_nft-NFT.json
 │   │   ├── Nargo.toml
 │   │   ├── package.json
 │   │   ├── README.md
 │   │   ├── src
 │   │   │   ├── main.nr
-│   │   │   └── test
-│   │   │       ├── darkforest_stub.nr
-│   │   │       ├── mod.nr
-│   │   │       └── utils.nr
+│   │   │   ├── mimc.nr
+│   │   │   ├── perlin.nr
+│   │   │   ├── test
+│   │   │   │   ├── darkforest_stub.nr
+│   │   │   │   ├── mod.nr
+│   │   │   │   └── utils.nr
+│   │   │   ├── types.nr
+│   │   │   └── utils.nr
+│   │   ├── target
+│   │   │   ├── darkforest_contract-DarkForest.json
+│   │   │   └── darkforest_contract-DarkForest.json.bak
 │   │   └── tsconfig.json
+│   ├── nft
+│   │   ├── Nargo.toml
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   └── main.nr
+│   │   └── target
+│   │       ├── darkforest_nft-NFT.json
+│   │       └── darkforest_nft-NFT.json.bak
 │   └── shared
 │       ├── dist
 │       │   ├── index.d.ts
@@ -13919,9 +13939,21 @@
 ├── README.md
 ├── tasks
 │   ├── 001-repo-analysis-plan.md
-│   └── 002-scaffold-aztec-workspace.md
+│   ├── 002-scaffold-aztec-workspace.md
+│   ├── 003-v06-aztec-crosswalk.md
+│   ├── 004-port-init-reveal.md
+│   ├── 005-client-config-and-valid-location-test.md
+│   ├── 006-port-move-capture.md
+│   ├── 007-planet-defaults-and-types.md
+│   ├── 008-planet-upgrades.md
+│   ├── 009-prospect-ruins.md
+│   ├── 010-artifact-find.md
+│   ├── 011-spacetime-rips-nft-minting.md
+│   ├── 012-artifact-activation-wormholes.md
+│   ├── 013-spaceships-voyages-abandonment.md
+│   └── 014-aztec-nft-artifacts.md
 ├── tree.txt
 ├── tsconfig.base.json
 └── yarn.lock
 
-3996 directories, 9929 files
+4002 directories, 9955 files
