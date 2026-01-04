@@ -258,6 +258,7 @@ pub struct Artifact {
     pub last_activated: u32,
     pub last_deactivated: u32,
     pub wormhole_to: Field,
+    pub burned: bool,
 }
 
 impl Artifact {
@@ -274,6 +275,7 @@ impl Artifact {
             last_activated: 0,
             last_deactivated: 0,
             wormhole_to: 0,
+            burned: false,
         }
     }
 
@@ -297,6 +299,7 @@ impl Artifact {
             last_activated: 0,
             last_deactivated: 0,
             wormhole_to: 0,
+            burned: false,
         }
     }
 }

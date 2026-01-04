@@ -295,6 +295,7 @@ pub contract DarkForest {
         planet_pausers: Map<Field, PublicMutable<u8, Context>, Context>,
         planet_artifact_state: Map<Field, PublicMutable<PlanetArtifactState, Context>, Context>,
         artifacts: Map<Field, PublicMutable<Artifact, Context>, Context>,
+        // Spaceships live in dedicated maps; artifact entries are materialized on demand.
         spaceships: Map<Field, PublicMutable<u8, Context>, Context>,
         spaceship_owners: Map<Field, PublicMutable<AztecAddress, Context>, Context>,
         planet_artifacts: Map<Field, PublicMutable<PlanetArtifacts, Context>, Context>,
@@ -797,9 +798,6 @@ pub contract DarkForest {
             space_junk /= 2;
         }
         self.storage.planet_space_junk.at(location_id).write(space_junk);
-        self.storage.planet_energy_gro_doublers.at(location_id).write(0);
-        self.storage.planet_silver_gro_doublers.at(location_id).write(0);
-        self.storage.planet_pausers.at(location_id).write(0);
     }
 
     #[internal("public")]
@@ -940,6 +938,7 @@ pub contract DarkForest {
             .transfer_in_public(from, to, token_id, 0)
             .call(self.context);
     }
+
 
     #[internal("public")]
     fn default_planet(
@@ -1304,6 +1303,11 @@ pub contract DarkForest {
             & (perlin_u64 < init_perlin_max)
         );
 
+        // Private nullifier ensures init claims are one-time even if public state is stale within a block.
+        self.context.push_nullifier(location_id);
+        let player_nullifier = mimc_sponge_2_220(player.to_field(), 1, planethash_key);
+        self.context.push_nullifier(player_nullifier);
+
         self.enqueue(
             DarkForest::at(self.context.this_address()).apply_player_action(
                 player,
@@ -1332,46 +1336,24 @@ pub contract DarkForest {
     ) {
         let config = self.storage.config.read();
         let current_block = self.context.block_number();
-        if (action < 2) | (action == 5) {
-            assert(bn254::lt(location_id, config.max_location_id));
-        }
-        if action < 2 {
-            let stored = self.storage.config_hash_spacetype.read();
-            assert(config_hash == stored);
-        }
         if (action >= 6) & (action <= 9) {
             let stored_admin = self.storage.admin.read();
             assert(player.eq(stored_admin));
         }
         if action == 0 {
-            assert(radius <= config.world_radius);
-            if config.spawn_rim_area != 0 {
-                let radius_u = radius as u128;
-                let world_u = config.world_radius as u128;
-                let lhs = ((radius_u * radius_u * 314u128) / 100u128)
-                    + (config.spawn_rim_area as u128);
-                let rhs = (world_u * world_u * 314u128) / 100u128;
-                assert(lhs >= rhs);
-            }
-            assert(
-                (perlin >= config.init_perlin_min)
-                & (perlin < config.init_perlin_max)
-            );
-            let existing_player = self.storage.players.at(player).read();
-            assert(!existing_player.is_initialized);
-
+            assert(bn254::lt(location_id, config.max_location_id));
             let existing_planet = self.storage.planets.at(location_id).read();
-            if !existing_planet.is_initialized {
-                let planet = self.internal.default_planet(
-                    player,
-                    location_id,
-                    perlin,
-                    true,
-                    current_block
-                );
-                self.storage.planets.at(location_id).write(planet);
-                self.internal.init_planet_extras(location_id, planet);
-            }
+            // v0.6: LibPlanet._initializePlanet reverts if the planet is already initialized.
+            assert(!existing_planet.is_initialized);
+            let planet = self.internal.default_planet(
+                player,
+                location_id,
+                perlin,
+                true,
+                current_block
+            );
+            self.storage.planets.at(location_id).write(planet);
+            self.internal.init_planet_extras(location_id, planet);
             self.storage
                 .players
                 .at(player)
@@ -1406,6 +1388,8 @@ pub contract DarkForest {
                     false,
                     current_block
                 );
+                // Mark the location as initialized so future inits fail deterministically.
+                self.context.push_nullifier(location_id);
                 self.storage.planets.at(location_id).write(planet);
                 self.internal.init_planet_extras(location_id, planet);
             }
@@ -1459,7 +1443,6 @@ pub contract DarkForest {
             self.internal.execute_upgrade_planet(player, location_id, branch);
         } else if action == 4 {
             let planet = self.storage.planets.at(location_id).read();
-            assert(planet.is_initialized);
             assert(!self.internal.is_planet_destroyed(location_id));
             assert(planet.owner.eq(player));
             assert(planet.planet_type == PLANET_TYPE_RUINS);
@@ -1473,7 +1456,6 @@ pub contract DarkForest {
             assert(config_hash == stored);
             let biomebase = perlin;
             let planet = self.storage.planets.at(location_id).read();
-            assert(planet.is_initialized);
             assert(!self.internal.is_planet_destroyed(location_id));
             assert(planet.owner.eq(player));
             assert(planet.planet_type == PLANET_TYPE_RUINS);
@@ -1569,13 +1551,13 @@ pub contract DarkForest {
             let artifact_id = x;
 
             let planet = self.storage.planets.at(location_id).read();
-            assert(planet.is_initialized);
             assert(!self.internal.is_planet_destroyed(location_id));
             assert(planet.owner.eq(player));
             assert(planet.planet_type == PLANET_TYPE_TRADING_POST);
 
             let artifact = self.storage.artifacts.at(artifact_id).read();
             assert(artifact.is_initialized);
+            assert(!artifact.burned);
             assert(!self.internal.is_spaceship(artifact.artifact_type));
             assert(planet.planet_level > artifact.rarity);
 
@@ -1613,14 +1595,14 @@ pub contract DarkForest {
             let wormhole_to = y;
 
             let mut planet = self.storage.planets.at(location_id).read();
-            assert(planet.is_initialized);
             assert(!self.internal.is_planet_destroyed(location_id));
 
             let mut planet_artifacts = self.storage.planet_artifacts.at(location_id).read();
             assert(self.internal.planet_artifacts_contains(planet_artifacts, artifact_id));
 
-            let mut artifact = self.storage.artifacts.at(artifact_id).read();
+            let mut artifact = self.internal.load_artifact_or_ship(artifact_id);
             assert(artifact.is_initialized);
+            assert(!artifact.burned);
             let is_ship = self.internal.is_spaceship(artifact.artifact_type);
 
             let current_block = self.context.block_number();
@@ -1696,10 +1678,21 @@ pub contract DarkForest {
                 if should_burn {
                     artifact.last_deactivated = current_block;
                     artifact.wormhole_to = 0;
+                    artifact.burned = true;
                     planet_artifacts =
                         self.internal.planet_artifacts_remove(planet_artifacts, artifact_id);
                     self.storage.planet_artifacts.at(location_id).write(planet_artifacts);
-                    self.storage.artifact_locations.at(artifact_id).write(0);
+                    self.storage
+                        .artifact_locations
+                        .at(artifact_id)
+                        .write(config.max_location_id);
+                    let contract_addr = self.context.this_address();
+                    let burn_addr = contract_addr;
+                    self.internal.nft_transfer(
+                        contract_addr,
+                        burn_addr,
+                        artifact_id,
+                    );
                 }
 
                 self.storage.artifacts.at(artifact_id).write(artifact);
@@ -1792,7 +1785,6 @@ pub contract DarkForest {
 
         let current_block = self.context.block_number();
         let mut planet = self.storage.planets.at(location_id).read();
-        assert(planet.is_initialized);
         planet = self.internal.refresh_planet(location_id, planet, current_block);
 
         assert(planet.owner.eq(player));
@@ -2038,7 +2030,6 @@ pub contract DarkForest {
         location_id: Field,
     ) -> pub Planet {
         let mut planet = self.storage.planets.at(location_id).read();
-        assert(planet.is_initialized);
         assert(!self.internal.is_planet_destroyed(location_id));
         assert(planet.owner.eq(player));
 
@@ -2059,7 +2050,14 @@ pub contract DarkForest {
             assert(self.internal.planet_artifacts_contains(planet_artifacts, artifact.id));
             planet_artifacts = self.internal.planet_artifacts_remove(planet_artifacts, artifact.id);
             self.storage.planet_artifacts.at(location_id).write(planet_artifacts);
-            self.storage.artifact_locations.at(artifact.id).write(0);
+            let burn_location_id = self.storage.config.read().max_location_id;
+            self.storage
+                .artifact_locations
+                .at(artifact.id)
+                .write(burn_location_id);
+            artifact.burned = true;
+            let contract_addr = self.context.this_address();
+            self.internal.nft_transfer(contract_addr, contract_addr, artifact.id);
         }
 
         self.storage.artifacts.at(artifact.id).write(artifact);
@@ -2248,6 +2246,8 @@ pub contract DarkForest {
                 false,
                 current_block
             );
+            // Planet initialization should be one-time across all actions.
+            self.context.push_nullifier(to_location_id);
             self.storage.planets.at(to_location_id).write(to_planet);
             self.internal.init_planet_extras(to_location_id, to_planet);
         } else {
@@ -2308,6 +2308,44 @@ pub contract DarkForest {
                 );
         }
 
+        let active_from = self.internal.get_active_artifact(from_location_id);
+        let active_to = self.internal.get_active_artifact(to_location_id);
+        let mut wormhole = Artifact::empty();
+        if active_from.is_initialized
+            & (active_from.artifact_type == ARTIFACT_TYPE_WORMHOLE)
+            & (active_from.wormhole_to == to_location_id)
+        {
+            wormhole = active_from;
+        } else if active_to.is_initialized
+            & (active_to.artifact_type == ARTIFACT_TYPE_WORMHOLE)
+            & (active_to.wormhole_to == from_location_id)
+        {
+            wormhole = active_to;
+        }
+
+        if wormhole.is_initialized {
+            arrival_type = ARRIVAL_TYPE_WORMHOLE;
+            let modifier = WORMHOLE_SPEED_MODIFIERS[wormhole.rarity as u32];
+            effective_dist_times_hundred = effective_dist_times_hundred / modifier;
+            effective_dist = effective_dist / modifier;
+        }
+
+        if !is_spaceship_move {
+            if active_from.is_initialized
+                & (active_from.artifact_type == ARTIFACT_TYPE_PHOTOID_CANNON)
+            {
+                if current_block >= active_from.last_activated {
+                    let elapsed = current_block - active_from.last_activated;
+                    if elapsed >= PHOTOID_ACTIVATION_DELAY_BLOCKS {
+                        arrival_type = ARRIVAL_TYPE_PHOTOID;
+                        temp_upgrade = self.internal.time_delay_upgrade(active_from);
+                        from_planet =
+                            self.internal.execute_deactivate_artifact(player, from_location_id);
+                    }
+                }
+            }
+        }
+
         let mut player_dirty = false;
         if (!is_spaceship_move) & abandoning {
             assert(!self.internal.planet_has_arrivals(from_location_id));
@@ -2355,63 +2393,6 @@ pub contract DarkForest {
                 player_space_junk += to_space_junk;
                 self.storage.planet_space_junk.at(to_location_id).write(0);
                 player_dirty = true;
-            }
-        }
-
-        let active_from = self.internal.get_active_artifact(from_location_id);
-        let active_to = self.internal.get_active_artifact(to_location_id);
-        let mut wormhole = Artifact::empty();
-        if active_from.is_initialized
-            & (active_from.artifact_type == ARTIFACT_TYPE_WORMHOLE)
-            & (active_from.wormhole_to == to_location_id)
-        {
-            wormhole = active_from;
-        } else if active_to.is_initialized
-            & (active_to.artifact_type == ARTIFACT_TYPE_WORMHOLE)
-            & (active_to.wormhole_to == from_location_id)
-        {
-            wormhole = active_to;
-        }
-
-        if wormhole.is_initialized {
-            arrival_type = ARRIVAL_TYPE_WORMHOLE;
-            let modifier = WORMHOLE_SPEED_MODIFIERS[wormhole.rarity as u32];
-            effective_dist_times_hundred = effective_dist_times_hundred / modifier;
-            effective_dist = effective_dist / modifier;
-        }
-
-        if !is_spaceship_move {
-            if active_from.is_initialized
-                & (active_from.artifact_type == ARTIFACT_TYPE_PHOTOID_CANNON)
-            {
-                if current_block >= active_from.last_activated {
-                    let elapsed = current_block - active_from.last_activated;
-                    if elapsed >= PHOTOID_ACTIVATION_DELAY_BLOCKS {
-                        arrival_type = ARRIVAL_TYPE_PHOTOID;
-                        temp_upgrade = self.internal.time_delay_upgrade(active_from);
-
-                        let mut fired_artifact = active_from;
-                        fired_artifact.last_deactivated = current_block;
-                        fired_artifact.wormhole_to = 0;
-                        let upgrade = self.internal.upgrade_for_artifact(fired_artifact);
-                        from_planet = self.internal.debuff_planet(from_planet, upgrade);
-
-                        let mut planet_artifacts =
-                            self.storage.planet_artifacts.at(from_location_id).read();
-                        assert(self.internal.planet_artifacts_contains(
-                            planet_artifacts,
-                            fired_artifact.id
-                        ));
-                        planet_artifacts = self.internal.planet_artifacts_remove(
-                            planet_artifacts,
-                            fired_artifact.id
-                        );
-                        self.storage.planet_artifacts.at(from_location_id).write(planet_artifacts);
-                        self.storage.artifact_locations.at(fired_artifact.id).write(0);
-
-                        self.storage.artifacts.at(fired_artifact.id).write(fired_artifact);
-                    }
-                }
             }
         }
 
@@ -2524,8 +2505,13 @@ pub contract DarkForest {
         assert(!self.internal.is_planet_destroyed(arrival.to_planet));
         let pausers = self.storage.planet_pausers.at(arrival.to_planet).read();
 
+        let arrival_type = arrival.arrival_type();
+        let wormhole_arrival = arrival_type == ARRIVAL_TYPE_WORMHOLE;
         if arrival.player.eq(planet.owner) {
             planet.population = planet.population + arrival.pop_arriving();
+        } else if wormhole_arrival {
+            // v0.6 parity: LibLazyUpdate.applyArrival skips energy transfer on wormhole arrivals
+            // to planets not owned by the initiator (darkforest-v0.6/eth/contracts/libraries/LibLazyUpdate.sol).
         } else {
             let damage = (arrival.pop_arriving() * 100) / planet.defense;
             if planet.population > damage {

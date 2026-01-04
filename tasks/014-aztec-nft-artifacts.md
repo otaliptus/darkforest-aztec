@@ -25,3 +25,11 @@ Make artifacts actual Aztec‑native NFTs and synchronize ownership with deposit
 - `yarn workspace @darkforest-aztec/contracts compile`
 - `yarn contracts:test:nr`
 
+## Status
+- Completed.
+
+## Notes
+- NFT contract implemented in `packages/nft/src/main.nr` with mint/transfer/burn and minter gating.
+- Core contract mints NFTs on artifact find/admin create and ship grant; transfers on trade withdraw/deposit.
+- Ownership is kept in sync between DarkForest storage and NFT public ownership (used as source of truth).
+- Tests cover find → withdraw → deposit → withdraw and non‑owner withdraw/deposit failures.
