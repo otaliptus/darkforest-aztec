@@ -88,6 +88,8 @@ export default function App() {
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
     const [logs, setLogs] = useState<Array<{ ts: string; message: string }>>([]);
+    const [zoom, setZoom] = useState(6);
+    const [viewCenter, setViewCenter] = useState({ x: 0, y: 0 });
 
     const [knownLocations, setKnownLocations] = useState<KnownLocation[]>(
         () => loadKnownLocations()
@@ -508,7 +510,11 @@ export default function App() {
 
     const worldRadius = client ? Number(client.gameConfig.worldRadius) : 1000;
     const mapRadius = Number.isFinite(worldRadius) && worldRadius > 0 ? worldRadius : 1000;
-    const viewBox = `${-mapRadius} ${-mapRadius} ${mapRadius * 2} ${mapRadius * 2}`;
+    const clampedZoom = Math.min(Math.max(zoom, 1), 20);
+    const zoomedRadius = mapRadius / clampedZoom;
+    const viewBox = `${viewCenter.x - zoomedRadius} ${viewCenter.y - zoomedRadius} ${
+        zoomedRadius * 2
+    } ${zoomedRadius * 2}`;
 
     const parseOptional = (value: string) => {
         const trimmed = value.trim();
@@ -535,6 +541,26 @@ export default function App() {
             ? trackLocationId < client.gameConfig.maxLocationId
             : false;
 
+    const PLANET_TYPE_LABELS = [
+        "Planet",
+        "Silver Mine",
+        "Ruins",
+        "Trading Post",
+        "Silver Bank",
+    ];
+    const SPACE_TYPE_LABELS = ["Nebula", "Space", "Deep Space", "Dead Space"];
+    const planetTypeLabel = selectedPlanet
+        ? PLANET_TYPE_LABELS[selectedPlanet.planetType] ??
+          `Type ${selectedPlanet.planetType}`
+        : "--";
+    const spaceTypeLabel = selectedPlanet
+        ? SPACE_TYPE_LABELS[selectedPlanet.spaceType] ??
+          `Space ${selectedPlanet.spaceType}`
+        : "--";
+    const selectedOwner =
+        selectedPlanet && !selectedPlanet.owner.isZero()
+            ? selectedPlanet.owner.toString()
+            : "";
     const selectedStats = selectedPlanet
         ? [
               { label: "Population", value: formatBigInt(selectedPlanet.population) },
@@ -544,9 +570,16 @@ export default function App() {
               { label: "Defense", value: formatBigInt(selectedPlanet.defense) },
               { label: "Perlin", value: formatBigInt(selectedPlanet.perlin) },
               { label: "Planet level", value: String(selectedPlanet.planetLevel) },
-              { label: "Planet type", value: String(selectedPlanet.planetType) },
-              { label: "Space type", value: String(selectedPlanet.spaceType) },
-              { label: "Home planet", value: selectedPlanet.isHomePlanet ? "yes" : "no" },
+              { label: "Planet type", value: planetTypeLabel },
+              { label: "Space type", value: spaceTypeLabel },
+              {
+                  label: "Initialized",
+                  value: selectedPlanet.isInitialized ? "yes" : "no",
+              },
+              {
+                  label: "Home planet",
+                  value: selectedPlanet.isHomePlanet ? "yes" : "no",
+              },
           ]
         : [];
 
@@ -557,23 +590,65 @@ export default function App() {
         locationId: bundle.locationId,
     }));
 
+    const adjustZoom = (next: number) => {
+        const clamped = Math.min(Math.max(next, 1), 20);
+        setZoom(clamped);
+    };
+
+    const focusSelected = () => {
+        if (!selectedLocation) return;
+        setViewCenter({
+            x: Number(selectedLocation.x),
+            y: -Number(selectedLocation.y),
+        });
+    };
+
+    const resetView = () => {
+        setViewCenter({ x: 0, y: 0 });
+        setZoom(6);
+    };
+
+    const fitTracked = () => {
+        if (knownLocations.length === 0) return;
+        const points = knownLocations.map((loc) => ({
+            x: Number(loc.x),
+            y: -Number(loc.y),
+        }));
+        const minX = Math.min(...points.map((p) => p.x));
+        const maxX = Math.max(...points.map((p) => p.x));
+        const minY = Math.min(...points.map((p) => p.y));
+        const maxY = Math.max(...points.map((p) => p.y));
+        const centerX = (minX + maxX) / 2;
+        const centerY = (minY + maxY) / 2;
+        const spanX = Math.max(maxX - minX, 1);
+        const spanY = Math.max(maxY - minY, 1);
+        const radius = Math.max(spanX, spanY) / 2;
+        const padded = Math.max(radius * 1.6, mapRadius / 20);
+        const nextZoom = Math.min(Math.max(mapRadius / padded, 1), 20);
+        setViewCenter({ x: centerX, y: centerY });
+        setZoom(nextZoom);
+    };
+
     return (
         <div className="app">
-            <header className="hero">
-                <div>
-                    <p className="eyebrow">Aztec Devnet</p>
-                    <h1>Dark Forest Atlas</h1>
-                    <p className="subtitle">
-                        Private validators, public galaxy. Track, reveal, and command
-                        planets from a live Aztec deployment.
-                    </p>
+            <header className="topbar">
+                <div className="brand">
+                    <span className="brand-title">Dark Forest</span>
+                    <span className="brand-sub">Aztec Command Deck</span>
                 </div>
-                <div className="status-card">
+                <div className="status-pill">
+                    <span
+                        className={`status-dot ${
+                            busy ? "busy" : client ? "online" : "offline"
+                        }`}
+                    />
                     <div>
-                        <span>Status</span>
+                        <span className="status-label">Status</span>
                         <strong>{status}</strong>
                         {error && <em>{error}</em>}
                     </div>
+                </div>
+                <div className="top-actions">
                     <button
                         className="primary"
                         onClick={connect}
@@ -581,18 +656,33 @@ export default function App() {
                     >
                         {client ? "Reconnect" : "Connect wallet"}
                     </button>
-                    {missingAddress && (
-                        <p className="hint">
-                            Set VITE_DARKFOREST_ADDRESS in apps/client/.env.local.
-                        </p>
-                    )}
+                    <div className="account-chip">
+                        <span>Account</span>
+                        <strong title={playerAddress}>
+                            {shortAddress(playerAddress)}
+                        </strong>
+                    </div>
                 </div>
             </header>
 
-            <div className="layout">
-                <aside className="sidebar">
-                    <section className="panel">
-                        <h2>Connection</h2>
+            <div className="deck">
+                <aside className="dock left">
+                    <section className="panel panel--network">
+                        <div className="panel-header">
+                            <div>
+                                <h2>Network Link</h2>
+                                <p className="panel-subtitle">
+                                    Node sync and contract routing.
+                                </p>
+                            </div>
+                            <button
+                                className="ghost small"
+                                onClick={() => refreshAll()}
+                                disabled={!client || busy}
+                            >
+                                Sync
+                            </button>
+                        </div>
                         <div className="stack">
                             <div className="row">
                                 <span className="label">Node URL</span>
@@ -611,23 +701,26 @@ export default function App() {
                                 </span>
                             </div>
                             <div className="row">
-                                <span className="label">Account</span>
-                                <span className="value" title={playerAddress}>
-                                    {shortAddress(playerAddress)}
-                                </span>
+                                <span className="label">World radius</span>
+                                <span className="value">{mapRadius}</span>
                             </div>
                         </div>
-                        <button
-                            className="ghost"
-                            onClick={() => refreshAll()}
-                            disabled={!client || busy}
-                        >
-                            Refresh state
-                        </button>
+                        {missingAddress && (
+                            <p className="hint">
+                                Set VITE_DARKFOREST_ADDRESS in apps/client/.env.local.
+                            </p>
+                        )}
                     </section>
 
-                    <section className="panel">
-                        <h2>Player</h2>
+                    <section className="panel panel--player">
+                        <div className="panel-header">
+                            <div>
+                                <h2>Commander</h2>
+                                <p className="panel-subtitle">
+                                    Player systems and resource telemetry.
+                                </p>
+                            </div>
+                        </div>
                         <div className="stack">
                             <div className="row">
                                 <span className="label">Initialized</span>
@@ -660,19 +753,28 @@ export default function App() {
                                     {formatBigInt(playerBundle?.claimedShips)}
                                 </span>
                             </div>
-                            <div className="row">
-                                <span className="label">Total energy</span>
-                                <span className="value">{formatBigInt(totalPopulation)}</span>
+                        </div>
+                        <div className="stat-grid compact">
+                            <div className="stat">
+                                <span>Total energy</span>
+                                <strong>{formatBigInt(totalPopulation)}</strong>
                             </div>
-                            <div className="row">
-                                <span className="label">Total silver</span>
-                                <span className="value">{formatBigInt(totalSilver)}</span>
+                            <div className="stat">
+                                <span>Total silver</span>
+                                <strong>{formatBigInt(totalSilver)}</strong>
                             </div>
                         </div>
                     </section>
 
-                    <section className="panel">
-                        <h2>Track Coordinates</h2>
+                    <section className="panel panel--scanner">
+                        <div className="panel-header">
+                            <div>
+                                <h2>Scanner</h2>
+                                <p className="panel-subtitle">
+                                    Feed coordinates into the galaxy map.
+                                </p>
+                            </div>
+                        </div>
                         <div className="grid">
                             <label>
                                 <span>X</span>
@@ -695,10 +797,15 @@ export default function App() {
                     </section>
                 </aside>
 
-                <main className="main">
+                <main className="core">
                     <section className="panel galaxy-panel">
                         <div className="panel-header">
-                            <h2>Galaxy View</h2>
+                            <div>
+                                <h2>Galaxy Radar</h2>
+                                <p className="panel-subtitle">
+                                    Tracking {knownLocations.length} locations.
+                                </p>
+                            </div>
                             <div className="legend">
                                 <span className="legend-item owned">Owned</span>
                                 <span className="legend-item neutral">Neutral</span>
@@ -706,35 +813,97 @@ export default function App() {
                             </div>
                         </div>
                         <div className="galaxy-grid">
-                            <svg className="galaxy-map" viewBox={viewBox}>
-                                <circle className="galaxy-boundary" cx={0} cy={0} r={mapRadius} />
-                                <line className="axis" x1={-mapRadius} y1={0} x2={mapRadius} y2={0} />
-                                <line className="axis" x1={0} y1={-mapRadius} x2={0} y2={mapRadius} />
-                                {knownLocations.map((location) => {
-                                    const id = location.locationId.toString();
-                                    const bundle = locationData[id];
-                                    const planet = bundle?.planet;
-                                    const owner = planet?.owner.toString() ?? "";
-                                    const isZeroOwner = planet ? planet.owner.isZero() : true;
-                                    const isOwned = owner && !isZeroOwner && owner === playerAddress;
-                                    const isOther = owner && !isZeroOwner && owner !== playerAddress;
-                                    const className = isOwned
-                                        ? "planet-point owned"
-                                        : isOther
-                                          ? "planet-point hostile"
-                                          : "planet-point neutral";
-                                    return (
-                                        <circle
-                                            key={id}
-                                            className={`${className}${selectedId === id ? " selected" : ""}`}
-                                            cx={Number(location.x)}
-                                            cy={-Number(location.y)}
-                                            r={selectedId === id ? 14 : 10}
-                                            onClick={() => setSelectedId(id)}
-                                        />
-                                    );
-                                })}
-                            </svg>
+                            <div className="galaxy-scan">
+                                <svg className="galaxy-map" viewBox={viewBox}>
+                                    <circle className="galaxy-boundary" cx={0} cy={0} r={mapRadius} />
+                                    <line className="axis" x1={-mapRadius} y1={0} x2={mapRadius} y2={0} />
+                                    <line className="axis" x1={0} y1={-mapRadius} x2={0} y2={mapRadius} />
+                                    {knownLocations.map((location) => {
+                                        const id = location.locationId.toString();
+                                        const bundle = locationData[id];
+                                        const planet = bundle?.planet;
+                                        const owner = planet?.owner.toString() ?? "";
+                                        const isZeroOwner = planet ? planet.owner.isZero() : true;
+                                        const isOwned = owner && !isZeroOwner && owner === playerAddress;
+                                        const isOther = owner && !isZeroOwner && owner !== playerAddress;
+                                        const isHome = planet?.isHomePlanet ?? false;
+                                        const className = isOwned
+                                            ? "planet-point owned"
+                                            : isOther
+                                              ? "planet-point hostile"
+                                              : "planet-point neutral";
+                                        return (
+                                            <circle
+                                                key={id}
+                                                className={`${className}${isHome ? " home" : ""}${
+                                                    selectedId === id ? " selected" : ""
+                                                }`}
+                                                cx={Number(location.x)}
+                                                cy={-Number(location.y)}
+                                                r={selectedId === id ? 14 : 10}
+                                                onClick={() => setSelectedId(id)}
+                                            />
+                                        );
+                                    })}
+                                </svg>
+                                <div className="galaxy-overlay">
+                                    <div className="overlay-card">
+                                        <span className="label">Selection</span>
+                                        <strong>
+                                            {selectedLocation
+                                                ? `${selectedLocation.x.toString()}, ${selectedLocation.y.toString()}`
+                                                : "none"}
+                                        </strong>
+                                        <span className="overlay-meta">
+                                            {selectedLocation
+                                                ? shortAddress(selectedLocation.locationId.toString())
+                                                : "--"}
+                                        </span>
+                                    </div>
+                                    <div className="radar-controls">
+                                        <div className="zoom-row">
+                                            <button
+                                                className="ghost small"
+                                                onClick={() => adjustZoom(clampedZoom - 1)}
+                                                aria-label="Zoom out"
+                                            >
+                                                -
+                                            </button>
+                                            <input
+                                                className="zoom-slider"
+                                                type="range"
+                                                min="1"
+                                                max="20"
+                                                step="0.5"
+                                                value={clampedZoom}
+                                                onChange={(e) => adjustZoom(Number(e.target.value))}
+                                            />
+                                            <button
+                                                className="ghost small"
+                                                onClick={() => adjustZoom(clampedZoom + 1)}
+                                                aria-label="Zoom in"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                        <div className="zoom-actions">
+                                            <button className="ghost small" onClick={fitTracked}>
+                                                Fit tracked
+                                            </button>
+                                            <button
+                                                className="ghost small"
+                                                onClick={focusSelected}
+                                                disabled={!selectedLocation}
+                                            >
+                                                Focus selected
+                                            </button>
+                                            <button className="ghost small" onClick={resetView}>
+                                                Reset
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div className="planet-list">
                                 <h3>Tracked</h3>
                                 <div className="planet-rows">
@@ -772,26 +941,33 @@ export default function App() {
                         </div>
                     </section>
 
-                    <section className="panel">
-                        <h2>Selected Planet</h2>
+                    <section className="panel intel-panel">
+                        <div className="panel-header">
+                            <div>
+                                <h2>Planet Intel</h2>
+                                <p className="panel-subtitle">
+                                    Deep scan of the selected world.
+                                </p>
+                            </div>
+                            <div className="intel-owner">
+                                <span className="label">Owner</span>
+                                <strong>
+                                    {selectedOwner ? shortAddress(selectedOwner) : "unclaimed"}
+                                </strong>
+                            </div>
+                        </div>
                         {selectedLocation ? (
                             <div className="stack">
                                 <div className="row">
                                     <span className="label">Location id</span>
-                                    <span className="value">{selectedLocation.locationId.toString()}</span>
+                                    <span className="value">
+                                        {selectedLocation.locationId.toString()}
+                                    </span>
                                 </div>
                                 <div className="row">
                                     <span className="label">Coords</span>
                                     <span className="value">
                                         {selectedLocation.x.toString()}, {selectedLocation.y.toString()}
-                                    </span>
-                                </div>
-                                <div className="row">
-                                    <span className="label">Owner</span>
-                                    <span className="value">
-                                        {selectedPlanet
-                                            ? shortAddress(selectedPlanet.owner.toString())
-                                            : "--"}
                                     </span>
                                 </div>
                                 <div className="stat-grid">
@@ -809,7 +985,14 @@ export default function App() {
                     </section>
 
                     <section className="panel actions-panel">
-                        <h2>Actions</h2>
+                        <div className="panel-header">
+                            <div>
+                                <h2>Command Orders</h2>
+                                <p className="panel-subtitle">
+                                    Issue actions to the selected coordinates.
+                                </p>
+                            </div>
+                        </div>
                         <div className="action-grid">
                             <div className="action-card">
                                 <h3>Init Player</h3>
@@ -1025,9 +1208,18 @@ export default function App() {
                             </div>
                         </div>
                     </section>
+                </main>
 
-                    <section className="panel">
-                        <h2>Artifacts</h2>
+                <aside className="dock right">
+                    <section className="panel artifacts-panel">
+                        <div className="panel-header">
+                            <div>
+                                <h2>Artifact Hangar</h2>
+                                <p className="panel-subtitle">
+                                    Items recovered from ruins and rips.
+                                </p>
+                            </div>
+                        </div>
                         {artifactList.length === 0 ? (
                             <p className="hint">No artifacts found on tracked planets.</p>
                         ) : (
@@ -1059,8 +1251,20 @@ export default function App() {
                         )}
                     </section>
 
-                    <section className="panel">
-                        <h2>Logs</h2>
+                    <section className="panel logs-panel">
+                        <div className="panel-header">
+                            <div>
+                                <h2>Ops Log</h2>
+                                <p className="panel-subtitle">
+                                    Transaction telemetry and system chatter.
+                                </p>
+                            </div>
+                            {logs.length > 0 && (
+                                <button className="ghost small" onClick={clearLogs} disabled={busy}>
+                                    Clear
+                                </button>
+                            )}
+                        </div>
                         <div className="logs">
                             {logs.length === 0 && <p className="hint">No logs yet.</p>}
                             {logs.map((entry, index) => (
@@ -1070,13 +1274,8 @@ export default function App() {
                                 </div>
                             ))}
                         </div>
-                        {logs.length > 0 && (
-                            <button className="ghost" onClick={clearLogs} disabled={busy}>
-                                Clear logs
-                            </button>
-                        )}
                     </section>
-                </main>
+                </aside>
             </div>
         </div>
     );
