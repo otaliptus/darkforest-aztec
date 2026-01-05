@@ -26,6 +26,6 @@ Align wormhole arrival handling with Dark Forest v0.6 expectations (combat/no-co
 - Completed.
 
 ## Notes
-- v0.6 reference: `darkforest-v0.6/eth/contracts/libraries/LibLazyUpdate.sol` lines 115-168 (wormhole arrival branch at 125-129) skips energy transfer when arrival type is Wormhole and target is not owned by the initiator.
+- v0.6 reference: `reference/darkforest-v0.6/eth/contracts/libraries/LibLazyUpdate.sol` lines 115-168 (wormhole arrival branch at 125-129) skips energy transfer when arrival type is Wormhole and target is not owned by the initiator.
 - Noir parity: `packages/contracts/src/main.nr` `execute_arrival` wormhole branch mirrors the v0.6 skip-combat behavior while still applying silver transfer.
 - Tests: `test_activate_wormhole_and_move_speedup` and `test_wormhole_arrival_skips_combat_on_enemy` in `packages/contracts/src/test/darkforest_stub.nr`.

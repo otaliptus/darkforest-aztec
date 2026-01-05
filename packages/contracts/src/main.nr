@@ -2551,7 +2551,7 @@ pub contract DarkForest {
             planet.population = planet.population + arrival.pop_arriving();
         } else if wormhole_arrival {
             // v0.6 parity: LibLazyUpdate.applyArrival skips energy transfer on wormhole arrivals
-            // to planets not owned by the initiator (darkforest-v0.6/eth/contracts/libraries/LibLazyUpdate.sol).
+            // to planets not owned by the initiator (reference/darkforest-v0.6/eth/contracts/libraries/LibLazyUpdate.sol).
         } else {
             let damage = (arrival.pop_arriving() * 100) / planet.defense;
             if planet.population > damage {

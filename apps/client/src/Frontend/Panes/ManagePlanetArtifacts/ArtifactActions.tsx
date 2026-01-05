@@ -1,7 +1,6 @@
 import {
   canActivateArtifact,
   canDepositArtifact,
-  canWithdrawArtifact,
   durationUntilArtifactAvailable,
   isActivated,
   isLocatable,
@@ -10,7 +9,6 @@ import {
   isUnconfirmedActivateArtifactTx,
   isUnconfirmedDeactivateArtifactTx,
   isUnconfirmedDepositArtifactTx,
-  isUnconfirmedWithdrawArtifactTx,
 } from '@darkforest_eth/serde';
 import { Artifact, ArtifactId, ArtifactType, LocationId, TooltipName } from '@darkforest_eth/types';
 import React, { useCallback } from 'react';
@@ -48,13 +46,6 @@ export function ArtifactActions({
 
   const otherArtifactsOnPlanet = usePlanetArtifacts(onPlanetWrapper, uiManager);
 
-  const withdraw = useCallback(
-    (artifact: Artifact) => {
-      onPlanet && uiManager.withdrawArtifact(onPlanet.locationId, artifact?.id);
-    },
-    [onPlanet, uiManager]
-  );
-
   const deposit = useCallback(
     (artifact: Artifact) => {
       artifact &&
@@ -91,15 +82,12 @@ export function ArtifactActions({
 
   const actions: TooltipTriggerProps[] = [];
 
-  const withdrawing = artifact.transactions?.hasTransaction(isUnconfirmedWithdrawArtifactTx);
   const depositing = artifact.transactions?.hasTransaction(isUnconfirmedDepositArtifactTx);
   const activating = artifact.transactions?.hasTransaction(isUnconfirmedActivateArtifactTx);
   const deactivating = artifact.transactions?.hasTransaction(isUnconfirmedDeactivateArtifactTx);
 
   const canHandleDeposit =
     depositPlanetWrapper.value && depositPlanetWrapper.value.planetLevel > artifact.rarity;
-  const canHandleWithdraw =
-    onPlanetWrapper.value && onPlanetWrapper.value.planetLevel > artifact.rarity;
 
   const wait = durationUntilArtifactAvailable(artifact);
 
@@ -141,29 +129,6 @@ export function ArtifactActions({
       ),
     });
   }
-  if (canWithdrawArtifact(account, artifact, onPlanet)) {
-    actions.unshift({
-      name: TooltipName.WithdrawArtifact,
-      extraContent: !canHandleWithdraw && (
-        <>
-          . <ArtifactRarityLabelAnim rarity={artifact.rarity} />
-          {` artifacts can only be withdrawn from level ${artifact.rarity + 1}+ spacetime rips`}
-        </>
-      ),
-      children: (
-        <Btn
-          disabled={withdrawing}
-          onClick={(e) => {
-            e.stopPropagation();
-            canHandleWithdraw && withdraw(artifact);
-          }}
-        >
-          {withdrawing ? <LoadingSpinner initialText={'Withdrawing...'} /> : 'Withdraw'}
-        </Btn>
-      ),
-    });
-  }
-
   if (canActivateArtifact(artifact, onPlanet, otherArtifactsOnPlanet)) {
     actions.unshift({
       name: TooltipName.ActivateArtifact,

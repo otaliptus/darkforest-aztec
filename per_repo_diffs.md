@@ -6,12 +6,12 @@
   - `tasks/019-playable-client-integration.md` (status updates)
   - `tasks/020-performance-devnet-deploy-docs.md` (status + notes)
   - `progress-2026-01-03-1653.md` (new progress report)
-- Submodules flagged as dirty: `darkforest-local`
+- Submodules flagged as dirty: `reference/darkforest-local`
 
-## Submodule: `darkforest-local`
+## Submodule: `reference/darkforest-local`
 - Submodules flagged as dirty: `circuits`, `eth`, `packages` (gitlink only at this level).
 
-### `darkforest-local/circuits`
+### `reference/darkforest-local/circuits`
 - Untracked:
   - `node_modules/.bin/circom`
   - `node_modules/.bin/eslint`
@@ -19,12 +19,12 @@
   - `node_modules/.bin/snarkjs`
 - Tracked diffs: none.
 
-### `darkforest-local/eth`
+### `reference/darkforest-local/eth`
 - Tracked diff:
   - `package.json`: `hardhat:node` host changed from `0.0.0.0` → `127.0.0.1`.
 - Untracked: none.
 
-### `darkforest-local/packages`
+### `reference/darkforest-local/packages`
 - Tracked diffs:
   - `contracts/index.ts`, `contracts/index.js`, `contracts/index.d.ts`
     - `NETWORK: 'xdai' → 'localhost'`
@@ -49,8 +49,8 @@
   - `types/node_modules/.bin/*`
   - `ui/node_modules/.bin/*`
 
-## Submodule: `darkforest-v0.6`
+## Submodule: `reference/darkforest-v0.6`
 - Clean (no diffs).
 
-## Submodule: `noir`
+## Submodule: `reference/noir`
 - Clean (no diffs).

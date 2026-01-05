@@ -13,6 +13,7 @@ import type {
   RevealedCoords,
   Transaction,
   TxIntent,
+  VoyageId,
 } from '@darkforest_eth/types';
 import { EventEmitter } from 'events';
 import type { Contract, providers } from 'ethers';
@@ -24,6 +25,7 @@ import {
   readPlayerBundle,
   readPlanetArrivals,
   readArrivalState,
+  readPlanetArtifactState,
   readPlanetArtifacts,
   readRevealedCoordsCount,
   readRevealedCoordsRange,
@@ -31,7 +33,12 @@ import {
   readTouchedPlanetIdsRange,
 } from '../Aztec/scripts/chain';
 import type { StorageSlots } from '../Aztec/scripts/storage';
-import { locationIdFromCoords, multiScalePerlin, toField } from '../Aztec/scripts/hashing';
+import {
+  locationIdFromCoords,
+  mimcSponge2_220,
+  multiScalePerlin,
+  toField,
+} from '../Aztec/scripts/hashing';
 import type { OnChainConfig } from '../Aztec/scripts/types';
 import { AztecConnection } from '../Aztec/AztecConnection';
 import { VERBOSE_LOGGING } from '../Aztec/config';
@@ -65,6 +72,38 @@ const toBigInt = (id: string) => BigInt(id.startsWith('0x') ? id : `0x${id}`);
 const toFieldBigInt = (value: number | bigint) => toField(BigInt(value));
 const INDEX_PAGE_SIZE = 200;
 const UNKNOWN_HASH = 'unknown';
+const READ_CONCURRENCY = 8;
+
+const mapWithConcurrency = async <T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>,
+  progress?: (fraction: number) => void
+): Promise<R[]> => {
+  if (items.length === 0) {
+    progress?.(1);
+    return [];
+  }
+
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  let completed = 0;
+
+  const run = async () => {
+    while (true) {
+      const index = nextIndex++;
+      if (index >= items.length) return;
+      const result = await worker(items[index], index);
+      results[index] = result;
+      completed += 1;
+      progress?.(Math.min(1, completed / items.length));
+    }
+  };
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, () => run());
+  await Promise.all(workers);
+  return results;
+};
 
 type TxTimings = {
   createdAt: number;
@@ -162,6 +201,15 @@ export class ContractsAPI extends EventEmitter {
     this.storageSlots = connection.getClient().storageSlots;
   }
 
+  private computeArtifactSeed(locationId: bigint, prospectedBlockNumber: number): bigint {
+    if (prospectedBlockNumber <= 0) return 0n;
+    const planethashKey = this.onChainConfig.planethashKey;
+    const contractAddr = this.aztecConnection.getClient().darkforestAddress.toBigInt();
+    const blockHash = mimcSponge2_220(BigInt(prospectedBlockNumber), 0n, planethashKey);
+    const seed1 = mimcSponge2_220(locationId, contractAddr, planethashKey);
+    return mimcSponge2_220(seed1, blockHash, planethashKey);
+  }
+
   public destroy(): void {
     this.removeAllListeners();
   }
@@ -198,7 +246,8 @@ export class ContractsAPI extends EventEmitter {
       PERLIN_MIRROR_X: cfg.perlinMirrorX,
       PERLIN_MIRROR_Y: cfg.perlinMirrorY,
 
-      TOKEN_MINT_END_SECONDS: 0,
+      // Aztec contract does not currently track a mint end timestamp; treat as no end.
+      TOKEN_MINT_END_SECONDS: Number.MAX_SAFE_INTEGER,
       MAX_NATURAL_PLANET_LEVEL: 9,
       TIME_FACTOR_HUNDREDTHS: 100,
       PERLIN_THRESHOLD_1: 14,
@@ -261,14 +310,18 @@ export class ContractsAPI extends EventEmitter {
     return Promise.resolve(Number(this.onChainConfig.worldRadius));
   }
 
-  public async getPlayers(): Promise<Map<string, Player>> {
+  public async getPlayers(progress?: (fraction: number) => void): Promise<Map<string, Player>> {
     const address = this.getAddress();
-    if (!address) return new Map();
+    if (!address) {
+      progress?.(1);
+      return new Map();
+    }
     const player = await this.getPlayerById(address);
     const map = new Map<string, Player>();
     if (player) {
       map.set(address, player);
     }
+    progress?.(1);
     return map;
   }
 
@@ -328,12 +381,23 @@ export class ContractsAPI extends EventEmitter {
     });
   }
 
-  public async bulkGetPlanets(planetIds: LocationId[]): Promise<Map<LocationId, Planet>> {
+  public async bulkGetPlanets(
+    planetIds: LocationId[],
+    progress?: (fraction: number) => void
+  ): Promise<Map<LocationId, Planet>> {
     const map = new Map<LocationId, Planet>();
-    for (const planetId of planetIds) {
-      const planet = await this.getPlanetById(planetId);
-      if (planet) {
-        map.set(planetId, planet);
+    const entries = await mapWithConcurrency(
+      planetIds,
+      READ_CONCURRENCY,
+      async (planetId) => {
+        const planet = await this.getPlanetById(planetId);
+        return { planetId, planet };
+      },
+      progress
+    );
+    for (const entry of entries) {
+      if (entry.planet) {
+        map.set(entry.planetId, entry.planet);
       }
     }
     return map;
@@ -365,12 +429,17 @@ export class ContractsAPI extends EventEmitter {
     return arrivals;
   }
 
-  public async getAllArrivals(planetIds: LocationId[]): Promise<QueuedArrival[]> {
-    const arrivals: QueuedArrival[] = [];
-    for (const planetId of planetIds) {
-      const planetArrivals = await this.getArrivalsForPlanet(planetId);
-      arrivals.push(...planetArrivals);
-    }
+  public async getAllArrivals(
+    planetIds: LocationId[],
+    progress?: (fraction: number) => void
+  ): Promise<QueuedArrival[]> {
+    const batches = await mapWithConcurrency(
+      planetIds,
+      READ_CONCURRENCY,
+      (planetId) => this.getArrivalsForPlanet(planetId),
+      progress
+    );
+    const arrivals = batches.flat();
     const seen = new Set<string>();
     return arrivals.filter((arrival) => {
       if (seen.has(arrival.eventId)) return false;
@@ -399,41 +468,95 @@ export class ContractsAPI extends EventEmitter {
       lastActivatedTimestamp,
       lastDeactivatedTimestamp,
       contractAddress: this.aztecConnection.getClient().darkforestAddress,
+      burnedLocationId: this.onChainConfig.maxLocationId,
     });
   }
 
-  public async bulkGetArtifacts(artifactIds: ArtifactId[]): Promise<Artifact[]> {
-    const artifacts: Artifact[] = [];
-    for (const artifactId of artifactIds) {
-      const artifact = await this.getArtifactById(artifactId);
-      if (artifact) artifacts.push(artifact);
-    }
-    return artifacts;
+  public async bulkGetArtifacts(
+    artifactIds: ArtifactId[],
+    progress?: (fraction: number) => void
+  ): Promise<Artifact[]> {
+    const entries = await mapWithConcurrency(
+      artifactIds,
+      READ_CONCURRENCY,
+      (artifactId) => this.getArtifactById(artifactId),
+      progress
+    );
+    return entries.filter((artifact): artifact is Artifact => !!artifact);
   }
 
-  public async bulkGetArtifactsOnPlanets(planetIds: LocationId[]): Promise<Artifact[][]> {
-    const artifactsByPlanet: Artifact[][] = [];
-    for (const planetId of planetIds) {
-      const id = toBigInt(planetId);
-      const artifactsState = await readPlanetArtifacts(
-        this.aztecConnection.getNode(),
-        this.aztecConnection.getClient().darkforestAddress,
-        this.storageSlots,
-        id
-      );
-      const ids = artifactsState.ids.filter((artifactId) => artifactId !== 0n);
-      const artifacts: Artifact[] = [];
-      for (const artifactId of ids) {
-        const artifact = await this.getArtifactById(artifactIdFromDecStr(artifactId.toString()));
-        if (artifact) artifacts.push(artifact);
-      }
-      artifactsByPlanet.push(artifacts);
-    }
+  public async bulkGetArtifactsOnPlanets(
+    planetIds: LocationId[],
+    progress?: (fraction: number) => void
+  ): Promise<Artifact[][]> {
+    const artifactsByPlanet = await mapWithConcurrency(
+      planetIds,
+      READ_CONCURRENCY,
+      async (planetId) => {
+        const id = toBigInt(planetId);
+        const artifactsState = await readPlanetArtifacts(
+          this.aztecConnection.getNode(),
+          this.aztecConnection.getClient().darkforestAddress,
+          this.storageSlots,
+          id
+        );
+        const ids = artifactsState.ids.filter((artifactId) => artifactId !== 0n);
+        const artifacts: Artifact[] = [];
+        for (const artifactId of ids) {
+          const artifact = await this.getArtifactById(
+            artifactIdFromDecStr(artifactId.toString())
+          );
+          if (artifact) artifacts.push(artifact);
+        }
+        return artifacts;
+      },
+      progress
+    );
     return artifactsByPlanet;
   }
 
-  public async getPlayerArtifacts(): Promise<Artifact[]> {
-    return [];
+  public async getPlayerArtifacts(progress?: (fraction: number) => void): Promise<Artifact[]> {
+    const account = this.getAddress();
+    if (!account) {
+      progress?.(1);
+      return [];
+    }
+
+    const touchedPlanetIds = await this.getTouchedPlanetIds();
+    if (touchedPlanetIds.length === 0) {
+      progress?.(1);
+      return [];
+    }
+
+    const artifactSeeds = new Set<ArtifactId>();
+    await mapWithConcurrency(
+      touchedPlanetIds,
+      READ_CONCURRENCY,
+      async (planetId) => {
+        const locationId = toBigInt(planetId);
+        const state = await readPlanetArtifactState(
+          this.aztecConnection.getNode(),
+          this.aztecConnection.getClient().darkforestAddress,
+          this.storageSlots,
+          locationId
+        );
+        if (!state.hasTriedFindingArtifact) return;
+        const seed = this.computeArtifactSeed(locationId, state.prospectedBlockNumber);
+        if (seed === 0n) return;
+        artifactSeeds.add(artifactIdFromDecStr(seed.toString()));
+      },
+      progress
+    );
+
+    const artifacts: Artifact[] = [];
+    for (const artifactId of artifactSeeds) {
+      const artifact = await this.getArtifactById(artifactId);
+      if (!artifact) continue;
+      if (artifact.currentOwner === account) {
+        artifacts.push(artifact);
+      }
+    }
+    return artifacts;
   }
 
   public async getRevealedCoordsByIdIfExists(planetId: LocationId): Promise<RevealedCoords | undefined> {
@@ -539,6 +662,27 @@ export class ContractsAPI extends EventEmitter {
 
   public getAddress(): EthAddress | undefined {
     return this.aztecConnection.getAddress();
+  }
+
+  public async resolveArrival(arrivalId: VoyageId): Promise<void> {
+    const id = BigInt(arrivalId);
+    const sentTx = await this.aztecConnection.getClient().resolveArrival(id);
+    const rawHash = sentTx.getTxHash ? await sentTx.getTxHash() : sentTx.txHash;
+    const txHash = formatTxHash(rawHash);
+    if (VERBOSE_LOGGING) {
+      console.info('[Aztec tx] submitted', {
+        method: 'resolveArrival',
+        hash: txHash ?? UNKNOWN_HASH,
+        args: [arrivalId],
+      });
+    }
+    await sentTx.wait();
+    if (VERBOSE_LOGGING) {
+      console.info('[Aztec tx] confirmed', {
+        method: 'resolveArrival',
+        hash: txHash ?? UNKNOWN_HASH,
+      });
+    }
   }
 
   public emitTransactionEvents(tx: Transaction): void {

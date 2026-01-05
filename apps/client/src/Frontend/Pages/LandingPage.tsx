@@ -28,6 +28,7 @@ const links = {
 };
 
 const defaultAddress = CLIENT_CONFIG.darkforestAddress || '';
+const isAztec = true;
 
 const ButtonWrapper = styled.div`
   display: flex;
@@ -52,7 +53,7 @@ export default function LandingPage() {
   return (
     <>
       <PrettyOverlayGradient />
-      <Hiring />
+      {!isAztec && <Hiring />}
 
       <Page>
         <OnlyMobile>
@@ -64,29 +65,31 @@ export default function LandingPage() {
 
         <MainContentContainer>
           <Header>
-            <LinkContainer>
-              <Link to={links.email}>email</Link>
-              <Spacer width={4} />
-              <Link to={links.blog}>blog</Link>
-              <Spacer width={4} />
+            {!isAztec && (
+              <LinkContainer>
+                <Link to={links.email}>email</Link>
+                <Spacer width={4} />
+                <Link to={links.blog}>blog</Link>
+                <Spacer width={4} />
 
-              <a className={'link-twitter'} href={links.twitter}>
-                <span className={'icon-twitter'}></span>
-              </a>
-              <Spacer width={4} />
-              <a className={'link-discord'} href={links.discord}>
-                <span className={'icon-discord'}></span>
-              </a>
-              <Spacer width={4} />
-              <a className={'link-github'} href={links.github}>
-                <span className={'icon-github'}></span>
-              </a>
+                <a className={'link-twitter'} href={links.twitter}>
+                  <span className={'icon-twitter'}></span>
+                </a>
+                <Spacer width={4} />
+                <a className={'link-discord'} href={links.discord}>
+                  <span className={'icon-discord'}></span>
+                </a>
+                <Spacer width={4} />
+                <a className={'link-github'} href={links.github}>
+                  <span className={'icon-github'}></span>
+                </a>
 
-              <Spacer width={4} />
-              <Link to={links.plugins}>plugins</Link>
-              <Spacer width={4} />
-              <Link to={links.wiki}>wiki</Link>
-            </LinkContainer>
+                <Spacer width={4} />
+                <Link to={links.plugins}>plugins</Link>
+                <Spacer width={4} />
+                <Link to={links.wiki}>wiki</Link>
+              </LinkContainer>
+            )}
 
             <OnlyMobile>
               <Spacer height={4} />
@@ -100,200 +103,207 @@ export default function LandingPage() {
             <p>
               <White>Dark Forest</White> <Text>zkSNARK space warfare</Text>
               <br />
-              <Text>Round 5: </Text>
-              <White>The Junk Wars</White>
+              <Text>Aztec devnet build</Text>
             </p>
 
             <Spacer height={16} />
 
             <ButtonWrapper>
               <Btn size='large' onClick={() => history.push(`/play/${defaultAddress}`)}>
-                Enter Round 5
+                Enter Game
               </Btn>
-              <Btn size='large' onClick={() => history.push(`/events`)}>
-                Events
-              </Btn>
+              {!isAztec && (
+                <Btn size='large' onClick={() => history.push(`/events`)}>
+                  Events
+                </Btn>
+              )}
             </ButtonWrapper>
           </Header>
-          <EmSpacer height={3} />
-          Ways to get Involved
-          <EmSpacer height={1} />
-          <Involved>
-            <InvolvedItem
-              href='https://blog.zkga.me/hosting-a-dark-forest-community-round'
-              style={{
-                backgroundImage: "url('/public/get_involved/community_round.png')",
-              }}
-            ></InvolvedItem>
-            <InvolvedItem
-              href='https://github.com/darkforest-eth/plugins#adding-your-plugin'
-              style={{
-                backgroundImage: "url('/public/get_involved/write_plugin.png')",
-              }}
-            ></InvolvedItem>
-            <InvolvedItem
-              href='https://github.com/darkforest-eth/plugins#reviewer-guidelines'
-              style={{
-                backgroundImage: "url('/public/get_involved/reveiw_plugin.png')",
-              }}
-            ></InvolvedItem>
-            <InvolvedItem
-              href='https://blog.zkga.me/renderer-plugin-contest'
-              style={{
-                backgroundImage: "url('/public/get_involved/plugin_render.png')",
-              }}
-            ></InvolvedItem>
-            <InvolvedItem
-              href='https://blog.zkga.me/introducing-dark-forest-lobbies'
-              style={{
-                backgroundImage: "url('/public/get_involved/lobby.png')",
-              }}
-            ></InvolvedItem>
-          </Involved>
-          <EmSpacer height={3} />
-          <HallOfFame style={{ color: dfstyles.colors.text }}>
-            <HallOfFameTitle>Space Masters</HallOfFameTitle>
-            <Spacer height={8} />
-            <table>
-              <tbody>
-                <TRow>
-                  <td>
-                    <HideSmall>v</HideSmall>0.1
-                  </td>
-                  <td>
-                    02/22/<HideSmall>20</HideSmall>20
-                  </td>
-                  <td>
-                    <a href='https://twitter.com/zoink'>Dylan Field</a>
-                  </td>
-                </TRow>
-                <TRow>
-                  <td>
-                    <HideSmall>v</HideSmall>0.2
-                  </td>
-                  <td>
-                    06/24/<HideSmall>20</HideSmall>20
-                  </td>
-                  <td>Nate Foss</td>
-                </TRow>
-                <TRow>
-                  <td>
-                    <Link to='https://blog.zkga.me/v3-rules'>
-                      <HideSmall>v</HideSmall>0.3
-                    </Link>
-                  </td>
-                  <td>
-                    08/07/<HideSmall>20</HideSmall>20
-                  </td>
-                  <td>
-                    <Link to='https://twitter.com/hideandcleanse'>@hideandcleanse</Link>
-                  </td>
-                </TRow>
-                <TRow>
-                  <td>
-                    <Link to='https://blog.zkga.me/v4-recap'>
-                      <HideSmall>v</HideSmall>0.4
-                    </Link>
-                  </td>
-                  <td>
-                    10/02/<HideSmall>20</HideSmall>20
-                  </td>
-                  <td>
-                    <Link to='https://twitter.com/jacobrosenthal'>Jacob Rosenthal</Link>
-                  </td>
-                </TRow>
-                <TRow>
-                  <td>
-                    <Link to='https://blog.zkga.me/v5-winners'>
-                      <HideSmall>v</HideSmall>0.5
-                    </Link>
-                  </td>
-                  <td>
-                    12/25/<HideSmall>20</HideSmall>20
-                  </td>
-                  <td>0xb05d9542...</td>
-                </TRow>
-                <TRow>
-                  <td>
-                    <Link to='https://blog.zkga.me/v6-r1-wrapup'>
-                      <HideSmall>v</HideSmall>0.6 round 1
-                    </Link>
-                  </td>
-                  <td>
-                    05/22/<HideSmall>20</HideSmall>21
-                  </td>
-                  <td>
-                    <Link to='https://twitter.com/adietrichs'>Ansgar Dietrichs</Link>
-                  </td>
-                </TRow>
-                <TRow>
-                  <td>
-                    <Link to='https://blog.zkga.me/v6-r2-wrapup'>
-                      <HideSmall>v</HideSmall>0.6 round 2
-                    </Link>
-                  </td>
-                  <td>
-                    07/07/<HideSmall>20</HideSmall>21
-                  </td>
-                  <td>
-                    <Link to='https://twitter.com/orden_gg'>@orden_gg</Link>
-                  </td>
-                </TRow>
-                <TRow>
-                  <td>
-                    <Link to='https://blog.zkga.me/v6-r3-wrapup'>
-                      <HideSmall>v</HideSmall>0.6 round 3
-                    </Link>
-                  </td>
-                  <td>
-                    08/22/<HideSmall>20</HideSmall>21
-                  </td>
-                  <td>
-                    <Link to='https://twitter.com/dropswap_gg'>@dropswap_gg</Link>
-                  </td>
-                </TRow>
-                <TRow>
-                  <td>
-                    <Link to='https://blog.zkga.me/v6-r4-wrapup'>
-                      <HideSmall>v</HideSmall>0.6 round 4
-                    </Link>
-                  </td>
-                  <td>
-                    10/01/<HideSmall>20</HideSmall>21
-                  </td>
-                  <td>
-                    <Link to='https://twitter.com/orden_gg'>@orden_gg</Link>
-                  </td>
-                </TRow>
-                <TRow>
-                  <td>
-                    <Link to='https://blog.zkga.me/v6-r5-wrapup'>
-                      <HideSmall>v</HideSmall>0.6 round 5
-                    </Link>
-                  </td>
-                  <td>
-                    02/18/<HideSmall>20</HideSmall>22
-                  </td>
-                  <td>
-                    <Link to='https://twitter.com/d_fdao'>@d_fdao</Link>
-                    {' + '}
-                    <Link to='https://twitter.com/orden_gg'>@orden_gg</Link>
-                  </td>
-                </TRow>
-              </tbody>
-            </table>
-          </HallOfFame>
-          <Spacer height={32} />
-          <EmailWrapper>
-            <EmailCTA mode={EmailCTAMode.SUBSCRIBE} />
-          </EmailWrapper>
+          {!isAztec && (
+            <>
+              <EmSpacer height={3} />
+              Ways to get Involved
+              <EmSpacer height={1} />
+              <Involved>
+                <InvolvedItem
+                  href='https://blog.zkga.me/hosting-a-dark-forest-community-round'
+                  style={{
+                    backgroundImage: "url('/public/get_involved/community_round.png')",
+                  }}
+                ></InvolvedItem>
+                <InvolvedItem
+                  href='https://github.com/darkforest-eth/plugins#adding-your-plugin'
+                  style={{
+                    backgroundImage: "url('/public/get_involved/write_plugin.png')",
+                  }}
+                ></InvolvedItem>
+                <InvolvedItem
+                  href='https://github.com/darkforest-eth/plugins#reviewer-guidelines'
+                  style={{
+                    backgroundImage: "url('/public/get_involved/reveiw_plugin.png')",
+                  }}
+                ></InvolvedItem>
+                <InvolvedItem
+                  href='https://blog.zkga.me/renderer-plugin-contest'
+                  style={{
+                    backgroundImage: "url('/public/get_involved/plugin_render.png')",
+                  }}
+                ></InvolvedItem>
+                <InvolvedItem
+                  href='https://blog.zkga.me/introducing-dark-forest-lobbies'
+                  style={{
+                    backgroundImage: "url('/public/get_involved/lobby.png')",
+                  }}
+                ></InvolvedItem>
+              </Involved>
+              <EmSpacer height={3} />
+              <HallOfFame style={{ color: dfstyles.colors.text }}>
+                <HallOfFameTitle>Space Masters</HallOfFameTitle>
+                <Spacer height={8} />
+                <table>
+                  <tbody>
+                    <TRow>
+                      <td>
+                        <HideSmall>v</HideSmall>0.1
+                      </td>
+                      <td>
+                        02/22/<HideSmall>20</HideSmall>20
+                      </td>
+                      <td>
+                        <a href='https://twitter.com/zoink'>Dylan Field</a>
+                      </td>
+                    </TRow>
+                    <TRow>
+                      <td>
+                        <HideSmall>v</HideSmall>0.2
+                      </td>
+                      <td>
+                        06/24/<HideSmall>20</HideSmall>20
+                      </td>
+                      <td>Nate Foss</td>
+                    </TRow>
+                    <TRow>
+                      <td>
+                        <Link to='https://blog.zkga.me/v3-rules'>
+                          <HideSmall>v</HideSmall>0.3
+                        </Link>
+                      </td>
+                      <td>
+                        08/07/<HideSmall>20</HideSmall>20
+                      </td>
+                      <td>
+                        <Link to='https://twitter.com/hideandcleanse'>@hideandcleanse</Link>
+                      </td>
+                    </TRow>
+                    <TRow>
+                      <td>
+                        <Link to='https://blog.zkga.me/v4-recap'>
+                          <HideSmall>v</HideSmall>0.4
+                        </Link>
+                      </td>
+                      <td>
+                        10/02/<HideSmall>20</HideSmall>20
+                      </td>
+                      <td>
+                        <Link to='https://twitter.com/jacobrosenthal'>Jacob Rosenthal</Link>
+                      </td>
+                    </TRow>
+                    <TRow>
+                      <td>
+                        <Link to='https://blog.zkga.me/v5-winners'>
+                          <HideSmall>v</HideSmall>0.5
+                        </Link>
+                      </td>
+                      <td>
+                        12/25/<HideSmall>20</HideSmall>20
+                      </td>
+                      <td>0xb05d9542...</td>
+                    </TRow>
+                    <TRow>
+                      <td>
+                        <Link to='https://blog.zkga.me/v6-r1-wrapup'>
+                          <HideSmall>v</HideSmall>0.6 round 1
+                        </Link>
+                      </td>
+                      <td>
+                        05/22/<HideSmall>20</HideSmall>21
+                      </td>
+                      <td>
+                        <Link to='https://twitter.com/adietrichs'>Ansgar Dietrichs</Link>
+                      </td>
+                    </TRow>
+                    <TRow>
+                      <td>
+                        <Link to='https://blog.zkga.me/v6-r2-wrapup'>
+                          <HideSmall>v</HideSmall>0.6 round 2
+                        </Link>
+                      </td>
+                      <td>
+                        07/07/<HideSmall>20</HideSmall>21
+                      </td>
+                      <td>
+                        <Link to='https://twitter.com/orden_gg'>@orden_gg</Link>
+                      </td>
+                    </TRow>
+                    <TRow>
+                      <td>
+                        <Link to='https://blog.zkga.me/v6-r3-wrapup'>
+                          <HideSmall>v</HideSmall>0.6 round 3
+                        </Link>
+                      </td>
+                      <td>
+                        08/22/<HideSmall>20</HideSmall>21
+                      </td>
+                      <td>
+                        <Link to='https://twitter.com/dropswap_gg'>@dropswap_gg</Link>
+                      </td>
+                    </TRow>
+                    <TRow>
+                      <td>
+                        <Link to='https://blog.zkga.me/v6-r4-wrapup'>
+                          <HideSmall>v</HideSmall>0.6 round 4
+                        </Link>
+                      </td>
+                      <td>
+                        10/01/<HideSmall>20</HideSmall>21
+                      </td>
+                      <td>
+                        <Link to='https://twitter.com/orden_gg'>@orden_gg</Link>
+                      </td>
+                    </TRow>
+                    <TRow>
+                      <td>
+                        <Link to='https://blog.zkga.me/v6-r5-wrapup'>
+                          <HideSmall>v</HideSmall>0.6 round 5
+                        </Link>
+                      </td>
+                      <td>
+                        02/18/<HideSmall>20</HideSmall>22
+                      </td>
+                      <td>
+                        <Link to='https://twitter.com/d_fdao'>@d_fdao</Link>
+                        {' + '}
+                        <Link to='https://twitter.com/orden_gg'>@orden_gg</Link>
+                      </td>
+                    </TRow>
+                  </tbody>
+                </table>
+              </HallOfFame>
+              <Spacer height={32} />
+              <EmailWrapper>
+                <EmailCTA mode={EmailCTAMode.SUBSCRIBE} />
+              </EmailWrapper>
+            </>
+          )}
         </MainContentContainer>
 
-        <Spacer height={128} />
-
-        <LeadboardDisplay />
-
-        <Spacer height={256} />
+        {!isAztec && (
+          <>
+            <Spacer height={128} />
+            <LeadboardDisplay />
+            <Spacer height={256} />
+          </>
+        )}
       </Page>
     </>
   );

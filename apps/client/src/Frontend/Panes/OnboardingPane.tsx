@@ -2,7 +2,6 @@ import { ModalName } from '@darkforest_eth/types';
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { Btn } from '../Components/Btn';
-import { Icon, IconType } from '../Components/Icons';
 import { Green, Red, White } from '../Components/Text';
 import { TextPreview } from '../Components/TextPreview';
 import dfstyles from '../Styles/dfstyles';
@@ -49,34 +48,21 @@ function OnboardMoney({ advance }: { advance: () => void }) {
   const uiManager = useUIManager();
   const account = useAccount(uiManager);
 
-  const explorerAddressLink = `https://blockscout.com/poa/xdai/address/${account}`;
-
   return (
     <StyledOnboardingContent>
       <p>
         Welcome to <Green>Dark Forest</Green>!
       </p>
       <p>
-        <Red>There is real money being transacted in-game!</Red> We have initialized a{' '}
-        <a onClick={() => window.open('https://github.com/austintgriffith/burner-wallet')}>
-          burner wallet
-        </a>{' '}
-        for you and dripped 15c to it, courtesy of Dark Forest Team and xDAI.
+        You are playing on an <White>Aztec test environment</White>. Transactions are signed by a
+        local test account managed by the node.
       </p>
       <p className='indent'>
-        Your burner wallet address is: <br />
-        <White>
-          <a onClick={() => window.open(explorerAddressLink)}>{account}</a>
-        </White>
+        Your current account address is: <br />
+        <White>{account}</White>
       </p>
       <p>
-        This means that when you make moves on Dark Forest,{' '}
-        <White> you are authorizing the client to pay gas fees on your behalf</White>.
-      </p>
-      <p>
-        To ensure the safety of your balance, <White>we require you to enable popups</White> so that
-        all transactions may be confirmed by you. Note that you can disable popups for small
-        transactions in settings. <Icon type={IconType.Settings} />
+        In production, account management and balances will be handled by your Aztec wallet.
       </p>
       <p>
         <White>Make sure you understand all of the above before proceeding.</White>
@@ -96,21 +82,20 @@ function OnboardStorage({ advance }: { advance: () => void }) {
   return (
     <StyledOnboardingContent>
       <p>
-        The game stores important information like your <White>private key</White>,{' '}
-        <White>home coordinates</White>, and <White>map data</White> in your browser's local storage
-        / cache. <Red>If you clear your browser history, you risk losing your data!</Red>
+        The game stores important information like your <White>home coordinates</White> and{' '}
+        <White>map data</White> in your browser's local storage/cache.
+        <Red> If you clear your browser history, you risk losing your data!</Red>
       </p>
       <p>
-        Your <White>private key and home coordinates</White> act as your password. You can use them
-        to access your Dark Forest account on other browsers, or to continue playing if you
-        accidentally clear local storage. But this also means{' '}
-        <Red>they should never be viewed by anyone else!</Red>
+        Your <White>home coordinates</White> act as your password. You can use them to access your
+        Dark Forest account on other browsers, or to continue playing if you accidentally clear
+        local storage. But this also means <Red>they should never be viewed by anyone else!</Red>
       </p>
       <p>
         <White>Make sure you back them up</White> and keep them somewhere safe.
       </p>
       <p>
-        On the next page, you will be able to view and copy your private key and home coordinates.{' '}
+        On the next page, you will be able to view and copy your home coordinates.{' '}
         <White>When you are ready to back them up, please proceed.</White>
       </p>
       <div>
@@ -124,11 +109,7 @@ function OnboardStorage({ advance }: { advance: () => void }) {
 }
 function OnboardKeys({ advance }: { advance: () => void }) {
   const uiManager = useUIManager();
-  const [sKey, setSKey] = useState<string | undefined>(undefined);
-  useEffect(() => {
-    if (!uiManager) return;
-    setSKey(uiManager.getPrivateKey());
-  }, [uiManager]);
+  const account = useAccount(uiManager);
 
   const [home, setHome] = useState<string | undefined>(undefined);
   useEffect(() => {
@@ -140,15 +121,19 @@ function OnboardKeys({ advance }: { advance: () => void }) {
   return (
     <StyledOnboardingContent>
       <p>
-        Your private key is: <br />
-        <TextPreview text={sKey} focusedWidth={'150px'} unFocusedWidth={'150px'} />
+        Your account address is: <br />
+        <TextPreview text={account} focusedWidth={'150px'} unFocusedWidth={'150px'} />
       </p>
       <p>
         Your home coordinates are: <br />
         <White>{home}</White>
       </p>
 
-      <p>When you have backed up your key and coordinates, please proceed.</p>
+      <p>
+        Aztec test accounts are managed by the local node, so there is no browser-stored private
+        key to back up.
+      </p>
+      <p>When you have backed up your coordinates, please proceed.</p>
 
       <div>
         <span></span>

@@ -1,11 +1,13 @@
 # Dark Forest on Aztec
 
-This workspace is the Aztec port target. The original Dark Forest v0.6 sources and the Aztec/Noir references live alongside it:
+This workspace is the Aztec port target. Reference repos live under `reference/`:
 
-- `darkforest-v0.6`: Canonical v0.6 contracts, circuits, and client.
-- `darkforest-local`: Runnable local Dark Forest for behavior reference.
-- `aztec-starter`: Aztec/Noir starter project reference.
-- `noir`: Noir language/toolchain reference.
+- `reference/darkforest-v0.6`: Canonical v0.6 contracts, circuits, and client.
+- `reference/darkforest-local`: Runnable local Dark Forest for behavior reference.
+- `reference/aztec-starter`: Aztec/Noir starter project reference.
+- `reference/noir`: Noir language/toolchain reference.
+
+See `docs/PROJECT_MAP.md` for active vs reference directories.
 
 ## Workspace Layout
 

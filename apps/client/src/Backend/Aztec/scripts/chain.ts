@@ -75,6 +75,7 @@ const decodeArtifact = (fields: bigint[]): ArtifactState => ({
     lastActivated: toU32(fields[8] ?? 0n),
     lastDeactivated: toU32(fields[9] ?? 0n),
     wormholeTo: fields[10] ?? 0n,
+    burned: toBool(fields[11] ?? 0n),
 });
 
 const decodeRevealed = (fields: bigint[]): RevealedCoords => ({
@@ -315,7 +316,7 @@ export const readArtifactState = async (
         contractAddress,
         slot,
         fieldKey(artifactId),
-        11
+        12
     );
     return decodeArtifact(fields);
 };

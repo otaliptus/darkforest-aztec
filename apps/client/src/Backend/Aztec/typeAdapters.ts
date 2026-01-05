@@ -274,6 +274,7 @@ export const mapArtifact = async ({
   lastActivatedTimestamp,
   lastDeactivatedTimestamp,
   contractAddress,
+  burnedLocationId,
 }: {
   artifactState: ArtifactState;
   locationId: bigint;
@@ -281,12 +282,19 @@ export const mapArtifact = async ({
   lastActivatedTimestamp: number;
   lastDeactivatedTimestamp: number;
   contractAddress: AztecAddress;
+  burnedLocationId: bigint;
 }): Promise<Artifact> => {
   const artifactId = toArtifactId(artifactState.id);
-  const onPlanetId = locationId === 0n ? undefined : toLocationId(locationId);
+  const isBurned = artifactState.burned || (burnedLocationId !== 0n && locationId === burnedLocationId);
+  const onPlanetId =
+    isBurned || locationId === 0n ? undefined : toLocationId(locationId);
   const wormholeTo =
     artifactState.wormholeTo === 0n ? undefined : toLocationId(artifactState.wormholeTo);
-  const currentOwner = owner ? toEthAddress(owner) : toEthAddress(contractAddress);
+  const currentOwner = isBurned
+    ? (EMPTY_ADDRESS as EthAddress)
+    : owner
+      ? toEthAddress(owner)
+      : toEthAddress(contractAddress);
 
   return {
     isInititalized: artifactState.isInitialized,

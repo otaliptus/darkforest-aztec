@@ -79,6 +79,7 @@ export type ArtifactState = {
     lastActivated: number;
     lastDeactivated: number;
     wormholeTo: bigint;
+    burned: boolean;
 };
 
 export type RevealedCoords = {

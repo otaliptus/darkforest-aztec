@@ -19,6 +19,7 @@ import UnsubscribePage from './UnsubscribePage';
 import { ValhallaPage } from './ValhallaPage';
 
 const isProd = process.env.NODE_ENV === 'production';
+const isAztec = true;
 
 const defaultAddress = CLIENT_CONFIG.darkforestAddress || '';
 
@@ -32,10 +33,18 @@ function App() {
           <Switch>
             <Redirect path='/play' to={`/play/${defaultAddress}`} push={true} exact={true} />
             <Route path='/play/:contract' component={GameLandingPage} />
-            <Route path='/events' component={EventsPage} />
+            {isAztec ? (
+              <Redirect path='/events' to={`/play/${defaultAddress}`} push={true} exact={true} />
+            ) : (
+              <Route path='/events' component={EventsPage} />
+            )}
             <Route path='/' exact component={LandingPage} />
             <Redirect path='/lobby' to={`/play/${defaultAddress}`} push={true} exact={true} />
-            <Route path='/lobby/:contract' component={CreateLobby} />
+            {isAztec ? (
+              <Redirect path='/lobby/:contract' to={`/play/${defaultAddress}`} push={true} />
+            ) : (
+              <Route path='/lobby/:contract' component={CreateLobby} />
+            )}
             <Route path='/planet/:locationId' component={SharePlanet} />
             <Route path='/artifact/:artifactId' component={ShareArtifact} />
             <Route

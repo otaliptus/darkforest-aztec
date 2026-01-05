@@ -1,18 +1,15 @@
 import { PlanetType, TooltipName } from '@darkforest_eth/types';
 import React from 'react';
 import { getPlanetRank, isFullRank } from '../../Backend/Utils/Utils';
-import { ScoreLabel, SilverLabel } from '../Components/Labels/KeywordLabels';
+import { ScoreLabel } from '../Components/Labels/KeywordLabels';
 import { Green, Red, Text, White } from '../Components/Text';
-import { useAccount, useSelectedPlanet, useUIManager } from '../Utils/AppHooks';
+import { useSelectedPlanet, useUIManager } from '../Utils/AppHooks';
 
 export function NetworkHealthPane() {
   return (
     <>
-      <White>xDAI Tx Speed: </White>For each auto gas setting (which you can choose in the{' '}
-      <White>Settings</White> Pane), the average amount of time it takes a transaction with that
-      setting to confirm. The Dark Forest client uploads diagnostic info (you can turn this off via
-      settings), which is aggregated into this network health indicator. I hope you find it helpful
-      in cases the network is being slow.
+      <White>Aztec Tx Speed: </White>This local devnet should confirm quickly. If transactions feel
+      stuck, restart the node and refresh the client.
     </>
   );
 }
@@ -20,8 +17,7 @@ export function NetworkHealthPane() {
 export function WithdrawSilverButton() {
   return (
     <>
-      This is a <Text>Spacetime Rip</Text> where you can withdraw <SilverLabel /> for <ScoreLabel />
-      !
+      This is a <Text>Spacetime Rip</Text>. Silver withdrawal is disabled in this build.
     </>
   );
 }
@@ -68,9 +64,7 @@ export function TimeUntilActivationPossiblePane() {
 export function TwitterHandleTooltipPane() {
   return (
     <>
-      You may connect your account to <White>Twitter</White>
-      <br />
-      to identify yourself on the <White>Leaderboard</White>.
+      Twitter verification is disabled in this build.
     </>
   );
 }
@@ -86,8 +80,8 @@ export function RankTooltipPane() {
 export function ScoreTooltipPane() {
   return (
     <>
-      You earn <ScoreLabel /> by finding artifacts and withdrawing silver. Check out the{' '}
-      <White>Help Pane</White> for more info on scoring.
+      You earn <ScoreLabel /> by finding artifacts and capturing planets in Capture Zones (if
+      scoring is enabled). Check out the <White>Help Pane</White> for details.
     </>
   );
 }

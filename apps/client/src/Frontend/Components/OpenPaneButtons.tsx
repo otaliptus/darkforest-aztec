@@ -1,7 +1,6 @@
 import { LocationId } from '@darkforest_eth/types';
 import React, { useCallback } from 'react';
 import { BroadcastPane, BroadcastPaneHelpContent } from '../Panes/BroadcastPane';
-import { HatPane } from '../Panes/HatPane';
 import {
   ManagePlanetArtifactsHelpContent,
   ManagePlanetArtifactsPane,
@@ -11,7 +10,6 @@ import { PlanetInfoPane } from '../Panes/PlanetInfoPane';
 import { UpgradeDetailsPane, UpgradeDetailsPaneHelpContent } from '../Panes/UpgradeDetailsPane';
 import {
   TOGGLE_BROADCAST_PANE,
-  TOGGLE_HAT_PANE,
   TOGGLE_PLANET_ARTIFACTS_PANE,
   TOGGLE_PLANET_INFO_PANE,
   TOGGLE_UPGRADES_PANE,
@@ -50,23 +48,6 @@ export function OpenPaneButton({
     >
       {title}
     </MaybeShortcutButton>
-  );
-}
-
-export function OpenHatPaneButton({
-  modal,
-  planetId,
-}: {
-  modal: ModalHandle;
-  planetId: LocationId | undefined;
-}) {
-  return (
-    <OpenPaneButton
-      modal={modal}
-      title='Hat'
-      shortcut={TOGGLE_HAT_PANE}
-      element={() => <HatPane modal={modal} initialPlanetId={planetId} />}
-    />
   );
 }
 

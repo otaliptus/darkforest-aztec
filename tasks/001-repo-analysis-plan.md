@@ -4,7 +4,7 @@
 Produce a repository inventory and an end-to-end implementation plan for the Dark Forest v0.6 port to Aztec.
 
 ## Acceptance Criteria
-- Summarize each curated repo (darkforest-v0.6, darkforest-local, aztec-starter, noir) with purpose and key components relevant to porting.
+- Summarize each curated repo (`reference/darkforest-v0.6`, `reference/darkforest-local`, `reference/aztec-starter`, `reference/noir`) with purpose and key components relevant to porting.
 - Map Dark Forest v0.6 circuits/contracts/client components to Aztec equivalents at a high level.
 - Provide a full-feature implementation plan that includes tests and the performance target.
 - Include explicit verification steps for each phase.

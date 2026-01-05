@@ -6,7 +6,6 @@ import { BorderlessPane, EmSpacer } from '../Components/CoreUI';
 import { DFZIndex } from '../Utils/constants';
 import {
   TOGGLE_HELP_PANE,
-  TOGGLE_PLUGINS_PANE,
   TOGGLE_SETTINGS_PANE,
   TOGGLE_TRANSACTIONS_PANE,
   TOGGLE_YOUR_ARTIFACTS_PANE,
@@ -17,14 +16,12 @@ import { ModalToggleButton } from './ModalIcon';
 export function SidebarPane({
   settingsHook,
   helpHook,
-  pluginsHook,
   yourArtifactsHook,
   planetdexHook,
   transactionLogHook,
 }: {
   settingsHook: Hook<boolean>;
   helpHook: Hook<boolean>;
-  pluginsHook: Hook<boolean>;
   yourArtifactsHook: Hook<boolean>;
   planetdexHook: Hook<boolean>;
   transactionLogHook: Hook<boolean>;
@@ -53,15 +50,6 @@ export function SidebarPane({
           size='stretch'
           shortcutKey={TOGGLE_HELP_PANE}
           shortcutText={sidebarHovered ? TOGGLE_HELP_PANE : undefined}
-        />
-        <EmSpacer height={0.5} />
-        <ModalToggleButton
-          modal={ModalName.Plugins}
-          hook={pluginsHook}
-          text={sidebarHovered ? 'Plugins' : undefined}
-          size='stretch'
-          shortcutKey={TOGGLE_PLUGINS_PANE}
-          shortcutText={sidebarHovered ? TOGGLE_PLUGINS_PANE : undefined}
         />
         <EmSpacer height={0.5} />
         <ModalToggleButton

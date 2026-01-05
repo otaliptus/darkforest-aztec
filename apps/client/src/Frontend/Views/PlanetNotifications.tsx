@@ -8,13 +8,11 @@ import { AccountLabel } from '../Components/Labels/Labels';
 import { Row } from '../Components/Row';
 import { Sub } from '../Components/Text';
 import dfstyles from '../Styles/dfstyles';
-import { EmojiPlanetNotification } from './EmojiPlanetNotification';
 
 export const enum PlanetNotifType {
   PlanetCanUpgrade,
   Claimed,
   DistanceFromCenter,
-  CanAddEmoji,
 }
 
 const StyledPlanetNotifications = styled.div`
@@ -30,14 +28,9 @@ export function getNotifsForPlanet(
 
   if (planet?.owner === account && account !== undefined) {
     if (GameObjects.planetCanUpgrade(planet)) notifs.push(PlanetNotifType.PlanetCanUpgrade);
-    if (process.env.DF_WEBSERVER_URL) notifs.push(PlanetNotifType.CanAddEmoji);
   }
 
   return notifs;
-}
-
-function EmojiRow({ wrapper }: { wrapper: Wrapper<Planet | undefined> }) {
-  return <EmojiPlanetNotification wrapper={wrapper} />;
 }
 
 const PlanetCanUpgradeRow = () => (
@@ -78,8 +71,6 @@ function renderNotification(notif: PlanetNotifType, planet: Wrapper<Planet | und
   switch (notif) {
     case PlanetNotifType.PlanetCanUpgrade:
       return <PlanetCanUpgradeRow />;
-    case PlanetNotifType.CanAddEmoji:
-      return <EmojiRow wrapper={planet} key={notif + (planet.value?.locationId + '')} />;
     case PlanetNotifType.Claimed:
       return <PlanetClaimedRow key={notif + (planet.value?.locationId + '')} planet={planet} />;
     case PlanetNotifType.DistanceFromCenter:

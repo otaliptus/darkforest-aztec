@@ -902,14 +902,7 @@ export function GameLandingPage({ match, location }: RouteComponentProps<{ contr
     async (terminal: React.MutableRefObject<TerminalHandle | undefined>) => {
       terminal.current?.println('');
       terminal.current?.println('Press ENTER to begin');
-      terminal.current?.println("Press 's' then ENTER to begin in SAFE MODE - plugins disabled");
-
-      const input = await terminal.current?.getInput();
-
-      if (input === 's') {
-        const gameUIManager = gameUIManagerRef.current;
-        gameUIManager?.getGameManager()?.setSafeMode(true);
-      }
+      await terminal.current?.getInput();
 
       setStep(TerminalPromptStep.COMPLETE);
       setInitRenderState(InitRenderState.COMPLETE);

@@ -1,7 +1,5 @@
-import { weiToGwei } from '@darkforest_eth/network';
 import { address } from '@darkforest_eth/serde';
 import { EthAddress, Setting } from '@darkforest_eth/types';
-import { BigNumber as EthersBN } from 'ethers';
 import React, { useState } from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 import styled, { css, keyframes } from 'styled-components';
@@ -157,16 +155,8 @@ export function TxConfirmPopup({
     else approve();
   };
 
-  const gasFee = EthersBN.from(localStorage.getItem(`${account}-gasFeeGwei`) || '');
-
   const fromPlanet = localStorage.getItem(`${account}-fromPlanet`);
   const toPlanet = localStorage.getItem(`${account}-toPlanet`);
-
-  const hatPlanet = localStorage.getItem(`${account}-hatPlanet`);
-  const hatLevel = localStorage.getItem(`${account}-hatLevel`);
-  const hatCost: number = method === 'buyHat' && hatLevel ? 2 ** parseInt(hatLevel) : 0;
-
-  const txCost: number = hatCost + 0.002 * weiToGwei(gasFee);
 
   const upPlanet = localStorage.getItem(`${account}-upPlanet`);
   const branch = localStorage.getItem(`${account}-branch`);
@@ -188,9 +178,10 @@ export function TxConfirmPopup({
   const deactivatePlanet = localStorage.getItem(`${account}-deactivatePlanet`);
   const deactivateArtifact = localStorage.getItem(`${account}-deactivateArtifact`);
 
-  const withdrawSilverPlanet = localStorage.getItem(`${account}-withdrawSilverPlanet`);
-
   const revealPlanet = localStorage.getItem(`${account}-revealLocationId`);
+
+  const parsedBalance = Number.parseFloat(balance);
+  const formattedBalance = Number.isFinite(parsedBalance) ? parsedBalance.toFixed(8) : 'n/a';
 
   return (
     <StyledTxConfirmPopup>
@@ -208,20 +199,6 @@ export function TxConfirmPopup({
             <b>Planet ID</b>
             <span className='mono'>{revealPlanet}</span>
           </Row>
-        )}
-        {method === 'buyHat' && (
-          <>
-            <Row>
-              <b>On</b>
-              <span className='mono'>{hatPlanet}</span>
-            </Row>
-            <Row>
-              <b>HAT Level</b>
-              <span>
-                {hatLevel} ({hatCost} xDAI)
-              </span>
-            </Row>
-          </>
         )}
         {method === 'move' && (
           <>
@@ -313,42 +290,20 @@ export function TxConfirmPopup({
             </Row>
           </>
         )}
-        {method === 'withdrawSilver' && (
-          <Row>
-            <b>Planet ID</b>
-            <span className='mono'>{withdrawSilverPlanet}</span>
-          </Row>
-        )}
       </div>
 
       <div className='section'>
         <Row>
-          <b>Gas Fee</b>
-          <span>{weiToGwei(gasFee)} gwei</span>
+          <b>Fee</b>
+          <span>n/a (Aztec local node)</span>
         </Row>
-        <Row>
-          <b>Gas Limit</b>
-          <span>2000000</span>
-        </Row>
-        <Row>
-          <b>Total Transaction Cost</b>
-          <span>{txCost.toFixed(8)} xDAI</span>
-        </Row>
-        {method === 'buyHat' && hatLevel && +hatLevel > 6 && (
-          <Row>
-            <b
-              style={{
-                color: 'red',
-              }}
-            >
-              WARNING: You are buying a very expensive HAT! Check the price and make sure you intend
-              to do this!
-            </b>
-          </Row>
-        )}
         <Row className='mtop'>
-          <b>Account Balance</b>
-          <span>{parseFloat(balance).toFixed(8)} xDAI</span>
+          <b>Account</b>
+          <span className='mono'>{account}</span>
+        </Row>
+        <Row>
+          <b>Balance</b>
+          <span>{formattedBalance}</span>
         </Row>
         <Row className='mtop'>
           <Button onClick={doReject}>
@@ -364,12 +319,12 @@ export function TxConfirmPopup({
       <div className='section'>
         <Row className='network'>
           <div>
-            <ConfirmIcon /> DF connected to xDAI
+            <ConfirmIcon /> DF connected to Aztec local node
           </div>
         </Row>
         <Row className='mtop'>
           <Checkbox
-            label='Auto-confirm all transactions except purchases. Currently, you can only purchase Hats, or anything 3rd party plugins offer.'
+            label='Auto-confirm transactions for this account on this device.'
             checked={autoApproveChecked}
             onChange={(e: Event & React.ChangeEvent<DarkForestCheckbox>) =>
               setAutoApprovedChecked(e.target.checked)

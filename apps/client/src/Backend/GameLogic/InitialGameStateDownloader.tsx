@@ -92,7 +92,7 @@ export class InitialGameStateDownloader {
     const contractConstants = contractsAPI.getConstants();
     const worldRadius = contractsAPI.getWorldRadius();
 
-    const players = contractsAPI.getPlayers();
+    const players = contractsAPI.getPlayers(playersLoadingBar);
 
     const arrivals: Map<VoyageId, QueuedArrival> = new Map();
     const planetVoyageIdMap: Map<LocationId, VoyageId[]> = new Map();
@@ -131,7 +131,7 @@ export class InitialGameStateDownloader {
       planetsToLoad = allTouchedPlanetIds;
     }
 
-    const pendingMoves = await contractsAPI.getAllArrivals(planetsToLoad);
+    const pendingMoves = await contractsAPI.getAllArrivals(planetsToLoad, pendingMovesLoadingBar);
 
     // add origin points of voyages to known planets, because we need to know origin owner to render
     // the shrinking / incoming circle
@@ -172,8 +172,11 @@ export class InitialGameStateDownloader {
       artifactsInFlightLoadingBar
     );
 
-    const heldArtifacts = contractsAPI.bulkGetArtifactsOnPlanets(planetsToLoad);
-    const myArtifacts = contractsAPI.getPlayerArtifacts();
+    const heldArtifacts = contractsAPI.bulkGetArtifactsOnPlanets(
+      planetsToLoad,
+      artifactsOnPlanetsLoadingBar
+    );
+    const myArtifacts = contractsAPI.getPlayerArtifacts(yourArtifactsLoadingBar);
 
     const twitters = {} as AddressTwitterMap;
     const paused = contractsAPI.getIsPaused();

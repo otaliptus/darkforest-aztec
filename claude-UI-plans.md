@@ -37,7 +37,7 @@ This document details the complete plan for integrating the original DarkForest 
 - Form-based actions (init, move, reveal, upgrade)
 - Functional but lacks the visual richness of original
 
-**Original DarkForest UI (`darkforest-local/client/src/Frontend/`):**
+**Original DarkForest UI (`reference/darkforest-local/client/src/Frontend/`):**
 - 150+ component files organized into:
   - `Components/` (30 files) - Reusable UI primitives
   - `Panes/` (31 files) - Modal panel contents
@@ -139,7 +139,7 @@ apps/client-og/
 ├── vite.config.ts
 ├── .env.local                    # Copy from apps/client
 ├── public/
-│   └── icons/                    # Copy from darkforest-local/client/public/icons
+│   └── icons/                    # Copy from reference/darkforest-local/client/public/icons
 │       ├── alerts/               # 36 alert icons
 │       ├── arrow-right.svg
 │       ├── broadcast.svg
@@ -159,7 +159,7 @@ apps/client-og/
     │   ├── AztecGameAdapter.ts
     │   ├── GameUIManager.ts
     │   └── typeAdapters.ts
-    ├── Frontend/                 # COPY from darkforest-local
+    ├── Frontend/                 # COPY from reference/darkforest-local
     │   ├── Components/           # 30 files
     │   ├── Panes/                # 31 files  
     │   ├── Views/                # 30 files
@@ -187,16 +187,16 @@ apps/client-og/
 mkdir -p apps/client-og/src/{Frontend,Backend,scripts,shims} apps/client-og/public
 
 # Copy Frontend directories (unchanged)
-cp -r darkforest-local/client/src/Frontend/Components apps/client-og/src/Frontend/
-cp -r darkforest-local/client/src/Frontend/Panes apps/client-og/src/Frontend/
-cp -r darkforest-local/client/src/Frontend/Views apps/client-og/src/Frontend/
-cp -r darkforest-local/client/src/Frontend/Styles apps/client-og/src/Frontend/
-cp -r darkforest-local/client/src/Frontend/Utils apps/client-og/src/Frontend/
-cp -r darkforest-local/client/src/Frontend/Game apps/client-og/src/Frontend/
-cp -r darkforest-local/client/src/Frontend/Renderers apps/client-og/src/Frontend/
+cp -r reference/darkforest-local/client/src/Frontend/Components apps/client-og/src/Frontend/
+cp -r reference/darkforest-local/client/src/Frontend/Panes apps/client-og/src/Frontend/
+cp -r reference/darkforest-local/client/src/Frontend/Views apps/client-og/src/Frontend/
+cp -r reference/darkforest-local/client/src/Frontend/Styles apps/client-og/src/Frontend/
+cp -r reference/darkforest-local/client/src/Frontend/Utils apps/client-og/src/Frontend/
+cp -r reference/darkforest-local/client/src/Frontend/Game apps/client-og/src/Frontend/
+cp -r reference/darkforest-local/client/src/Frontend/Renderers apps/client-og/src/Frontend/
 
 # Copy icons
-cp -r darkforest-local/client/public/icons apps/client-og/public/
+cp -r reference/darkforest-local/client/public/icons apps/client-og/public/
 
 # Copy your existing scripts
 cp -r apps/client/src/scripts apps/client-og/src/
@@ -205,7 +205,7 @@ cp apps/client/src/config.ts apps/client-og/src/
 cp apps/client/.env.local apps/client-og/
 
 # Copy original index.html as base (will modify)
-cp darkforest-local/client/index.html apps/client-og/
+cp reference/darkforest-local/client/index.html apps/client-og/
 ```
 
 ### Files NOT to Copy (Ethereum-specific)

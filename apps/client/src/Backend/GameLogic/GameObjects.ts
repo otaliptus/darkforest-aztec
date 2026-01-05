@@ -159,6 +159,7 @@ export class GameObjects {
    * any potential invader's voyages.
    */
   private readonly planetArrivalIds: Map<LocationId, VoyageId[]>;
+  private readonly arrivalMaturedHandler?: (arrival: QueuedArrival) => void;
 
   /**
    * Map from location id (unique id of each planet) to some information about the location at which
@@ -235,7 +236,8 @@ export class GameObjects {
     unprocessedArrivals: Map<VoyageId, QueuedArrival>,
     unprocessedPlanetArrivalIds: Map<LocationId, VoyageId[]>,
     contractConstants: ContractConstants,
-    worldRadius: number
+    worldRadius: number,
+    arrivalMaturedHandler?: (arrival: QueuedArrival) => void
   ) {
     autoBind(this);
 
@@ -255,6 +257,7 @@ export class GameObjects {
     this.transactions = new TxCollection();
     this.wormholes = new Map();
     this.layeredMap = new LayeredMap(worldRadius);
+    this.arrivalMaturedHandler = arrivalMaturedHandler;
 
     this.planetUpdated$ = monomitter();
     this.artifactUpdated$ = monomitter();
@@ -1109,6 +1112,15 @@ export class GameObjects {
     const nowInSeconds = Date.now() / 1000;
     for (const arrival of arrivals) {
       try {
+        if (this.arrivalMaturedHandler) {
+          const delayMs = Math.max(0, arrival.arrivalTime * 1000 - Date.now());
+          const notifyMatured = setTimeout(() => {
+            this.arrivalMaturedHandler?.(arrival);
+          }, delayMs);
+          arrivalsWithTimers.push({ arrivalData: arrival, timer: notifyMatured });
+          continue;
+        }
+
         if (nowInSeconds - arrival.arrivalTime > 0) {
           // if arrival happened in the past, run this arrival
           const update = arrive(

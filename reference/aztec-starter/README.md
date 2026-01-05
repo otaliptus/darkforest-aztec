@@ -1,3 +1,5 @@
+> Reference only: This repo is vendored into the darkforest-aztec workspace under `reference/` and is not part of the build or deployment workflow.
+
 <div align="center">
   <a href="https://aztec.network">
     <img src="https://cdn.prod.website-files.com/6847005bc403085c1aa846e0/6847514dc37a9e8cfe8a66b8_aztec-logo.svg" alt="Aztec Protocol Logo" width="300">

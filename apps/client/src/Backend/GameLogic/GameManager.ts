@@ -198,6 +198,7 @@ class GameManager extends EventEmitter {
    *   implemented by {@link TxExecutor} via two separately tuned {@link ThrottledConcurrentQueue}s.
    */
   private readonly contractsAPI: ContractsAPI;
+  private readonly resolvingArrivals: Set<VoyageId>;
 
   /**
    * An object that syncs any newly added or deleted chunks to the player's IndexedDB.
@@ -422,6 +423,8 @@ class GameManager extends EventEmitter {
 
     this.contractConstants = contractConstants;
     this.homeLocation = homeLocation;
+    this.contractsAPI = contractsAPI;
+    this.resolvingArrivals = new Set();
 
     const revealedLocations = new Map<LocationId, RevealedLocation>();
     for (const [locationId, coords] of revealedCoords) {
@@ -468,10 +471,9 @@ class GameManager extends EventEmitter {
       unprocessedArrivals,
       unprocessedPlanetArrivalIds,
       contractConstants,
-      worldRadius
+      worldRadius,
+      this.queueResolveArrival.bind(this)
     );
-
-    this.contractsAPI = contractsAPI;
     this.persistentChunkStore = persistentChunkStore;
     this.snarkHelper = snarkHelper;
     this.useMockHash = useMockHash;
@@ -2832,7 +2834,43 @@ class GameManager extends EventEmitter {
       if (this.captureZoneGenerator) {
         this.captureZoneGenerator.generate(blockNumber);
       }
+      this.resolveMaturedArrivals();
     });
+  }
+
+  private resolveMaturedArrivals(): void {
+    const nowSeconds = Date.now() / 1000;
+    const arrivals = this.entityStore
+      .getAllVoyages()
+      .filter((arrival) => arrival.arrivalTime <= nowSeconds)
+      .sort((a, b) => a.arrivalTime - b.arrivalTime);
+
+    let started = 0;
+    const maxToResolve = 3;
+    for (const arrival of arrivals) {
+      if (started >= maxToResolve) break;
+      if (this.resolvingArrivals.has(arrival.eventId)) continue;
+      this.queueResolveArrival(arrival);
+      started += 1;
+    }
+  }
+
+  private queueResolveArrival(arrival: QueuedArrival): void {
+    if (this.resolvingArrivals.has(arrival.eventId)) return;
+    this.resolvingArrivals.add(arrival.eventId);
+    void (async () => {
+      try {
+        await this.contractsAPI.resolveArrival(arrival.eventId);
+      } catch (err) {
+        console.error('[Aztec] resolve arrival failed', {
+          arrivalId: arrival.eventId,
+          error: (err as Error)?.message ?? err,
+        });
+      } finally {
+        this.resolvingArrivals.delete(arrival.eventId);
+        await this.hardRefreshPlanet(arrival.toPlanet);
+      }
+    })();
   }
 
   /**

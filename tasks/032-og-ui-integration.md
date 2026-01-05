@@ -30,4 +30,4 @@ Integrate the original Dark Forest v0.6 UI (look, feel, layout, and game canvas)
 
 ## Notes
 - Supersedes Ticket 031 (game-feel upgrade).
-- We will base UI assets on `darkforest-v0.6/client` (and `darkforest-local/client` for icons/assets).
+- We will base UI assets on `reference/darkforest-v0.6/client` (and `reference/darkforest-local/client` for icons/assets).
