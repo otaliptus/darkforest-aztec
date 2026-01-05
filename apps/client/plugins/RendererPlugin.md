@@ -50,7 +50,7 @@ Here is Dark Forest's current implementation of its mine renderer: https://githu
    - Asteroid
    - Mine
    - Spacetime Rip
-   - Ruins
+   - Foundry
    - Ring
    - Quasar
    - Black Domain

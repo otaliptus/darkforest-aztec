@@ -68,6 +68,8 @@ pub contract DarkForest {
 
     global PLANET_TYPE_PLANET: u8 = 0;
     global PLANET_TYPE_SILVER_MINE: u8 = 1;
+    global PLANET_TYPE_FOUNDRY: u8 = 2;
+    // Legacy alias kept for parity with earlier naming.
     global PLANET_TYPE_RUINS: u8 = 2;
     global PLANET_TYPE_TRADING_POST: u8 = 3;
     global PLANET_TYPE_SILVER_BANK: u8 = 4;
@@ -1484,7 +1486,7 @@ pub contract DarkForest {
             let planet = self.storage.planets.at(location_id).read();
             assert(!self.internal.is_planet_destroyed(location_id));
             assert(planet.owner.eq(player));
-            assert(planet.planet_type == PLANET_TYPE_RUINS);
+            assert(planet.planet_type == PLANET_TYPE_FOUNDRY);
 
             let mut state = self.storage.planet_artifact_state.at(location_id).read();
             assert(state.prospected_block_number == 0);
@@ -1497,7 +1499,7 @@ pub contract DarkForest {
             let planet = self.storage.planets.at(location_id).read();
             assert(!self.internal.is_planet_destroyed(location_id));
             assert(planet.owner.eq(player));
-            assert(planet.planet_type == PLANET_TYPE_RUINS);
+            assert(planet.planet_type == PLANET_TYPE_FOUNDRY);
 
             let mut state = self.storage.planet_artifact_state.at(location_id).read();
             assert(!state.has_tried_finding_artifact);

@@ -651,7 +651,7 @@ export default class EmbeddedRendererShowcase implements DFPlugin {
         Mine: new CirclePlanetRenderer(glMan, RendererType.Mine),
         SpacetimeRip: new CirclePlanetRenderer(glMan, RendererType.SpacetimeRip),
         Quasar: new CirclePlanetRenderer(glMan, RendererType.Quasar),
-        Ruins: new CirclePlanetRenderer(glMan, RendererType.Ruins),
+        Foundry: new CirclePlanetRenderer(glMan, RendererType.Ruins),
       };
     }
     this.circleChecker = {};
@@ -689,7 +689,7 @@ export default class EmbeddedRendererShowcase implements DFPlugin {
             <option value="MineBody">Mine Body</option>
             <option value="MineBelt">Mine Belt</option>
             <option value="SpacetimeRip">Spacetime RIP</option>
-            <option value="Ruins">Ruins</option>
+            <option value="Foundry">Foundry</option>
             <option value="Quasar">Quasar</option>
             <option value="Asteroid">Asteroid</option>
             <option value="Background">Background</option>
@@ -745,7 +745,7 @@ export default class EmbeddedRendererShowcase implements DFPlugin {
             <option value="Planet">Planet</option>
             <option value="Mine">Mine</option>
             <option value="SpacetimeRip">Spacetime RIP</option>
-            <option value="Ruins">Ruins</option>
+            <option value="Foundry">Foundry</option>
             <option value="Quasar">Quasar</option>
           </select>
 
@@ -784,7 +784,7 @@ export default class EmbeddedRendererShowcase implements DFPlugin {
           <option value="MineBody">Mine Body</option>
           <option value="MineBelt">Mine Belt</option>
           <option value="SpacetimeRip">Spacetime RIP</option>
-          <option value="Ruins">Ruins</option>
+          <option value="Foundry">Foundry</option>
           <option value="Quasar">Quasar</option>
           <option value="Asteroid">Asteroid</option>
           <option value="Background">Background</option>
@@ -847,7 +847,7 @@ let rendererLibrary: { [key: string]: any } = {
   Planet: new PlanetRenderer(),
   Mine: new MineRenderer(),
   SpacetimeRip: new SpacetimeRipRenderer(),
-  Ruins: new RuinsRenderer(),
+  Foundry: new RuinsRenderer(),
   Quasar: new QuasarRenderer(),
   Asteroid: new AsteroidRenderer(),
   MineBody: new MineBodyRenderer(),
@@ -907,7 +907,7 @@ let rendererDescription: { [key: string]: any } = {
   Planet: 'basic planets',
   Mine: 'asteroid fields',
   SpacetimeRip: 'Spacetime Rips',
-  Ruins: 'foundries',
+  Foundry: 'foundries',
   Quasar: 'quasars',
   Asteroid: 'asteroid that hover around different planets',
   MineBody: 'the body/asteroids of asteroid fields',

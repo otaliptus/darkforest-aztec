@@ -55,6 +55,8 @@ export type PlanetType = Abstract<number, 'PlanetType'>;
 export const PlanetType = {
   PLANET: 0 as PlanetType,
   SILVER_MINE: 1 as PlanetType,
+  FOUNDRY: 2 as PlanetType,
+  // Legacy alias; Foundry is the canonical name for planet type 2.
   RUINS: 2 as PlanetType,
   TRADING_POST: 3 as PlanetType,
   SILVER_BANK: 4 as PlanetType,

@@ -2,7 +2,7 @@ use crate::test::utils;
 use crate::{
     mimc::mimc_sponge_2_220,
     perlin::multi_scale_perlin,
-    utils::pow2_frac_q32,
+    utils::{exp_neg_q32, pow2_frac_q32},
     DarkForest,
 };
 use dep::aztec::protocol_types::address::AztecAddress;
@@ -34,6 +34,7 @@ pub global PLANET_TYPE_PLANET: u8 = 0;
 pub global PLANET_TYPE_SILVER_MINE: u8 = 1;
 pub global PLANET_TYPE_RUINS: u8 = 2;
 pub global PLANET_TYPE_TRADING_POST: u8 = 3;
+pub global PLANET_TYPE_SILVER_BANK: u8 = 4;
 pub global ARTIFACT_TYPE_UNKNOWN: u8 = 0;
 pub global ARTIFACT_TYPE_MONOLITH: u8 = 1;
 pub global ARTIFACT_TYPE_COLOSSUS: u8 = 2;
@@ -360,6 +361,64 @@ fn decayed_population(pop_moved: u64, dist: u64, range: u64, pop_cap: u64) -> u6
         };
     }
     result
+}
+
+fn expected_population_after_time(
+    population: u64,
+    pop_cap: u64,
+    pop_growth: u64,
+    time_elapsed: u128,
+    planet_type: u8,
+    pausers: u8,
+) -> u64 {
+    let mut updated = population;
+    if time_elapsed != 0 {
+        let pop_cap_u = pop_cap as u128;
+        let pop_u = updated as u128;
+        let prev_pop = updated;
+        if (pop_u != 0) & (pop_cap_u != 0) {
+            let numerator = (4u128 * (pop_growth as u128)) * time_elapsed;
+            let x_q32 = (numerator << 32) / pop_cap_u;
+            let exp_neg = exp_neg_q32(x_q32);
+
+            if exp_neg == 0 {
+                updated = pop_cap;
+            } else {
+                let ratio_q32 = (pop_cap_u << 32) / pop_u;
+                let mut ratio_minus_one_neg = false;
+                let mut ratio_minus_one_mag: u128 = 0;
+                if ratio_q32 >= (1u128 << 32) {
+                    ratio_minus_one_mag = ratio_q32 - (1u128 << 32);
+                } else {
+                    ratio_minus_one_mag = (1u128 << 32) - ratio_q32;
+                    ratio_minus_one_neg = true;
+                }
+                let product_mag = (exp_neg * ratio_minus_one_mag) >> 32;
+                let denom_q32 = if ratio_minus_one_neg {
+                    if product_mag >= (1u128 << 32) {
+                        1u128
+                    } else {
+                        (1u128 << 32) - product_mag
+                    }
+                } else {
+                    (1u128 << 32) + product_mag
+                };
+                let new_pop = (pop_cap_u << 32) / denom_q32;
+                updated = new_pop as u64;
+            }
+
+            if (pausers > 0) & (updated > prev_pop) {
+                updated = prev_pop;
+            }
+
+            if (planet_type == PLANET_TYPE_SILVER_BANK) | (pausers > 0) {
+                if updated > pop_cap {
+                    updated = pop_cap;
+                }
+            }
+        }
+    }
+    updated
 }
 
 #[test]
@@ -879,12 +938,31 @@ unconstrained fn test_move_creates_arrival() {
     let from_location_id = expected_location_id(INIT_X, INIT_Y);
     let to_location_id = expected_location_id(MOVE_X_2, MOVE_Y_2);
     let mut pre_population: u64 = 0;
+    let mut pre_pop_cap: u64 = 0;
+    let mut pre_pop_growth: u64 = 0;
+    let mut pre_last_updated: u64 = 0;
+    let mut pre_planet_type: u64 = 0;
+    let mut pre_pausers: u64 = 0;
     let pre_population_ref = &mut pre_population;
+    let pre_pop_cap_ref = &mut pre_pop_cap;
+    let pre_pop_growth_ref = &mut pre_pop_growth;
+    let pre_last_updated_ref = &mut pre_last_updated;
+    let pre_planet_type_ref = &mut pre_planet_type;
+    let pre_pausers_ref = &mut pre_pausers;
 
     env.public_context_at(contract_address, |context| {
         let planet_slot =
             derive_storage_slot_in_map(DarkForest::storage_layout().planets.slot, from_location_id);
         *pre_population_ref = context.storage_read(planet_slot + 3);
+        *pre_pop_cap_ref = context.storage_read(planet_slot + 4);
+        *pre_pop_growth_ref = context.storage_read(planet_slot + 5);
+        *pre_last_updated_ref = context.storage_read(planet_slot + 12);
+        *pre_planet_type_ref = context.storage_read(planet_slot + 14);
+        let pausers_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().planet_pausers.slot,
+            from_location_id,
+        );
+        *pre_pausers_ref = context.storage_read(pausers_slot);
     });
 
     env.call_private(
@@ -933,8 +1011,23 @@ unconstrained fn test_move_creates_arrival() {
         let planet_slot =
             derive_storage_slot_in_map(DarkForest::storage_layout().planets.slot, from_location_id);
         let stored_population = context.storage_read(planet_slot + 3);
+        let post_last_updated = context.storage_read(planet_slot + 12);
+        let time_elapsed = (post_last_updated as u128) - (pre_last_updated as u128);
+        let refreshed_population = expected_population_after_time(
+            pre_population,
+            pre_pop_cap,
+            pre_pop_growth,
+            time_elapsed,
+            pre_planet_type as u8,
+            pre_pausers as u8,
+        );
+        let expected_remaining = if refreshed_population > MOVE_POP_MOVED {
+            refreshed_population - MOVE_POP_MOVED
+        } else {
+            0
+        };
         assert(stored_population < pre_population);
-        assert(stored_population + MOVE_POP_MOVED >= pre_population);
+        assert_eq(stored_population, expected_remaining);
 
         let arrival_list_slot = derive_storage_slot_in_map(
             DarkForest::storage_layout().planet_arrivals.slot,
@@ -1290,7 +1383,7 @@ unconstrained fn test_upgrade_planet_success() {
     let mut planet_dist: u64 = 0;
     let mut planet_location_id: Field = 0;
     let mut planet_silver_cap: u64 = 0;
-    let pop_moved: u64 = HOME_PLANET_POPULATION - 1;
+    let pop_moved: u64 = HOME_PLANET_POPULATION / 4;
 
     for dx in 0..(SEARCH_MAX_DIST + 1) {
         for dy in 0..(SEARCH_MAX_DIST + 1) {

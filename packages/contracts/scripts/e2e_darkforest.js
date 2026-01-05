@@ -26,6 +26,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CONTRACTS_DIR = path.resolve(__dirname, "..");
 
+const deriveMaxLocationId = (planetRarity) => {
+    const rarity = BigInt(planetRarity);
+    if (rarity <= 0n) {
+        throw new Error("planet_rarity must be greater than zero.");
+    }
+    const maxLocationId = FIELD_MODULUS / rarity;
+    return maxLocationId === FIELD_MODULUS ? FIELD_MODULUS - 1n : maxLocationId;
+};
+
 const DEFAULT_CONFIG = {
     planethash_key: 42n,
     spacetype_key: 43n,
@@ -39,7 +48,7 @@ const DEFAULT_CONFIG = {
     spawn_rim_area: 0n,
     location_reveal_cooldown: 0n,
     planet_rarity: 1n,
-    max_location_id: FIELD_MODULUS - 1n,
+    max_location_id: deriveMaxLocationId(1n),
 };
 
 const DEFAULT_INIT = { x: 990n, y: 0n, radius: 1000n };

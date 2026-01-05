@@ -23,6 +23,15 @@ const SPONSORED_FPC_SALT = new Fr(0);
 const FIELD_MODULUS =
     21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
+const deriveMaxLocationId = (planetRarity) => {
+    const rarity = BigInt(planetRarity);
+    if (rarity <= 0n) {
+        throw new Error("planet_rarity must be greater than zero.");
+    }
+    const maxLocationId = FIELD_MODULUS / rarity;
+    return maxLocationId === FIELD_MODULUS ? FIELD_MODULUS - 1n : maxLocationId;
+};
+
 const BASE_CONFIG = {
     planethash_key: 42n,
     spacetype_key: 43n,
@@ -36,8 +45,7 @@ const BASE_CONFIG = {
     spawn_rim_area: 0,
     location_reveal_cooldown: 0,
     planet_rarity: 1,
-    // Dev-friendly: allow almost any location id.
-    max_location_id: FIELD_MODULUS - 1n,
+    max_location_id: deriveMaxLocationId(1),
 };
 
 const DEFAULT_INIT = { x: 990, y: 0, radius: 1000 };
@@ -218,6 +226,7 @@ function buildEnvBlock(
 async function main() {
     const { nodeUrl, writeEnv, overwriteEnv, configOverrides, init, reveal } = parseArgs();
     const config = { ...BASE_CONFIG, ...configOverrides };
+    config.max_location_id = deriveMaxLocationId(config.planet_rarity);
     console.log(`Connecting to Aztec node at ${nodeUrl}...`);
     const node = createAztecNodeClient(nodeUrl);
     await waitForNode(node);
