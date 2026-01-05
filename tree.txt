@@ -1,139 +1,398 @@
 .
 ├── agents.md
 ├── apps
-│   └── client
-│       ├── dist
-│       │   ├── assets
-│       │   │   ├── acvm_js_bg-loYwuL4-.wasm
-│       │   │   ├── AuthRegistry-Ch2I5stJ.js
-│       │   │   ├── barretenberg-CXOGG0GQ.js
-│       │   │   ├── barretenberg-threads-ErRtbxx1.js
-│       │   │   ├── ContractClassRegistry-ui9bCQvt.js
-│       │   │   ├── ContractInstanceRegistry-B3tmGxcB.js
-│       │   │   ├── EcdsaKAccount-Ckob8ePs.js
-│       │   │   ├── EcdsaRAccount-DzGJaiTf.js
-│       │   │   ├── FeeJuice-CBjPlmWG.js
-│       │   │   ├── hiding_kernel_to_public-CucXEknK.js
-│       │   │   ├── hiding_kernel_to_rollup-D1yygF2h.js
-│       │   │   ├── index-Br7LWEhu.js
-│       │   │   ├── index-D_587F4W.css
-│       │   │   ├── main.worker-CDMG3F58.js
-│       │   │   ├── MultiCallEntrypoint-BrmKqlHV.js
-│       │   │   ├── noirc_abi_wasm_bg-COtVELO-.wasm
-│       │   │   ├── private_kernel_init_simulated-CAzC1sjI.js
-│       │   │   ├── private_kernel_init-DjgzdTPE.js
-│       │   │   ├── private_kernel_inner_simulated-BEt73SKF.js
-│       │   │   ├── private_kernel_inner-CDoozZRz.js
-│       │   │   ├── private_kernel_reset_0_0_0_0_0_64_0_0_0-Bo0eHn1M.js
-│       │   │   ├── private_kernel_reset_0_0_0_0_64_0_0_0_0-CSIfWAb0.js
-│       │   │   ├── private_kernel_reset_0_0_0_64_0_0_0_0_0-C6-MKjyV.js
-│       │   │   ├── private_kernel_reset_0_0_64_0_0_0_0_0_0-DJZHrNLi.js
-│       │   │   ├── private_kernel_reset_0_64_0_0_0_0_0_0_0-Ci5HUkXk.js
-│       │   │   ├── private_kernel_reset_16_16_16_16_16_16_16_16_16-BpfTayKs.js
-│       │   │   ├── private_kernel_reset_32_16_32_16_4_4_4_4_4-1mixUYah.js
-│       │   │   ├── private_kernel_reset_32_16_32_16_4_4_4_4_64-R-QkJe70.js
-│       │   │   ├── private_kernel_reset_32_16_32_16_4_4_4_64_4-1__-akln.js
-│       │   │   ├── private_kernel_reset_32_16_32_16_4_4_4_64_64-95SHh0wR.js
-│       │   │   ├── private_kernel_reset_32_16_32_16_4_4_64_4_4-DMoDtvLR.js
-│       │   │   ├── private_kernel_reset_32_16_32_16_4_4_64_4_64-D-7imwBc.js
-│       │   │   ├── private_kernel_reset_32_16_32_16_4_4_64_64_4-Bgu4AIYU.js
-│       │   │   ├── private_kernel_reset_32_16_32_16_4_4_64_64_64-SwFvPPg3.js
-│       │   │   ├── private_kernel_reset_32_16_32_4_4_4_4_4_4-B7YEcP2K.js
-│       │   │   ├── private_kernel_reset_32_16_32_4_4_4_4_4_64-CrUvWN_2.js
-│       │   │   ├── private_kernel_reset_32_16_32_4_4_4_4_64_4-SGSJkiHC.js
-│       │   │   ├── private_kernel_reset_32_16_32_4_4_4_4_64_64-DK9K5cYt.js
-│       │   │   ├── private_kernel_reset_32_16_32_4_4_4_64_4_4-D1587tHg.js
-│       │   │   ├── private_kernel_reset_32_16_32_4_4_4_64_4_64-CqFgHyBJ.js
-│       │   │   ├── private_kernel_reset_32_16_32_4_4_4_64_64_4-BxTtnpnO.js
-│       │   │   ├── private_kernel_reset_32_16_32_4_4_4_64_64_64-B9pX2-ZX.js
-│       │   │   ├── private_kernel_reset_32_32_32_32_32_32_32_32_32-ByFaUkMV.js
-│       │   │   ├── private_kernel_reset_32_4_32_16_4_4_4_4_4-7aZ6L58p.js
-│       │   │   ├── private_kernel_reset_32_4_32_16_4_4_4_4_64-DkZVKOEn.js
-│       │   │   ├── private_kernel_reset_32_4_32_16_4_4_4_64_4-DXy71HK7.js
-│       │   │   ├── private_kernel_reset_32_4_32_16_4_4_4_64_64-BtHg79rj.js
-│       │   │   ├── private_kernel_reset_32_4_32_16_4_4_64_4_4-DSbgD5Vv.js
-│       │   │   ├── private_kernel_reset_32_4_32_16_4_4_64_4_64-CQeoolqB.js
-│       │   │   ├── private_kernel_reset_32_4_32_16_4_4_64_64_4-Dxh2Wo7W.js
-│       │   │   ├── private_kernel_reset_32_4_32_16_4_4_64_64_64-5-NAlLTU.js
-│       │   │   ├── private_kernel_reset_32_4_32_4_4_4_4_4_4-dcvsRRpi.js
-│       │   │   ├── private_kernel_reset_32_4_32_4_4_4_4_4_64-DyjW6Xo3.js
-│       │   │   ├── private_kernel_reset_32_4_32_4_4_4_4_64_4-Df7VJwoA.js
-│       │   │   ├── private_kernel_reset_32_4_32_4_4_4_4_64_64-C9ftVBL9.js
-│       │   │   ├── private_kernel_reset_32_4_32_4_4_4_64_4_4-BDk4IRya.js
-│       │   │   ├── private_kernel_reset_32_4_32_4_4_4_64_4_64-B07auU61.js
-│       │   │   ├── private_kernel_reset_32_4_32_4_4_4_64_64_4-DOVjzy_E.js
-│       │   │   ├── private_kernel_reset_32_4_32_4_4_4_64_64_64-UGkKaap1.js
-│       │   │   ├── private_kernel_reset_4_4_4_4_4_4_4_4_4-BYJ70fvr.js
-│       │   │   ├── private_kernel_reset_64_0_0_0_0_0_0_0_0-D-JtT8HJ.js
-│       │   │   ├── private_kernel_reset_simulated_0_0_0_0_0_64_0_0_0-CKHPYNla.js
-│       │   │   ├── private_kernel_reset_simulated_0_0_0_0_64_0_0_0_0-I8xH5YRS.js
-│       │   │   ├── private_kernel_reset_simulated_0_0_0_64_0_0_0_0_0-CZrt59PS.js
-│       │   │   ├── private_kernel_reset_simulated_0_0_64_0_0_0_0_0_0-Iv9udP7v.js
-│       │   │   ├── private_kernel_reset_simulated_0_64_0_0_0_0_0_0_0-DwAJvaQs.js
-│       │   │   ├── private_kernel_reset_simulated_16_16_16_16_16_16_16_16_16-B_xc1aN4.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_4_4_4-B0Y6zcyK.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_4_4_64-BinRlQVM.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_4_64_4-BNe_oiYK.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_4_64_64-v-t-xD-N.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_64_4_4-C_aRc4ib.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_64_4_64-hwFnp8Mv.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_64_64_4-DDM6GFgx.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_64_64_64-kvm1u5WR.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_4_4_4-BmenCFap.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_4_4_64-BFmHVG3O.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_4_64_4-DL6k2XAp.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_4_64_64-BOeKUvDV.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_64_4_4-Czs22JFc.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_64_4_64-CQn8cseM.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_64_64_4-DZyMeG83.js
-│       │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_64_64_64-DU777IO3.js
-│       │   │   ├── private_kernel_reset_simulated_32_32_32_32_32_32_32_32_32-2xS27sWF.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_4_4_4-BK4mcuxq.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_4_4_64-CHKoy1FK.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_4_64_4-DF4ieIPC.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_4_64_64-DH2yh9t2.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_64_4_4-DBC6wPGd.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_64_4_64-DD6HfL56.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_64_64_4-DqJ1zLBm.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_64_64_64-Bl758_8c.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_4_4_4-DNWMnMnM.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_4_4_64-DH60isMe.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_4_64_4-0wlBtXL7.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_4_64_64-C-N4s3E3.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_64_4_4-BKun3p8E.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_64_4_64-DBEgGuh-.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_64_64_4-C8VGIENr.js
-│       │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_64_64_64-BgrnvyLI.js
-│       │   │   ├── private_kernel_reset_simulated_4_4_4_4_4_4_4_4_4-CAadpJCS.js
-│       │   │   ├── private_kernel_reset_simulated_64_0_0_0_0_0_0_0_0-Dzp7R5-o.js
-│       │   │   ├── private_kernel_reset_simulated-CXNur_2x.js
-│       │   │   ├── private_kernel_reset-Bf8tYj5x.js
-│       │   │   ├── private_kernel_tail_simulated-I6K3j4uy.js
-│       │   │   ├── private_kernel_tail_to_public_simulated-B-yaxgGJ.js
-│       │   │   ├── private_kernel_tail_to_public-DZRjG7l5.js
-│       │   │   ├── private_kernel_tail-JxWArcTT.js
-│       │   │   ├── Router-CUFCcgSj.js
-│       │   │   ├── SimulatedAccount-C1qt1GYo.js
-│       │   │   └── thread.worker-Dh8poyoY.js
-│       │   └── index.html
-│       ├── index.html
-│       ├── package.json
-│       ├── src
-│       │   ├── App.tsx
-│       │   ├── config
-│       │   ├── config.ts
-│       │   ├── main.tsx
-│       │   ├── scripts
-│       │   │   ├── chain.ts
-│       │   │   ├── darkforest.ts
-│       │   │   ├── hashing.ts
-│       │   │   ├── storage.ts
-│       │   │   └── types.ts
-│       │   ├── shims
-│       │   │   └── pino-browser.ts
-│       │   └── styles.css
-│       ├── tsconfig.json
-│       └── vite.config.ts
+│   ├── client
+│   │   ├── dist
+│   │   │   ├── assets
+│   │   │   │   ├── acvm_js_bg-loYwuL4-.wasm
+│   │   │   │   ├── AuthRegistry-Ch2I5stJ.js
+│   │   │   │   ├── barretenberg-CXOGG0GQ.js
+│   │   │   │   ├── barretenberg-threads-ErRtbxx1.js
+│   │   │   │   ├── ContractClassRegistry-ui9bCQvt.js
+│   │   │   │   ├── ContractInstanceRegistry-B3tmGxcB.js
+│   │   │   │   ├── EcdsaKAccount-Ckob8ePs.js
+│   │   │   │   ├── EcdsaRAccount-DzGJaiTf.js
+│   │   │   │   ├── FeeJuice-CBjPlmWG.js
+│   │   │   │   ├── hiding_kernel_to_public-CucXEknK.js
+│   │   │   │   ├── hiding_kernel_to_rollup-D1yygF2h.js
+│   │   │   │   ├── index-C_jppHKm.css
+│   │   │   │   ├── index-N3mKKn9_.js
+│   │   │   │   ├── main.worker-CDMG3F58.js
+│   │   │   │   ├── MultiCallEntrypoint-BrmKqlHV.js
+│   │   │   │   ├── noirc_abi_wasm_bg-COtVELO-.wasm
+│   │   │   │   ├── private_kernel_init_simulated-CAzC1sjI.js
+│   │   │   │   ├── private_kernel_init-DjgzdTPE.js
+│   │   │   │   ├── private_kernel_inner_simulated-BEt73SKF.js
+│   │   │   │   ├── private_kernel_inner-CDoozZRz.js
+│   │   │   │   ├── private_kernel_reset_0_0_0_0_0_64_0_0_0-Bo0eHn1M.js
+│   │   │   │   ├── private_kernel_reset_0_0_0_0_64_0_0_0_0-CSIfWAb0.js
+│   │   │   │   ├── private_kernel_reset_0_0_0_64_0_0_0_0_0-C6-MKjyV.js
+│   │   │   │   ├── private_kernel_reset_0_0_64_0_0_0_0_0_0-DJZHrNLi.js
+│   │   │   │   ├── private_kernel_reset_0_64_0_0_0_0_0_0_0-Ci5HUkXk.js
+│   │   │   │   ├── private_kernel_reset_16_16_16_16_16_16_16_16_16-BpfTayKs.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_16_4_4_4_4_4-1mixUYah.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_16_4_4_4_4_64-R-QkJe70.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_16_4_4_4_64_4-1__-akln.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_16_4_4_4_64_64-95SHh0wR.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_16_4_4_64_4_4-DMoDtvLR.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_16_4_4_64_4_64-D-7imwBc.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_16_4_4_64_64_4-Bgu4AIYU.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_16_4_4_64_64_64-SwFvPPg3.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_4_4_4_4_4_4-B7YEcP2K.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_4_4_4_4_4_64-CrUvWN_2.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_4_4_4_4_64_4-SGSJkiHC.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_4_4_4_4_64_64-DK9K5cYt.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_4_4_4_64_4_4-D1587tHg.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_4_4_4_64_4_64-CqFgHyBJ.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_4_4_4_64_64_4-BxTtnpnO.js
+│   │   │   │   ├── private_kernel_reset_32_16_32_4_4_4_64_64_64-B9pX2-ZX.js
+│   │   │   │   ├── private_kernel_reset_32_32_32_32_32_32_32_32_32-ByFaUkMV.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_16_4_4_4_4_4-7aZ6L58p.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_16_4_4_4_4_64-DkZVKOEn.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_16_4_4_4_64_4-DXy71HK7.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_16_4_4_4_64_64-BtHg79rj.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_16_4_4_64_4_4-DSbgD5Vv.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_16_4_4_64_4_64-CQeoolqB.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_16_4_4_64_64_4-Dxh2Wo7W.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_16_4_4_64_64_64-5-NAlLTU.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_4_4_4_4_4_4-dcvsRRpi.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_4_4_4_4_4_64-DyjW6Xo3.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_4_4_4_4_64_4-Df7VJwoA.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_4_4_4_4_64_64-C9ftVBL9.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_4_4_4_64_4_4-BDk4IRya.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_4_4_4_64_4_64-B07auU61.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_4_4_4_64_64_4-DOVjzy_E.js
+│   │   │   │   ├── private_kernel_reset_32_4_32_4_4_4_64_64_64-UGkKaap1.js
+│   │   │   │   ├── private_kernel_reset_4_4_4_4_4_4_4_4_4-BYJ70fvr.js
+│   │   │   │   ├── private_kernel_reset_64_0_0_0_0_0_0_0_0-D-JtT8HJ.js
+│   │   │   │   ├── private_kernel_reset_simulated_0_0_0_0_0_64_0_0_0-CKHPYNla.js
+│   │   │   │   ├── private_kernel_reset_simulated_0_0_0_0_64_0_0_0_0-I8xH5YRS.js
+│   │   │   │   ├── private_kernel_reset_simulated_0_0_0_64_0_0_0_0_0-CZrt59PS.js
+│   │   │   │   ├── private_kernel_reset_simulated_0_0_64_0_0_0_0_0_0-Iv9udP7v.js
+│   │   │   │   ├── private_kernel_reset_simulated_0_64_0_0_0_0_0_0_0-DwAJvaQs.js
+│   │   │   │   ├── private_kernel_reset_simulated_16_16_16_16_16_16_16_16_16-B_xc1aN4.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_4_4_4-B0Y6zcyK.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_4_4_64-BinRlQVM.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_4_64_4-BNe_oiYK.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_4_64_64-v-t-xD-N.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_64_4_4-C_aRc4ib.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_64_4_64-hwFnp8Mv.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_64_64_4-DDM6GFgx.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_16_4_4_64_64_64-kvm1u5WR.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_4_4_4-BmenCFap.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_4_4_64-BFmHVG3O.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_4_64_4-DL6k2XAp.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_4_64_64-BOeKUvDV.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_64_4_4-Czs22JFc.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_64_4_64-CQn8cseM.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_64_64_4-DZyMeG83.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_16_32_4_4_4_64_64_64-DU777IO3.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_32_32_32_32_32_32_32_32-2xS27sWF.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_4_4_4-BK4mcuxq.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_4_4_64-CHKoy1FK.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_4_64_4-DF4ieIPC.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_4_64_64-DH2yh9t2.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_64_4_4-DBC6wPGd.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_64_4_64-DD6HfL56.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_64_64_4-DqJ1zLBm.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_16_4_4_64_64_64-Bl758_8c.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_4_4_4-DNWMnMnM.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_4_4_64-DH60isMe.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_4_64_4-0wlBtXL7.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_4_64_64-C-N4s3E3.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_64_4_4-BKun3p8E.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_64_4_64-DBEgGuh-.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_64_64_4-C8VGIENr.js
+│   │   │   │   ├── private_kernel_reset_simulated_32_4_32_4_4_4_64_64_64-BgrnvyLI.js
+│   │   │   │   ├── private_kernel_reset_simulated_4_4_4_4_4_4_4_4_4-CAadpJCS.js
+│   │   │   │   ├── private_kernel_reset_simulated_64_0_0_0_0_0_0_0_0-Dzp7R5-o.js
+│   │   │   │   ├── private_kernel_reset_simulated-CXNur_2x.js
+│   │   │   │   ├── private_kernel_reset-Bf8tYj5x.js
+│   │   │   │   ├── private_kernel_tail_simulated-I6K3j4uy.js
+│   │   │   │   ├── private_kernel_tail_to_public_simulated-B-yaxgGJ.js
+│   │   │   │   ├── private_kernel_tail_to_public-DZRjG7l5.js
+│   │   │   │   ├── private_kernel_tail-JxWArcTT.js
+│   │   │   │   ├── Router-CUFCcgSj.js
+│   │   │   │   ├── SimulatedAccount-C1qt1GYo.js
+│   │   │   │   └── thread.worker-Dh8poyoY.js
+│   │   │   └── index.html
+│   │   ├── index.html
+│   │   ├── package.json
+│   │   ├── src
+│   │   │   ├── App.tsx
+│   │   │   ├── config
+│   │   │   ├── config.ts
+│   │   │   ├── main.tsx
+│   │   │   ├── scripts
+│   │   │   │   ├── chain.ts
+│   │   │   │   ├── darkforest.ts
+│   │   │   │   ├── hashing.ts
+│   │   │   │   ├── storage.ts
+│   │   │   │   └── types.ts
+│   │   │   ├── shims
+│   │   │   │   └── pino-browser.ts
+│   │   │   └── styles.css
+│   │   ├── tsconfig.json
+│   │   └── vite.config.ts
+│   └── client-og
+│       ├── public
+│       │   └── icons
+│       │       ├── alerts
+│       │       │   ├── artifacts
+│       │       │   │   ├── find.svg
+│       │       │   │   └── prospect.svg
+│       │       │   ├── backgrounds
+│       │       │   │   ├── 1.svg
+│       │       │   │   └── 2.svg
+│       │       │   ├── biomes
+│       │       │   │   ├── corrupted.svg
+│       │       │   │   ├── desert.svg
+│       │       │   │   ├── forest.svg
+│       │       │   │   ├── grassland.svg
+│       │       │   │   ├── ice.svg
+│       │       │   │   ├── lava.svg
+│       │       │   │   ├── ocean.svg
+│       │       │   │   ├── swamp.svg
+│       │       │   │   ├── tundra.svg
+│       │       │   │   └── wasteland.svg
+│       │       │   ├── borders
+│       │       │   │   ├── 1.svg
+│       │       │   │   └── 2.svg
+│       │       │   ├── combat
+│       │       │   │   ├── metplayer.svg
+│       │       │   │   ├── pirates.svg
+│       │       │   │   ├── planetattacked.svg
+│       │       │   │   ├── planetlost.svg
+│       │       │   │   ├── planetwon.svg
+│       │       │   │   └── playerfound.svg
+│       │       │   ├── generic
+│       │       │   │   └── generic.svg
+│       │       │   ├── planettypes
+│       │       │   │   ├── asteroid.svg
+│       │       │   │   ├── planet.svg
+│       │       │   │   ├── quasar.svg
+│       │       │   │   ├── ruins.svg
+│       │       │   │   └── tradingpost.svg
+│       │       │   ├── spacetypes
+│       │       │   │   ├── alert_-19.svg
+│       │       │   │   ├── deadspace.svg
+│       │       │   │   ├── deepspace.svg
+│       │       │   │   └── space.svg
+│       │       │   └── transactions
+│       │       │       ├── accepted.svg
+│       │       │       ├── confirmed.svg
+│       │       │       ├── declined.svg
+│       │       │       └── initialized.svg
+│       │       ├── arrow-right.svg
+│       │       ├── broadcast.svg
+│       │       ├── crown-round.svg
+│       │       ├── crown.svg
+│       │       ├── help.svg
+│       │       ├── leaderboard.svg
+│       │       ├── pause.svg
+│       │       ├── pirates.svg
+│       │       ├── planet-empty.svg
+│       │       ├── planet.svg
+│       │       ├── planetdex.svg
+│       │       ├── play.svg
+│       │       ├── population.svg
+│       │       ├── populationgrowth.svg
+│       │       ├── range.svg
+│       │       ├── rank1.svg
+│       │       ├── rank2.svg
+│       │       ├── rank3.svg
+│       │       ├── silver.svg
+│       │       ├── silver2.svg
+│       │       ├── silvergrowth.svg
+│       │       ├── star.svg
+│       │       ├── target.svg
+│       │       ├── twitter.svg
+│       │       └── upgrade.svg
+│       └── src
+│           ├── Backend
+│           ├── config.ts
+│           ├── Frontend
+│           │   ├── Components
+│           │   │   ├── AncientLabel.tsx
+│           │   │   ├── ArtifactImage.tsx
+│           │   │   ├── BiomeAnims.tsx
+│           │   │   ├── Btn.tsx
+│           │   │   ├── Button.tsx
+│           │   │   ├── CapturePlanetButton.tsx
+│           │   │   ├── CoreUI.tsx
+│           │   │   ├── Corner.tsx
+│           │   │   ├── DisplayGasPrices.tsx
+│           │   │   ├── Email.tsx
+│           │   │   ├── GameLandingPageComponents.tsx
+│           │   │   ├── GameWindowComponents.tsx
+│           │   │   ├── Icons.tsx
+│           │   │   ├── Input.tsx
+│           │   │   ├── Labels
+│           │   │   │   ├── ArtifactLabels.tsx
+│           │   │   │   ├── BiomeLabels.tsx
+│           │   │   │   ├── KeywordLabels.tsx
+│           │   │   │   ├── Labels.tsx
+│           │   │   │   ├── LavaLabel.tsx
+│           │   │   │   ├── LegendaryLabel.tsx
+│           │   │   │   ├── MythicLabel.tsx
+│           │   │   │   ├── PlanetLabels.tsx
+│           │   │   │   ├── SpacetimeRipLabel.tsx
+│           │   │   │   └── WastelandLabel.tsx
+│           │   │   ├── LoadingSpinner.tsx
+│           │   │   ├── MaybeShortcutButton.tsx
+│           │   │   ├── MineArtifactButton.tsx
+│           │   │   ├── Modal.tsx
+│           │   │   ├── OpenPaneButtons.tsx
+│           │   │   ├── PluginModal.tsx
+│           │   │   ├── ReadMore.tsx
+│           │   │   ├── RemoteModal.tsx
+│           │   │   ├── Row.tsx
+│           │   │   ├── Slider.tsx
+│           │   │   ├── Text.tsx
+│           │   │   ├── TextLoadingBar.tsx
+│           │   │   ├── TextPreview.tsx
+│           │   │   ├── Theme.tsx
+│           │   │   └── TimeUntil.tsx
+│           │   ├── Game
+│           │   │   ├── ControllableCanvas.tsx
+│           │   │   ├── ModalManager.ts
+│           │   │   ├── NotificationManager.tsx
+│           │   │   ├── Popups.ts
+│           │   │   └── Viewport.ts
+│           │   ├── Panes
+│           │   │   ├── ArtifactCard.tsx
+│           │   │   ├── ArtifactDetailsPane.tsx
+│           │   │   ├── ArtifactHoverPane.tsx
+│           │   │   ├── ArtifactsList.tsx
+│           │   │   ├── BroadcastPane.tsx
+│           │   │   ├── CoordsPane.tsx
+│           │   │   ├── DiagnosticsPane.tsx
+│           │   │   ├── ExplorePane.tsx
+│           │   │   ├── HatPane.tsx
+│           │   │   ├── HelpPane.tsx
+│           │   │   ├── HoverPane.tsx
+│           │   │   ├── HoverPlanetPane.tsx
+│           │   │   ├── Lobbies
+│           │   │   │   ├── AdminPermissionsPane.tsx
+│           │   │   │   ├── ArtifactSettingsPane.tsx
+│           │   │   │   ├── CaptureZonesPane.tsx
+│           │   │   │   ├── ConfigurationPane.tsx
+│           │   │   │   ├── GameSettingsPane.tsx
+│           │   │   │   ├── LobbiesUtils.tsx
+│           │   │   │   ├── minimap.worker.ts
+│           │   │   │   ├── MinimapPane.tsx
+│           │   │   │   ├── MinimapUtils.ts
+│           │   │   │   ├── PlanetPane.tsx
+│           │   │   │   ├── PlayerSpawnPane.tsx
+│           │   │   │   ├── Reducer.ts
+│           │   │   │   ├── SnarkPane.tsx
+│           │   │   │   ├── SpaceJunkPane.tsx
+│           │   │   │   ├── SpaceTypeBiomePane.tsx
+│           │   │   │   └── WorldSizePane.tsx
+│           │   │   ├── ManagePlanetArtifacts
+│           │   │   │   ├── ArtifactActions.tsx
+│           │   │   │   ├── ManageArtifacts.tsx
+│           │   │   │   ├── ManagePlanetArtifactsPane.tsx
+│           │   │   │   ├── SortBy.tsx
+│           │   │   │   └── UpgradeStatsView.tsx
+│           │   │   ├── OnboardingPane.tsx
+│           │   │   ├── PlanetContextPane.tsx
+│           │   │   ├── PlanetDexPane.tsx
+│           │   │   ├── PlanetInfoPane.tsx
+│           │   │   ├── PlayerArtifactsPane.tsx
+│           │   │   ├── PluginEditorPane.tsx
+│           │   │   ├── PluginLibraryPane.tsx
+│           │   │   ├── PrivatePane.tsx
+│           │   │   ├── SettingsPane.tsx
+│           │   │   ├── Tooltip.tsx
+│           │   │   ├── TooltipPanes.tsx
+│           │   │   ├── TransactionLogPane.tsx
+│           │   │   ├── TutorialPane.tsx
+│           │   │   ├── TwitterVerifyPane.tsx
+│           │   │   ├── UpgradeDetailsPane.tsx
+│           │   │   ├── WikiPane.tsx
+│           │   │   └── ZoomPane.tsx
+│           │   ├── Renderers
+│           │   │   ├── Artifacts
+│           │   │   │   └── ArtifactRenderer.ts
+│           │   │   ├── GifRenderer.ts
+│           │   │   ├── LandingPageCanvas.tsx
+│           │   │   └── PlanetscapeRenderer
+│           │   │       └── PlanetIcons.tsx
+│           │   ├── Styles
+│           │   │   ├── Colors.tsx
+│           │   │   ├── dfstyles.ts
+│           │   │   ├── font
+│           │   │   │   ├── generator_config.txt
+│           │   │   │   ├── perfect_dos_vga_437-demo.html
+│           │   │   │   ├── perfect_dos_vga_437-webfont.woff
+│           │   │   │   ├── perfect_dos_vga_437-webfont.woff2
+│           │   │   │   ├── specimen_files
+│           │   │   │   │   ├── grid_12-825-55-15.css
+│           │   │   │   │   └── specimen_stylesheet.css
+│           │   │   │   └── stylesheet.css
+│           │   │   ├── icomoon
+│           │   │   │   ├── fonts
+│           │   │   │   │   ├── icomoon.eot
+│           │   │   │   │   ├── icomoon.svg
+│           │   │   │   │   ├── icomoon.ttf
+│           │   │   │   │   └── icomoon.woff
+│           │   │   │   └── style.css
+│           │   │   ├── Mixins.tsx
+│           │   │   ├── preflight.css
+│           │   │   └── style.css
+│           │   ├── Utils
+│           │   │   ├── BrowserChecks.ts
+│           │   │   ├── constants.ts
+│           │   │   ├── createDefinedContext.ts
+│           │   │   ├── EmitterHooks.ts
+│           │   │   ├── EmitterUtils.ts
+│           │   │   ├── Hooks.tsx
+│           │   │   ├── KeyEmitters.ts
+│           │   │   ├── SettingsHooks.tsx
+│           │   │   ├── ShortcutConstants.ts
+│           │   │   ├── TerminalTypes.ts
+│           │   │   ├── TimeUtils.ts
+│           │   │   └── UIEmitter.ts
+│           │   └── Views
+│           │       ├── ArtifactLink.tsx
+│           │       ├── ArtifactRow.tsx
+│           │       ├── CadetWormhole.tsx
+│           │       ├── DarkForestTips.tsx
+│           │       ├── DFErrorBoundary.tsx
+│           │       ├── EmojiPicker.tsx
+│           │       ├── EmojiPlanetNotification.tsx
+│           │       ├── GameWindowLayout.tsx
+│           │       ├── GenericErrorBoundary.tsx
+│           │       ├── LandingPageRoundArt.tsx
+│           │       ├── Leaderboard.tsx
+│           │       ├── ModalIcon.tsx
+│           │       ├── ModalPane.tsx
+│           │       ├── NetworkHealth.tsx
+│           │       ├── Notifications.tsx
+│           │       ├── Paused.tsx
+│           │       ├── PlanetCard.tsx
+│           │       ├── PlanetCardComponents.tsx
+│           │       ├── PlanetLink.tsx
+│           │       ├── PlanetNotifications.tsx
+│           │       ├── SendResources.tsx
+│           │       ├── Share.tsx
+│           │       ├── SidebarPane.tsx
+│           │       ├── SortableTable.tsx
+│           │       ├── TabbedView.tsx
+│           │       ├── Table.tsx
+│           │       ├── Terminal.tsx
+│           │       ├── TopBar.tsx
+│           │       ├── UpgradePreview.tsx
+│           │       └── WithdrawSilver.tsx
+│           ├── scripts
+│           │   ├── chain.ts
+│           │   ├── darkforest.ts
+│           │   ├── hashing.ts
+│           │   ├── storage.ts
+│           │   └── types.ts
+│           └── shims
+│               └── pino-browser.ts
 ├── aztec-starter
 │   ├── AGENTS.md
 │   ├── config
@@ -172,6 +431,7 @@
 │   │       └── sponsored_fpc.ts
 │   ├── tsconfig.json
 │   └── yarn.lock
+├── claude-UI-plans.md
 ├── darkforest-local
 │   ├── BUILD.md
 │   ├── builders_guide.md
@@ -14022,7 +14282,9 @@
 │   │   ├── package.json
 │   │   ├── README.md
 │   │   ├── scripts
-│   │   │   └── deploy_local.js
+│   │   │   ├── deploy_local.js
+│   │   │   ├── e2e_darkforest.js
+│   │   │   └── hashing.js
 │   │   ├── src
 │   │   │   ├── main.nr
 │   │   │   ├── mimc.nr
@@ -14055,7 +14317,13 @@
 │       ├── src
 │       │   └── index.ts
 │       └── tsconfig.json
+├── per_repo_diffs.md
+├── plan.md
+├── progress-2026-01-03-1653.md
 ├── README.md
+├── review-2026-01-03-1917.md
+├── review-2026-01-04-1451.md
+├── review-2026-01-04-1713.md
 ├── tasks
 │   ├── 001-repo-analysis-plan.md
 │   ├── 002-scaffold-aztec-workspace.md
@@ -14076,9 +14344,21 @@
 │   ├── 017-config-validation-and-bounds.md
 │   ├── 018-aztec-public-bytecode-limit.md
 │   ├── 019-playable-client-integration.md
-│   └── 020-performance-devnet-deploy-docs.md
+│   ├── 020-performance-devnet-deploy-docs.md
+│   ├── 021-review-and-e2e-integration-test.md
+│   ├── 022-remaining-work-breakdown.md
+│   ├── 023-artifact-burn-semantics.md
+│   ├── 024-init-planet-claim-guard.md
+│   ├── 025-wormhole-arrival-parity.md
+│   ├── 026-spaceship-activation-parity.md
+│   ├── 027-e2e-negative-cases.md
+│   ├── 028-ux-polish-trade-activation.md
+│   ├── 029-logging-observability.md
+│   ├── 030-indexing-helpers.md
+│   ├── 031-game-feel-ui-upgrade.md
+│   └── 032-og-ui-integration.md
 ├── tree.txt
 ├── tsconfig.base.json
 └── yarn.lock
 
-4005 directories, 10077 files
+4039 directories, 10323 files

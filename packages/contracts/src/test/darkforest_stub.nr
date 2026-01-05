@@ -426,6 +426,94 @@ unconstrained fn test_init_player_sets_home_and_planet() {
         assert_eq(stored_planet_type, PLANET_TYPE_PLANET);
         assert_eq(stored_space_type, expected_space_type(perlin));
         assert_eq(stored_is_home, 1);
+
+        let touched_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().touched_planet_ids.slot,
+            0,
+        );
+        let touched_location = context.storage_read(touched_slot);
+        assert_eq(touched_location, location_id);
+        let touched_slot1 = derive_storage_slot_in_map(
+            DarkForest::storage_layout().touched_planet_ids.slot,
+            1,
+        );
+        let touched_location_1 = context.storage_read(touched_slot1);
+        assert_eq(touched_location_1, 0);
+    });
+}
+
+#[test]
+unconstrained fn test_reveal_updates_indexes() {
+    let (mut env, contract_address, _) = utils::setup();
+    let player = env.create_light_account();
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).init_player(
+            INIT_X,
+            INIT_Y,
+            INIT_RADIUS,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
+        )
+    );
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).reveal_location(
+            REVEAL_X,
+            REVEAL_Y,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+        )
+    );
+
+    let home_location_id = expected_location_id(INIT_X, INIT_Y);
+    let revealed_location_id = expected_location_id(REVEAL_X, REVEAL_Y);
+
+    env.public_context_at(contract_address, |context| {
+        let touched_slot0 = derive_storage_slot_in_map(
+            DarkForest::storage_layout().touched_planet_ids.slot,
+            0,
+        );
+        let touched_slot1 = derive_storage_slot_in_map(
+            DarkForest::storage_layout().touched_planet_ids.slot,
+            1,
+        );
+        let touched0 = context.storage_read(touched_slot0);
+        let touched1 = context.storage_read(touched_slot1);
+        assert_eq(touched0, home_location_id);
+        assert_eq(touched1, revealed_location_id);
+
+        let revealed_count =
+            context.storage_read(DarkForest::storage_layout().revealed_coords_count.slot);
+        assert_eq(revealed_count, 1);
+        let revealed_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().revealed_coords.slot,
+            0,
+        );
+        let stored_location = context.storage_read(revealed_slot);
+        let stored_x = context.storage_read(revealed_slot + 1);
+        let stored_y = context.storage_read(revealed_slot + 2);
+        let stored_revealer = context.storage_read(revealed_slot + 3);
+        assert_eq(stored_location, revealed_location_id);
+        assert_eq(stored_x, REVEAL_X);
+        assert_eq(stored_y, REVEAL_Y);
+        assert_eq(stored_revealer, player);
     });
 }
 
@@ -855,6 +943,13 @@ unconstrained fn test_move_creates_arrival() {
         let packed = context.storage_read(arrival_list_slot);
         let stored_arrival_id = unpack_u64_low(packed);
         assert_eq(stored_arrival_id, 1);
+
+        let touched_slot1 = derive_storage_slot_in_map(
+            DarkForest::storage_layout().touched_planet_ids.slot,
+            1,
+        );
+        let touched1 = context.storage_read(touched_slot1);
+        assert_eq(touched1, to_location_id);
     });
 }
 

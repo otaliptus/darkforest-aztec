@@ -304,6 +304,12 @@ pub contract DarkForest {
         planet_arrivals: Map<Field, PublicMutable<PlanetArrivals, Context>, Context>,
         next_arrival_id: PublicMutable<u64, Context>,
         revealed: Map<Field, PublicMutable<RevealedCoords, Context>, Context>,
+        touched_planet_ids_count: PublicMutable<u64, Context>,
+        touched_planet_ids: Map<Field, PublicMutable<Field, Context>, Context>,
+        touched_planet_seen: Map<Field, PublicMutable<u8, Context>, Context>,
+        revealed_coords_count: PublicMutable<u64, Context>,
+        revealed_coords: Map<Field, PublicMutable<RevealedCoords, Context>, Context>,
+        revealed_seen: Map<Field, PublicMutable<u8, Context>, Context>,
     }
 
     #[external("public")]
@@ -317,6 +323,8 @@ pub contract DarkForest {
         assert(!nft_contract.eq(AztecAddress::zero()));
         self.storage.nft_contract.write(nft_contract);
         self.storage.next_arrival_id.write(1);
+        self.storage.touched_planet_ids_count.write(0);
+        self.storage.revealed_coords_count.write(0);
         let spacetype_hash = config_hash(
             config.planethash_key,
             config.spacetype_key,
@@ -1239,6 +1247,34 @@ pub contract DarkForest {
         updated
     }
 
+    #[internal("public")]
+    fn index_touched_planet(location_id: Field) {
+        let seen = self.storage.touched_planet_seen.at(location_id).read();
+        if seen == 0 {
+            let idx = self.storage.touched_planet_ids_count.read();
+            self.storage.touched_planet_ids.at(idx as Field).write(location_id);
+            self.storage.touched_planet_ids_count.write(idx + 1);
+            self.storage.touched_planet_seen.at(location_id).write(1);
+        }
+    }
+
+    #[internal("public")]
+    fn index_revealed_coords(
+        location_id: Field,
+        x: Field,
+        y: Field,
+        revealer: AztecAddress,
+    ) {
+        let seen = self.storage.revealed_seen.at(location_id).read();
+        if seen == 0 {
+            let idx = self.storage.revealed_coords_count.read();
+            let coords = RevealedCoords::new(location_id, x, y, revealer);
+            self.storage.revealed_coords.at(idx as Field).write(coords);
+            self.storage.revealed_coords_count.write(idx + 1);
+            self.storage.revealed_seen.at(location_id).write(1);
+        }
+    }
+
 
     #[external("private")]
     fn init_player(
@@ -1364,6 +1400,7 @@ pub contract DarkForest {
                 .player_space_junk_limit
                 .at(player)
                 .write(SPACE_JUNK_LIMIT);
+            self.internal.index_touched_planet(location_id);
         } else if action == 1 {
             let existing = self.storage.revealed.at(location_id).read();
             assert(existing.location_id == 0);
@@ -1398,6 +1435,8 @@ pub contract DarkForest {
                 .revealed
                 .at(location_id)
                 .write(RevealedCoords::new(location_id, x, y, player));
+            self.internal.index_touched_planet(location_id);
+            self.internal.index_revealed_coords(location_id, x, y, player);
 
             let mut player_state = self.storage.players.at(player).read();
             player_state.last_reveal_block = current_block;
@@ -2250,6 +2289,7 @@ pub contract DarkForest {
             self.context.push_nullifier(to_location_id);
             self.storage.planets.at(to_location_id).write(to_planet);
             self.internal.init_planet_extras(to_location_id, to_planet);
+            self.internal.index_touched_planet(to_location_id);
         } else {
             to_planet = self.internal.refresh_planet(to_location_id, to_planet, current_block);
         }

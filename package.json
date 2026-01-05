@@ -11,5 +11,12 @@
         "client:dev": "yarn workspace @darkforest-aztec/client dev",
         "client:build": "yarn workspace @darkforest-aztec/client build"
     },
+    "resolutions": {
+        "@types/node": "16.11.7",
+        "@types/react": "17.0.34",
+        "@types/react-dom": "17.0.11",
+        "@types/lodash": "4.14.182",
+        "@types/styled-components": "5.1.15"
+    },
     "packageManager": "yarn@1.22.22"
 }

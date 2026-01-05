@@ -25,8 +25,9 @@ Deliver a game-like, playable UI feel by upgrading the existing `apps/client` la
 - Manual local run: init, reveal, move, upgrade, prospect/find, trade, activate/deactivate.
 
 ## Status
-- In Progress.
+- Superseded by Ticket 032 (OG UI integration).
 
 ## Notes
 - This ticket **overrides** the previous idea in `claude-UI-plans.md` to create a separate `client-og` app. We will upgrade the existing `apps/client` to achieve a playable, game-like experience instead.
 - Build check: `yarn client:build` completes; Vite warns about mixed JSON import attributes from Aztec deps.
+- User requested reverting to the original Dark Forest v0.6 UI (not a new skin). New work proceeds under Ticket 032.

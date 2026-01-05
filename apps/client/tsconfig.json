@@ -1,11 +1,39 @@
 {
-    "extends": "../../tsconfig.base.json",
-    "compilerOptions": {
-        "jsx": "react-jsx",
-        "module": "ESNext",
-        "moduleResolution": "Bundler",
-        "resolveJsonModule": true,
-        "types": ["vite/client"]
-    },
-    "include": ["src"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "embedded_plugins/**/*.ts",
+    "embedded_plugins/**/*.tsx",
+    "plugins/**/*.ts",
+    "plugins/**/*.tsx"
+  ],
+  "exclude": [
+    "src/Frontend/Panes/Lobbies/**"
+  ],
+  "compilerOptions": {
+    "module": "esnext",
+    "target": "es2020",
+    "sourceMap": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "allowSyntheticDefaultImports": true,
+    "jsx": "react", // use typescript to transpile jsx to js
+    "allowJs": true, // allow a partial TypeScript and JavaScript codebase
+    "moduleResolution": "NodeNext",
+    "lib": ["es2020", "dom"],
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "typedocOptions": {
+    "entryPointStrategy": "expand",
+    "entryPoints": ["src"],
+    "out": "docs",
+    "hideBreadcrumbs": true,
+    "readme": "none",
+    "disableSources": true,
+    "cleanOutputDir": false,
+    "githubPages": false,
+    "excludeExternals": true,
+    "listInvalidSymbolLinks": true
+  }
 }

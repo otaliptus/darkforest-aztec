@@ -3,6 +3,9 @@
 This plan lists remaining work by priority and maps each item to a ticket.
 Existing tickets are referenced to avoid duplication.
 
+## P0 — Active (Faithful, Safe v0.6)
+- Ticket 032 - Original v0.6 UI integration for Aztec client.
+
 ## P0 — Completed (Faithful, Safe v0.6)
 - Ticket 014 - Aztec-native NFT integration for artifacts (includes ownership enforcement).
 - Ticket 023 - Artifact burn semantics (bloom / black domain).

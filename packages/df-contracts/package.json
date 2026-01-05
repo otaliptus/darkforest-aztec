@@ -1,0 +1,43 @@
+{
+  "name": "@darkforest_eth/contracts",
+  "version": "6.7.9",
+  "license": "MIT",
+  "author": "0xPARC <ivan@0xPARC.org>",
+  "engines": {
+    "node": ">=16"
+  },
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.ts",
+    "index.js",
+    "index.d.ts",
+    "typechain/",
+    "abis/"
+  ],
+  "scripts": {
+    "prepublishOnly": "npm run docs",
+    "prepare": "tsc -p .",
+    "test": "exit 0",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "docs": "typedoc --tsconfig tsconfig.docs.json && npm run format",
+    "clean": "del-cli node_modules typechain abis"
+  },
+  "dependencies": {
+    "@ethersproject/providers": "^5.5.1",
+    "ethers": "^5.5.1"
+  },
+  "devDependencies": {
+    "del-cli": "^4.0.1",
+    "eslint": "^7.30.0",
+    "prettier": "^2.3.0",
+    "typedoc": "^0.22.8",
+    "typedoc-plugin-markdown": "3.11.x",
+    "typescript": "4.4.x"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "gitHead": "2d1cffe17c6ee951d30ff1a5f396bbd88b051fa3"
+}
