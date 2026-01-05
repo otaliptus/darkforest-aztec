@@ -199,6 +199,7 @@ class GameManager extends EventEmitter {
    */
   private readonly contractsAPI: ContractsAPI;
   private readonly resolvingArrivals: Set<VoyageId>;
+  private readonly arrivalResolveSkips: Map<VoyageId, number>;
 
   /**
    * An object that syncs any newly added or deleted chunks to the player's IndexedDB.
@@ -425,6 +426,7 @@ class GameManager extends EventEmitter {
     this.homeLocation = homeLocation;
     this.contractsAPI = contractsAPI;
     this.resolvingArrivals = new Set();
+    this.arrivalResolveSkips = new Map();
 
     const revealedLocations = new Map<LocationId, RevealedLocation>();
     for (const [locationId, coords] of revealedCoords) {
@@ -2859,15 +2861,48 @@ class GameManager extends EventEmitter {
     if (this.resolvingArrivals.has(arrival.eventId)) return;
     this.resolvingArrivals.add(arrival.eventId);
     void (async () => {
+      let arrivalBlock = 0;
+      let currentBlock = 0;
+      let toPlanet = arrival.toPlanet;
       try {
+        const arrivalState = await this.contractsAPI.getArrivalState(arrival.eventId);
+        if (!arrivalState || arrivalState.arrivalBlock === 0) {
+          console.info('[Aztec] arrival already resolved or missing', {
+            arrivalId: arrival.eventId,
+          });
+          return;
+        }
+        arrivalBlock = arrivalState.arrivalBlock;
+        toPlanet = locationIdFromBigInt(arrivalState.toPlanet);
+        currentBlock = await this.contractsAPI.getCurrentBlockNumber();
+        if (currentBlock < arrivalBlock) {
+          if (!this.arrivalResolveSkips.has(arrival.eventId)) {
+            this.arrivalResolveSkips.set(arrival.eventId, arrivalBlock);
+            console.info('[Aztec] arrival not ready', {
+              arrivalId: arrival.eventId,
+              arrivalBlock,
+              currentBlock,
+              toPlanet,
+            });
+            this.terminal.current?.println(
+              `Arrival ${arrival.eventId} waiting on block ${arrivalBlock} (now ${currentBlock})`,
+              TerminalTextStyle.Sub
+            );
+          }
+          return;
+        }
         await this.contractsAPI.resolveArrival(arrival.eventId);
       } catch (err) {
         console.error('[Aztec] resolve arrival failed', {
           arrivalId: arrival.eventId,
           error: (err as Error)?.message ?? err,
+          arrivalBlock,
+          currentBlock,
+          toPlanet,
         });
       } finally {
         this.resolvingArrivals.delete(arrival.eventId);
+        this.arrivalResolveSkips.delete(arrival.eventId);
         await this.hardRefreshPlanet(arrival.toPlanet);
       }
     })();

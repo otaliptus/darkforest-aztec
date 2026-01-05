@@ -39,7 +39,7 @@ import {
   multiScalePerlin,
   toField,
 } from '../Aztec/scripts/hashing';
-import type { OnChainConfig } from '../Aztec/scripts/types';
+import type { ArrivalState, OnChainConfig } from '../Aztec/scripts/types';
 import { AztecConnection } from '../Aztec/AztecConnection';
 import { VERBOSE_LOGGING } from '../Aztec/config';
 import {
@@ -73,6 +73,7 @@ const toFieldBigInt = (value: number | bigint) => toField(BigInt(value));
 const INDEX_PAGE_SIZE = 200;
 const UNKNOWN_HASH = 'unknown';
 const READ_CONCURRENCY = 8;
+const FALLBACK_BLOCK_TIME_SEC = 12;
 
 const mapWithConcurrency = async <T, R>(
   items: T[],
@@ -170,6 +171,7 @@ export class ContractsAPI extends EventEmitter {
   private cachedConstants?: ContractConstants;
   private txId = 1;
   private blockTimestampCache = new Map<number, number>();
+  private estimatedBlockTimeSec = FALLBACK_BLOCK_TIME_SEC;
 
   public readonly txExecutor = {
     waitForTransaction: (ser: { intent: TxIntent; hash: string }): Transaction => {
@@ -439,6 +441,21 @@ export class ContractsAPI extends EventEmitter {
       );
     }
     return arrivals;
+  }
+
+  public async getArrivalState(arrivalId: VoyageId): Promise<ArrivalState | undefined> {
+    const id = toBigInt(arrivalId);
+    const arrivalState = await readArrivalState(
+      this.aztecConnection.getNode(),
+      this.aztecConnection.getClient().darkforestAddress,
+      this.storageSlots,
+      id
+    );
+    return arrivalState;
+  }
+
+  public async getCurrentBlockNumber(): Promise<number> {
+    return this.aztecConnection.getNode().getBlockNumber();
   }
 
   public async getAllArrivals(
@@ -944,9 +961,28 @@ export class ContractsAPI extends EventEmitter {
     }
     const cached = this.blockTimestampCache.get(blockNumber);
     if (cached) return cached;
-    const block = await this.aztecConnection.getNode().getBlock(blockNumber);
+    const node = this.aztecConnection.getNode();
+    const block = await node.getBlock(blockNumber);
     if (!block) {
-      return Math.floor(Date.now() / 1000);
+      const latestNumber = await node.getBlockNumber();
+      const latestBlock = await node.getBlock(latestNumber);
+      if (!latestBlock) {
+        return Math.floor(Date.now() / 1000);
+      }
+      if (latestNumber > 1) {
+        const prevBlock = await node.getBlock(latestNumber - 1);
+        if (prevBlock) {
+          const delta = Number(latestBlock.timestamp) - Number(prevBlock.timestamp);
+          if (delta > 0) {
+            this.estimatedBlockTimeSec = delta;
+          }
+        }
+      }
+      const blocksAhead = Math.max(1, blockNumber - latestNumber);
+      const estimated =
+        Number(latestBlock.timestamp) + blocksAhead * this.estimatedBlockTimeSec;
+      this.blockTimestampCache.set(blockNumber, estimated);
+      return estimated;
     }
     const timestamp = Number(block.timestamp);
     this.blockTimestampCache.set(blockNumber, timestamp);

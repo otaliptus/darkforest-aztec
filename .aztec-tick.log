@@ -1,0 +1,17 @@
+Aztec node: http://localhost:8080
+L1 RPC: http://localhost:8545
+DarkForest: 0x1e6ca6d3847296d8ed7adb9768c7da2ab301fccc5e18b29de067b0acea0f44a1
+[22:01:45.854] INFO: pxe:data:lmdb Starting data store with maxReaders 16
+[22:01:46.119] INFO: pxe:service Started PXE connected to chain 31337 version 845231672
+[22:01:46.217] INFO: pxe:service Added contract SchnorrAccount at 0x2974756c17646ca139f79b5710b6aee11e2621ce65c882ffd593cfde58d94072 with class 0x045ceef8cb0a93103c0e60b83b9fdfb01e869fc6425ed690c8b5679dc06403f1
+[22:01:46.220] INFO: pxe:service Registered account 0x2974756c17646ca139f79b5710b6aee11e2621ce65c882ffd593cfde58d94072
+[22:01:46.344] INFO: pxe:service Added contract DarkForest at 0x1e6ca6d3847296d8ed7adb9768c7da2ab301fccc5e18b29de067b0acea0f44a1 with class 0x0b6a8495177f2083836d72298179eaac6520072c8a50ddc97cd36958d9e4753b
+file:///Users/talip/Desktop/darkforest-aztec/aztec-tick.mjs:165
+  throw new Error('Admin account not initialized. Initialize player (account index 0) in client first.');
+        ^
+
+Error: Admin account not initialized. Initialize player (account index 0) in client first.
+    at file:///Users/talip/Desktop/darkforest-aztec/aztec-tick.mjs:165:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+Node.js v22.15.0
