@@ -310,6 +310,18 @@ export class ContractsAPI extends EventEmitter {
     return Promise.resolve(Number(this.onChainConfig.worldRadius));
   }
 
+  public getOnChainConfig(): OnChainConfig {
+    return this.onChainConfig;
+  }
+
+  public getBurnedLocationId(): bigint {
+    return this.onChainConfig.maxLocationId;
+  }
+
+  public getContractAztecAddress(): AztecAddress {
+    return this.aztecConnection.getClient().darkforestAddress;
+  }
+
   public async getPlayers(progress?: (fraction: number) => void): Promise<Map<string, Player>> {
     const address = this.getAddress();
     if (!address) {

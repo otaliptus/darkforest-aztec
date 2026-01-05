@@ -23,7 +23,7 @@ const SPONSORED_FPC_SALT = new Fr(0);
 const FIELD_MODULUS =
     21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
-const CONFIG = {
+const BASE_CONFIG = {
     planethash_key: 42n,
     spacetype_key: 43n,
     biomebase_key: 6271n,
@@ -40,15 +40,110 @@ const CONFIG = {
     max_location_id: FIELD_MODULUS - 1n,
 };
 
-const DEFAULT_INIT = { x: "990", y: "0", radius: "1000" };
-const DEFAULT_REVEAL = { x: "123", y: "456" };
+const DEFAULT_INIT = { x: 990, y: 0, radius: 1000 };
+const DEFAULT_REVEAL = { x: 123, y: 456 };
+
+const readOptionalInt = (value) => {
+    if (value === undefined || value === "") return undefined;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return undefined;
+    return Math.trunc(parsed);
+};
+
+const readPositiveInt = (value, fallback) => {
+    const parsed = readOptionalInt(value);
+    if (parsed === undefined || parsed <= 0) return fallback;
+    return parsed;
+};
+
+const clampCoord = (value, worldRadius) => {
+    if (worldRadius <= 0) return 0;
+    return Math.max(Math.min(value, worldRadius), -worldRadius);
+};
+
+const clampRadius = (value, worldRadius) => {
+    if (worldRadius <= 0) return 0;
+    return Math.max(0, Math.min(value, worldRadius));
+};
+
+const deriveDefaults = (worldRadius) => {
+    return {
+        init: {
+            x: clampCoord(DEFAULT_INIT.x, worldRadius),
+            y: clampCoord(DEFAULT_INIT.y, worldRadius),
+            radius: clampRadius(DEFAULT_INIT.radius, worldRadius),
+        },
+        reveal: {
+            x: clampCoord(DEFAULT_REVEAL.x, worldRadius),
+            y: clampCoord(DEFAULT_REVEAL.y, worldRadius),
+        },
+    };
+};
 
 function parseArgs() {
-    const args = new Set(process.argv.slice(2));
+    const rawArgs = process.argv.slice(2);
+    const args = new Set(rawArgs);
+    const getArg = (flag) => {
+        const idx = rawArgs.indexOf(flag);
+        if (idx === -1 || idx + 1 >= rawArgs.length) return undefined;
+        return rawArgs[idx + 1];
+    };
+    const smallMap =
+        args.has("--small-map") ||
+        process.env.DF_SMALL_MAP === "1" ||
+        process.env.DF_SMALL_MAP === "true";
+    const defaultWorldRadius = smallMap ? 2000 : BASE_CONFIG.world_radius;
+    const defaultPlanetRarity = smallMap ? 1024 : BASE_CONFIG.planet_rarity;
+
+    const worldRadius = readPositiveInt(
+        getArg("--world-radius") ?? process.env.DF_WORLD_RADIUS,
+        defaultWorldRadius
+    );
+    const planetRarity = readPositiveInt(
+        getArg("--planet-rarity") ?? process.env.DF_PLANET_RARITY,
+        defaultPlanetRarity
+    );
+    const derived = deriveDefaults(worldRadius);
+    const init = {
+        x:
+            readOptionalInt(getArg("--init-x") ?? process.env.DF_INIT_X) ??
+            derived.init.x,
+        y:
+            readOptionalInt(getArg("--init-y") ?? process.env.DF_INIT_Y) ??
+            derived.init.y,
+        radius:
+            readOptionalInt(getArg("--init-radius") ?? process.env.DF_INIT_RADIUS) ??
+            derived.init.radius,
+    };
+    const reveal = {
+        x:
+            readOptionalInt(getArg("--reveal-x") ?? process.env.DF_REVEAL_X) ??
+            derived.reveal.x,
+        y:
+            readOptionalInt(getArg("--reveal-y") ?? process.env.DF_REVEAL_Y) ??
+            derived.reveal.y,
+    };
+
+    const boundedInit = {
+        x: clampCoord(init.x, worldRadius),
+        y: clampCoord(init.y, worldRadius),
+        radius: clampRadius(init.radius, worldRadius),
+    };
+    const boundedReveal = {
+        x: clampCoord(reveal.x, worldRadius),
+        y: clampCoord(reveal.y, worldRadius),
+    };
+
     return {
         nodeUrl: process.env.AZTEC_NODE_URL ?? "http://localhost:8080",
         writeEnv: args.has("--write-env") || args.has("-w"),
         overwriteEnv: args.has("--overwrite-env"),
+        configOverrides: {
+            world_radius: worldRadius,
+            planet_rarity: planetRarity,
+        },
+        init: boundedInit,
+        reveal: boundedReveal,
     };
 }
 
@@ -90,7 +185,15 @@ async function ensureAccount(wallet) {
     return account;
 }
 
-function buildEnvBlock(nodeUrl, darkforestAddress, nftAddress, sponsoredAddress) {
+function buildEnvBlock(
+    nodeUrl,
+    darkforestAddress,
+    nftAddress,
+    sponsoredAddress,
+    config,
+    init,
+    reveal
+) {
     const lines = [
         `VITE_AZTEC_NODE_URL=${nodeUrl}`,
         `VITE_DARKFOREST_ADDRESS=${darkforestAddress}`,
@@ -98,22 +201,23 @@ function buildEnvBlock(nodeUrl, darkforestAddress, nftAddress, sponsoredAddress)
         `VITE_SPONSORED_FPC_ADDRESS=${sponsoredAddress ?? ""}`,
         `VITE_ACCOUNT_INDEX=0`,
         `VITE_PROVER_ENABLED=false`,
-        `VITE_PLANETHASH_KEY=${CONFIG.planethash_key}`,
-        `VITE_SPACETYPE_KEY=${CONFIG.spacetype_key}`,
-        `VITE_PERLIN_LENGTH_SCALE=${CONFIG.perlin_length_scale}`,
-        `VITE_PERLIN_MIRROR_X=${CONFIG.perlin_mirror_x}`,
-        `VITE_PERLIN_MIRROR_Y=${CONFIG.perlin_mirror_y}`,
-        `VITE_INIT_X=${DEFAULT_INIT.x}`,
-        `VITE_INIT_Y=${DEFAULT_INIT.y}`,
-        `VITE_INIT_RADIUS=${DEFAULT_INIT.radius}`,
-        `VITE_REVEAL_X=${DEFAULT_REVEAL.x}`,
-        `VITE_REVEAL_Y=${DEFAULT_REVEAL.y}`,
+        `VITE_PLANETHASH_KEY=${config.planethash_key}`,
+        `VITE_SPACETYPE_KEY=${config.spacetype_key}`,
+        `VITE_PERLIN_LENGTH_SCALE=${config.perlin_length_scale}`,
+        `VITE_PERLIN_MIRROR_X=${config.perlin_mirror_x}`,
+        `VITE_PERLIN_MIRROR_Y=${config.perlin_mirror_y}`,
+        `VITE_INIT_X=${init.x}`,
+        `VITE_INIT_Y=${init.y}`,
+        `VITE_INIT_RADIUS=${init.radius}`,
+        `VITE_REVEAL_X=${reveal.x}`,
+        `VITE_REVEAL_Y=${reveal.y}`,
     ];
     return `${lines.join("\n")}\n`;
 }
 
 async function main() {
-    const { nodeUrl, writeEnv, overwriteEnv } = parseArgs();
+    const { nodeUrl, writeEnv, overwriteEnv, configOverrides, init, reveal } = parseArgs();
+    const config = { ...BASE_CONFIG, ...configOverrides };
     console.log(`Connecting to Aztec node at ${nodeUrl}...`);
     const node = createAztecNodeClient(nodeUrl);
     await waitForNode(node);
@@ -139,7 +243,7 @@ async function main() {
     console.log("Deploying DarkForest...");
     const dfDeploy = Contract.deploy(wallet, darkforestArtifact, [
         account.address,
-        CONFIG,
+        config,
         nft.address,
     ]);
     const darkforest = await dfDeploy.send({ from: account.address, fee }).deployed();
@@ -156,7 +260,10 @@ async function main() {
         nodeUrl,
         darkforest.address.toString(),
         nft.address.toString(),
-        sponsoredAddress?.toString()
+        sponsoredAddress?.toString(),
+        config,
+        init,
+        reveal
     );
 
     console.log("\n.env.local block:\n");

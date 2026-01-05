@@ -478,9 +478,15 @@ class PersistentChunkStore implements ChunkStore {
   public async onEthTxSubmit(tx: Transaction): Promise<void> {
     // in case the tx was mined and saved already
     if (!tx.hash || this.confirmedTxHashes.has(tx.hash)) return;
-    const ser: PersistedTransaction = { hash: tx.hash, intent: tx.intent };
+    const intent = { ...(tx.intent as Record<string, unknown>) };
+    delete intent.contract;
+    delete intent.args;
+    const ser: PersistedTransaction = { hash: tx.hash, intent: intent as typeof tx.intent };
     try {
-      await this.db.put(ObjectStore.UNCONFIRMED_ETH_TXS, JSON.parse(JSON.stringify(ser)), tx.hash);
+      const safeSer = JSON.parse(
+        JSON.stringify(ser, (_key, value) => (typeof value === 'bigint' ? value.toString() : value))
+      );
+      await this.db.put(ObjectStore.UNCONFIRMED_ETH_TXS, safeSer, tx.hash);
     } catch (err) {
       console.warn('[PersistentChunkStore] Failed to persist tx; skipping.', err);
     }

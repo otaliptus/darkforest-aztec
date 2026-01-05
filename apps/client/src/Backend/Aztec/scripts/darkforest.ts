@@ -5,9 +5,9 @@ import { Contract, getContractInstanceFromInstantiationParams, type SentTx } fro
 import { Fr, GrumpkinScalar } from "@aztec/aztec.js/fields";
 import { SponsoredFeePaymentMethod } from "@aztec/aztec.js/fee/testing";
 import type { AccountManager } from "@aztec/aztec.js/wallet";
-import { getInitialTestAccountsData } from "@aztec/accounts/testing/lazy";
+import { getInitialTestAccountsData } from "@aztec/accounts/testing";
 const sponsoredFpcArtifactUrl = "/public/aztec/sponsored_fpc_contract-SponsoredFPC.json";
-import { TestWallet } from "@aztec/test-wallet/client/lazy";
+import { TestWallet } from "@aztec/test-wallet/client/bundle";
 import type { NoirCompiledContract } from "@aztec/stdlib/noir";
 import type { ClientAccountConfig, ClientConfig } from "../config";
 import { MAX_TEST_ACCOUNTS } from "../config";

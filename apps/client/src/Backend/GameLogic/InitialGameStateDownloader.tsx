@@ -19,6 +19,7 @@ import { ContractConstants } from '../../_types/darkforest/api/ContractsAPITypes
 import { AddressTwitterMap } from '../../_types/darkforest/api/UtilityServerAPITypes';
 import PersistentChunkStore from '../Storage/PersistentChunkStore';
 import { ContractsAPI } from './ContractsAPI';
+import { tryLoadSnapshot } from './SnapshotLoader';
 
 export interface InitialGameState {
   contractConstants: ContractConstants;
@@ -62,6 +63,11 @@ export class InitialGameStateDownloader {
     contractsAPI: ContractsAPI,
     persistentChunkStore: PersistentChunkStore
   ): Promise<InitialGameState> {
+    const snapshotState = await tryLoadSnapshot(contractsAPI);
+    if (snapshotState) {
+      return snapshotState;
+    }
+
     const isDev = process.env.NODE_ENV !== 'production';
 
     /**

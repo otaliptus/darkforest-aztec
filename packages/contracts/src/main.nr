@@ -59,7 +59,7 @@ pub contract DarkForest {
     global PHOTOID_ACTIVATION_DELAY_BLOCKS: u32 = 4;
     global WORMHOLE_SPEED_MODIFIERS: [u64; 6] = [1, 2, 4, 8, 16, 32];
 
-    global HOME_PLANET_POPULATION: u64 = 50000;
+    global HOME_PLANET_POPULATION: u64 = 200000;
     global SPACE_JUNK_LIMIT: u64 = 1000;
     global PLANET_LEVEL_JUNK: [u64; 10] = [20, 25, 30, 35, 40, 45, 50, 55, 60, 65];
     global ABANDON_SPEED_CHANGE_PERCENT: u64 = 150;

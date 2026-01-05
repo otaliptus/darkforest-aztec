@@ -55,12 +55,17 @@ export class AttribManager {
     const buffer = gl.createBuffer();
     if (!buffer) throw 'Error creating buffer for attrib: ' + props.name;
 
-    if (enable) gl.enableVertexAttribArray(loc);
-
     this.loc = loc;
     this.buffer = buffer;
 
     this.attribArray = new AttribArray(props.type);
+
+    if (loc >= 0) {
+      if (enable) gl.enableVertexAttribArray(loc);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.vertexAttribPointer(loc, props.dim, props.type, props.normalize, 0, 0);
+      gl.bufferData(gl.ARRAY_BUFFER, this.attribArray.array, gl.DYNAMIC_DRAW);
+    }
   }
 
   /**
@@ -84,6 +89,7 @@ export class AttribManager {
     const { gl, loc } = this;
     const { dim, type, normalize } = this.props;
 
+    if (loc < 0) return;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer);
     gl.vertexAttribPointer(loc, dim, type, normalize, 0, 0);
     gl.bufferData(gl.ARRAY_BUFFER, this.attribArray.array, gl.DYNAMIC_DRAW, 0, n * dim);

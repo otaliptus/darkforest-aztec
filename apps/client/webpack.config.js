@@ -39,6 +39,7 @@ const ENV_DEFAULTS = {
   DEFAULT_RPC: 'https://rpc-df.xdaichain.com/',
   // This must be null to indicate to webpack that this environment variable is optional
   DF_WEBSERVER_URL: null,
+  DF_SNAPSHOT_URL: null,
   AZTEC_NODE_URL: 'http://localhost:8080',
   DARKFOREST_ADDRESS: '',
   NFT_ADDRESS: '',
