@@ -74,12 +74,16 @@ const INDEX_PAGE_SIZE = 200;
 const UNKNOWN_HASH = 'unknown';
 const READ_CONCURRENCY = 8;
 const FALLBACK_BLOCK_TIME_SEC = 12;
-const BLOCK_TIME_OVERRIDE_SEC = (() => {
-  const raw = process.env.VITE_BLOCK_TIME_SEC ?? process.env.DF_BLOCK_TIME_SEC ?? '';
+const readBlockTimeOverrideSec = (): number | undefined => {
+  const raw =
+    (process.env?.VITE_BLOCK_TIME_SEC ??
+      process.env?.DF_BLOCK_TIME_SEC ??
+      '') as string | number;
   const parsed = Number(raw);
   if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
   return parsed;
-})();
+};
+const BLOCK_TIME_OVERRIDE_SEC = readBlockTimeOverrideSec();
 
 const mapWithConcurrency = async <T, R>(
   items: T[],
@@ -970,22 +974,22 @@ export class ContractsAPI extends EventEmitter {
       if (!Number.isFinite(value)) {
         return Math.floor(Date.now() / 1000);
       }
-      // Aztec node timestamps may be ms/us/ns; normalize to seconds when needed.
+      // Aztec node timestamps may be in ns/us/ms; normalize to seconds.
+      if (value > 100_000_000_000_000_000) return Math.floor(value / 1_000_000_000);
       if (value > 100_000_000_000_000) return Math.floor(value / 1_000_000);
       if (value > 10_000_000_000) return Math.floor(value / 1_000);
-      return value;
+      return Math.floor(value);
     };
     const cached = this.blockTimestampCache.get(blockNumber);
-    if (cached) return cached;
+    if (cached !== undefined) return cached;
     const node = this.aztecConnection.getNode();
     if (this.blockTimeOverrideSec) {
       const latestNumber = await node.getBlockNumber();
-      const latestBlock = await node.getBlock(latestNumber);
-      const latestTs = latestBlock
-        ? normalizeTimestamp(Number(latestBlock.timestamp))
-        : Math.floor(Date.now() / 1000);
-      const estimated =
-        latestTs + (blockNumber - latestNumber) * this.blockTimeOverrideSec;
+      const nowSec = Math.floor(Date.now() / 1000);
+      // Anchor on wall-clock time to avoid chain timestamps racing ahead of real time.
+      const estimated = Math.floor(
+        nowSec + (blockNumber - latestNumber) * this.blockTimeOverrideSec
+      );
       this.blockTimestampCache.set(blockNumber, estimated);
       return estimated;
     }
