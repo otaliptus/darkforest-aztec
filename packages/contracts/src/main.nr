@@ -214,7 +214,6 @@ pub contract DarkForest {
     global BIOME_THRESHOLD_1: u64 = 15;
     global BIOME_THRESHOLD_2: u64 = 17;
     global MAX_NATURAL_PLANET_LEVEL: u8 = 9;
-    global TIME_FACTOR_HUNDREDTHS: u64 = 100;
     global PLANET_LEVEL_THRESHOLDS: [u64; 10] = [
         16777216,
         4194292,
@@ -1086,9 +1085,10 @@ pub contract DarkForest {
             silver = silver_cap / 2;
         }
 
-        speed = (speed * TIME_FACTOR_HUNDREDTHS) / 100;
-        population_growth = (population_growth * TIME_FACTOR_HUNDREDTHS) / 100;
-        silver_growth = (silver_growth * TIME_FACTOR_HUNDREDTHS) / 100;
+        // Scale time-dependent rates by the on-chain time factor (hundredths).
+        let time_factor = self.storage.config.read().time_factor_hundredths;
+        population_growth = (population_growth * time_factor) / 100;
+        silver_growth = (silver_growth * time_factor) / 100;
 
         let mut planet_owner = AztecAddress::zero();
         let mut is_home_planet = false;
@@ -1306,7 +1306,6 @@ pub contract DarkForest {
         let dist_sq = x_abs * x_abs + y_abs * y_abs;
         let r_sq = r_u * r_u;
         assert(dist_sq < r_sq);
-        assert(dist_sq * 100 > r_sq * 98);
 
         let perlin_u64 = multi_scale_perlin(
             x,
@@ -1329,6 +1328,7 @@ pub contract DarkForest {
         assert(bn254::lt(location_id, max_location_id));
         assert(radius <= world_radius);
         if spawn_rim_area != 0 {
+            assert(dist_sq * 100 > r_sq * 98);
             let radius_u = radius as u128;
             let world_u = world_radius as u128;
             let lhs = ((radius_u * radius_u * 314u128) / 100u128)
@@ -2449,7 +2449,12 @@ pub contract DarkForest {
             assert(pop_arriving > 0);
         }
 
-        let mut travel_time = effective_dist_times_hundred / move_planet.speed;
+        let time_factor = config.time_factor_hundredths;
+        let time_factor_u = if time_factor == 0 { 1 } else { time_factor } as u128;
+        let mut travel_time =
+            (effective_dist_times_hundred as u128)
+                * 100u128
+                / ((move_planet.speed as u128) * time_factor_u);
         if travel_time == 0 {
             travel_time = 1;
         }

@@ -16,14 +16,16 @@ import {
   Planet,
   PlanetRenderInfo,
   PlanetType,
+  RenderZIndex,
   TextAlign,
   TextAnchor,
   WorldCoords,
+  RGBAVec,
 } from '@darkforest_eth/types';
 import { engineConsts } from '../EngineConsts';
 import { Renderer } from '../Renderer';
 
-const { whiteA, barbsA, gold } = engineConsts.colors;
+const { barbsA, gold, ownedA } = engineConsts.colors;
 const { maxRadius } = engineConsts.planet;
 
 /**
@@ -59,7 +61,22 @@ export class PlanetRenderManager {
     const artifacts = uiManager
       .getArtifactsWithIds(planet.heldArtifactIds)
       .filter((a) => !!a) as Artifact[];
-    const color = uiManager.isOwnedByMe(planet) ? whiteA : getOwnerColorVec(planet);
+    const isMine = uiManager.isOwnedByMe(planet);
+    const color = isMine ? ownedA : getOwnerColorVec(planet);
+    if (isMine && (renderAtReducedQuality || renderInfo.radii.radiusPixels <= 8)) {
+      const viewport = this.renderer.getViewport();
+      const centerCanvas = viewport.worldToCanvasCoords(planet.location.coords);
+      const size = Math.max(4, Math.round(renderInfo.radii.radiusPixels * 1.4));
+      const half = size / 2;
+      this.renderer.rectRenderer.queueRect(
+        { x: centerCanvas.x - half, y: centerCanvas.y - half },
+        size,
+        size,
+        [color[0], color[1], color[2]],
+        -1,
+        RenderZIndex.UI
+      );
+    }
 
     // draw planet body
     this.queuePlanetBody(planet, planet.location.coords, renderInfo.radii.radiusWorld);
@@ -88,6 +105,18 @@ export class PlanetRenderManager {
     }
 
     if (hasOwner(planet)) {
+      if (isMine) {
+        const viewport = this.renderer.getViewport();
+        const centerCanvas = viewport.worldToCanvasCoords(planet.location.coords);
+        const highlightRadius = Math.max(renderInfo.radii.radiusPixels * 1.35, 3);
+        const highlightColor: RGBAVec = [
+          color[0],
+          color[1],
+          color[2],
+          Math.min(255, cA * 220),
+        ];
+        cR.queueCircle(centerCanvas, highlightRadius, highlightColor, 1);
+      }
       color[3] = cA * 120;
       cR.queueCircleWorld(planet.location.coords, renderInfo.radii.radiusWorld * 1.1, color, 0.5);
       const pct = planet.energy / planet.energyCap;
@@ -382,7 +411,7 @@ export class PlanetRenderManager {
     if (lockedEnergy > 0) energyString += ` (-${formatNumber(lockedEnergy)})`;
 
     const playerColor = hasOwner(planet) ? getOwnerColorVec(planet) : barbsA;
-    const color = uiManager.isOwnedByMe(planet) ? whiteA : playerColor;
+    const color = uiManager.isOwnedByMe(planet) ? ownedA : playerColor;
     color[3] = alpha;
 
     const textLoc: WorldCoords = {

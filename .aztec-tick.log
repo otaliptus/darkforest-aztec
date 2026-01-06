@@ -1,17 +1,37 @@
 Aztec node: http://localhost:8080
-L1 RPC: http://localhost:8545
-DarkForest: 0x1e6ca6d3847296d8ed7adb9768c7da2ab301fccc5e18b29de067b0acea0f44a1
-[22:01:45.854] INFO: pxe:data:lmdb Starting data store with maxReaders 16
-[22:01:46.119] INFO: pxe:service Started PXE connected to chain 31337 version 845231672
-[22:01:46.217] INFO: pxe:service Added contract SchnorrAccount at 0x2974756c17646ca139f79b5710b6aee11e2621ce65c882ffd593cfde58d94072 with class 0x045ceef8cb0a93103c0e60b83b9fdfb01e869fc6425ed690c8b5679dc06403f1
-[22:01:46.220] INFO: pxe:service Registered account 0x2974756c17646ca139f79b5710b6aee11e2621ce65c882ffd593cfde58d94072
-[22:01:46.344] INFO: pxe:service Added contract DarkForest at 0x1e6ca6d3847296d8ed7adb9768c7da2ab301fccc5e18b29de067b0acea0f44a1 with class 0x0b6a8495177f2083836d72298179eaac6520072c8a50ddc97cd36958d9e4753b
-file:///Users/talip/Desktop/darkforest-aztec/aztec-tick.mjs:165
-  throw new Error('Admin account not initialized. Initialize player (account index 0) in client first.');
-        ^
-
-Error: Admin account not initialized. Initialize player (account index 0) in client first.
-    at file:///Users/talip/Desktop/darkforest-aztec/aztec-tick.mjs:165:9
-    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
-
-Node.js v22.15.0
+DarkForest: 0x2a6dd38b0101382f15fa145866d86a99554dc992f0f6f0b023e59664998219aa
+Tick location: 0x1
+[15:47:00.043] INFO: pxe:data:lmdb Starting data store with maxReaders 16
+[15:47:00.300] INFO: pxe:service Started PXE connected to chain 31337 version 845231672
+[15:47:00.396] INFO: pxe:service Added contract SchnorrAccount at 0x2974756c17646ca139f79b5710b6aee11e2621ce65c882ffd593cfde58d94072 with class 0x045ceef8cb0a93103c0e60b83b9fdfb01e869fc6425ed690c8b5679dc06403f1
+[15:47:00.400] INFO: pxe:service Registered account 0x2974756c17646ca139f79b5710b6aee11e2621ce65c882ffd593cfde58d94072
+Admin: 0x2974756c17646ca139f79b5710b6aee11e2621ce65c882ffd593cfde58d94072
+[15:47:00.518] INFO: pxe:service Added contract DarkForest at 0x2a6dd38b0101382f15fa145866d86a99554dc992f0f6f0b023e59664998219aa with class 0x009ea932b46d550511807fa4079ae616d239ab9113eef307124053ada857cea0
+[15:47:01.515] INFO: wallet-sdk:base_wallet Sent transaction 0x2434b9b8a0900d194c6317be55812b3ebf3266fa7c9c96eaa4bb3dc2a3df5284
+Tick tx mined. L2 block: 443
+[15:47:08.504] INFO: wallet-sdk:base_wallet Sent transaction 0x0fcba56c2030ae1fac5368db0f0385ec3156729e90b66af7db4268ed1ea6a19d
+Tick tx mined. L2 block: 444
+[15:47:14.390] INFO: wallet-sdk:base_wallet Sent transaction 0x14e8f15f660af952fbe762ff55b036b79b090f12fd7c8a45eb69ad84a654e8bc
+Tick tx mined. L2 block: 445
+[15:47:20.227] INFO: wallet-sdk:base_wallet Sent transaction 0x208e061ccf079936701f12bcf6c13560379d0893ae6d1576249c384f2246d67f
+Tick tx mined. L2 block: 446
+[15:47:27.066] INFO: wallet-sdk:base_wallet Sent transaction 0x1c9aaa58ba369c143a24cdf9abc7f3ce83cc572103cd228238afdfb1b38c1fbc
+Tick tx mined. L2 block: 448
+[15:47:33.909] INFO: wallet-sdk:base_wallet Sent transaction 0x1f857d243f9fad555d091c5e9bb157a5c7e46f4a07cd79f56586543bbc88c22e
+Tick tx mined. L2 block: 449
+[15:47:40.831] INFO: wallet-sdk:base_wallet Sent transaction 0x13ae1e6f375a5da7b2b38584b509714eb3837834c0dfa8bec857c07ee0ada284
+Tick tx mined. L2 block: 450
+[15:47:46.687] INFO: wallet-sdk:base_wallet Sent transaction 0x188428e0a27f9b463e4246fdcbc127324fcc07856c6b12257085cf11d07be4fd
+Tick tx mined. L2 block: 451
+[15:47:52.575] INFO: wallet-sdk:base_wallet Sent transaction 0x0556fd47a91303a3fc4c54cd608152304962ea11a32f4aee911127cf698b3b31
+Tick tx mined. L2 block: 452
+[15:47:59.453] INFO: wallet-sdk:base_wallet Sent transaction 0x019e0c6b5638ca1f6e6d671da9bcc3fdebe7541d46cc55b2971c75a06e695b59
+Tick tx mined. L2 block: 454
+[15:48:05.352] INFO: wallet-sdk:base_wallet Sent transaction 0x22a553b19f61a069feaeeae8473ed0f93743f50c8afc4f894979b9876d083092
+Tick tx mined. L2 block: 455
+[15:48:12.219] INFO: wallet-sdk:base_wallet Sent transaction 0x1f65bbfc68038f281f2335076d45571c3474160f90a78c772287f9151090fb4b
+Tick tx mined. L2 block: 456
+[15:48:19.083] INFO: wallet-sdk:base_wallet Sent transaction 0x1b87c116e92f15a5f578aac7d30981efd72dd7d57afa0560f43479ef08f4aba3
+Tick tx mined. L2 block: 457
+[15:48:24.955] INFO: wallet-sdk:base_wallet Sent transaction 0x0a3f9661c3f1598abe984ddc11da98dfa11e456a5e2c8e6f83f8eddc459aff5b
+Tick tx mined. L2 block: 458

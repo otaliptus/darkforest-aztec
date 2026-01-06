@@ -1362,7 +1362,6 @@ export class GameObjects {
 
     const silver = planetType === PlanetType.SILVER_MINE ? silCap / 2 : 0;
 
-    speed *= this.contractConstants.TIME_FACTOR_HUNDREDTHS / 100;
     energyGro *= this.contractConstants.TIME_FACTOR_HUNDREDTHS / 100;
     silGro *= this.contractConstants.TIME_FACTOR_HUNDREDTHS / 100;
 

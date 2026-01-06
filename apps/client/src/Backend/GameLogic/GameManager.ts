@@ -3127,7 +3127,8 @@ class GameManager extends EventEmitter {
     const dist = this.getDist(fromId, toId);
 
     const speed = from.speed * this.getSpeedBuff(abandoning);
-    return dist / (speed / 100);
+    const timeFactor = Math.max(1, this.contractConstants.TIME_FACTOR_HUNDREDTHS || 100);
+    return (dist * 10000) / (speed * timeFactor);
   }
 
   /**

@@ -141,6 +141,7 @@ pub unconstrained fn setup_with_params(
         WORLD_RADIUS,
         SPAWN_RIM_AREA,
         location_reveal_cooldown,
+        TIME_FACTOR_HUNDREDTHS,
         planet_rarity,
         max_location_id,
     );

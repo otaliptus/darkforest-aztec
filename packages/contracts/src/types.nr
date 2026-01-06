@@ -20,6 +20,7 @@ pub struct GameConfig {
     pub world_radius: u64,
     pub spawn_rim_area: u64,
     pub location_reveal_cooldown: u32,
+    pub time_factor_hundredths: u64,
     pub planet_rarity: u64,
     pub max_location_id: Field,
 }
@@ -37,6 +38,7 @@ impl GameConfig {
         world_radius: u64,
         spawn_rim_area: u64,
         location_reveal_cooldown: u32,
+        time_factor_hundredths: u64,
         planet_rarity: u64,
         max_location_id: Field,
     ) -> GameConfig {
@@ -52,6 +54,7 @@ impl GameConfig {
             world_radius,
             spawn_rim_area,
             location_reveal_cooldown,
+            time_factor_hundredths,
             planet_rarity,
             max_location_id,
         }

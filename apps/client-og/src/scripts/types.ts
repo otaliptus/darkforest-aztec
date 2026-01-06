@@ -20,6 +20,7 @@ export type GameConfig = {
     worldRadius: bigint;
     spawnRimArea: bigint;
     locationRevealCooldown: bigint;
+    timeFactorHundredths: bigint;
     planetRarity: bigint;
     maxLocationId: bigint;
 };

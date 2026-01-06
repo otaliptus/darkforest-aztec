@@ -47,6 +47,7 @@ const DEFAULT_CONFIG = {
     world_radius: 10000n,
     spawn_rim_area: 0n,
     location_reveal_cooldown: 0n,
+    time_factor_hundredths: 100n,
     planet_rarity: 1n,
     max_location_id: deriveMaxLocationId(1n),
 };

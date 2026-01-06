@@ -44,6 +44,7 @@ const BASE_CONFIG = {
     world_radius: 10000,
     spawn_rim_area: 0,
     location_reveal_cooldown: 0,
+    time_factor_hundredths: 100,
     planet_rarity: 1,
     max_location_id: deriveMaxLocationId(1),
 };
@@ -56,6 +57,13 @@ const readOptionalInt = (value) => {
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) return undefined;
     return Math.trunc(parsed);
+};
+
+const readOptionalFloat = (value) => {
+    if (value === undefined || value === "") return undefined;
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return undefined;
+    return parsed;
 };
 
 const readPositiveInt = (value, fallback) => {
@@ -100,9 +108,9 @@ function parseArgs() {
         args.has("--small-map") ||
         process.env.DF_SMALL_MAP === "1" ||
         process.env.DF_SMALL_MAP === "true";
-    const defaultWorldRadius = smallMap ? 2000 : BASE_CONFIG.world_radius;
-    const defaultPlanetRarity = smallMap ? 1024 : BASE_CONFIG.planet_rarity;
-
+    // Local tiny-map defaults for fast iteration.
+    const defaultWorldRadius = smallMap ? 400 : BASE_CONFIG.world_radius;
+    const defaultPlanetRarity = smallMap ? 8 : BASE_CONFIG.planet_rarity;
     const worldRadius = readPositiveInt(
         getArg("--world-radius") ?? process.env.DF_WORLD_RADIUS,
         defaultWorldRadius
@@ -111,7 +119,17 @@ function parseArgs() {
         getArg("--planet-rarity") ?? process.env.DF_PLANET_RARITY,
         defaultPlanetRarity
     );
+    const inferredTinyMap = smallMap || worldRadius <= 1000 || planetRarity >= 8;
+    // Faster local pacing for tiny maps.
+    const defaultTimeFactor = inferredTinyMap ? 500 : BASE_CONFIG.time_factor_hundredths;
+    const timeFactorHundredths = readPositiveInt(
+        getArg("--time-factor") ?? process.env.DF_TIME_FACTOR_HUNDREDTHS,
+        defaultTimeFactor
+    );
     const derived = deriveDefaults(worldRadius);
+    const blockTimeSec = readOptionalFloat(
+        getArg("--block-time") ?? process.env.DF_BLOCK_TIME_SEC
+    );
     const init = {
         x:
             readOptionalInt(getArg("--init-x") ?? process.env.DF_INIT_X) ??
@@ -146,9 +164,11 @@ function parseArgs() {
         nodeUrl: process.env.AZTEC_NODE_URL ?? "http://localhost:8080",
         writeEnv: args.has("--write-env") || args.has("-w"),
         overwriteEnv: args.has("--overwrite-env"),
+        blockTimeSec,
         configOverrides: {
             world_radius: worldRadius,
             planet_rarity: planetRarity,
+            time_factor_hundredths: timeFactorHundredths,
         },
         init: boundedInit,
         reveal: boundedReveal,
@@ -200,7 +220,8 @@ function buildEnvBlock(
     sponsoredAddress,
     config,
     init,
-    reveal
+    reveal,
+    blockTimeSec
 ) {
     const lines = [
         `VITE_AZTEC_NODE_URL=${nodeUrl}`,
@@ -220,11 +241,15 @@ function buildEnvBlock(
         `VITE_REVEAL_X=${reveal.x}`,
         `VITE_REVEAL_Y=${reveal.y}`,
     ];
+    if (blockTimeSec !== undefined) {
+        lines.push(`VITE_BLOCK_TIME_SEC=${blockTimeSec}`);
+    }
     return `${lines.join("\n")}\n`;
 }
 
 async function main() {
-    const { nodeUrl, writeEnv, overwriteEnv, configOverrides, init, reveal } = parseArgs();
+    const { nodeUrl, writeEnv, overwriteEnv, configOverrides, init, reveal, blockTimeSec } =
+        parseArgs();
     const config = { ...BASE_CONFIG, ...configOverrides };
     config.max_location_id = deriveMaxLocationId(config.planet_rarity);
     console.log(`Connecting to Aztec node at ${nodeUrl}...`);
@@ -272,7 +297,8 @@ async function main() {
         sponsoredAddress?.toString(),
         config,
         init,
-        reveal
+        reveal,
+        blockTimeSec
     );
 
     console.log("\n.env.local block:\n");

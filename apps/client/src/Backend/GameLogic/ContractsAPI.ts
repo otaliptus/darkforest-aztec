@@ -74,6 +74,12 @@ const INDEX_PAGE_SIZE = 200;
 const UNKNOWN_HASH = 'unknown';
 const READ_CONCURRENCY = 8;
 const FALLBACK_BLOCK_TIME_SEC = 12;
+const BLOCK_TIME_OVERRIDE_SEC = (() => {
+  const raw = process.env.VITE_BLOCK_TIME_SEC ?? process.env.DF_BLOCK_TIME_SEC ?? '';
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+  return parsed;
+})();
 
 const mapWithConcurrency = async <T, R>(
   items: T[],
@@ -172,6 +178,7 @@ export class ContractsAPI extends EventEmitter {
   private txId = 1;
   private blockTimestampCache = new Map<number, number>();
   private estimatedBlockTimeSec = FALLBACK_BLOCK_TIME_SEC;
+  private blockTimeOverrideSec = BLOCK_TIME_OVERRIDE_SEC;
 
   public readonly txExecutor = {
     waitForTransaction: (ser: { intent: TxIntent; hash: string }): Transaction => {
@@ -251,7 +258,7 @@ export class ContractsAPI extends EventEmitter {
       // Aztec contract does not currently track a mint end timestamp; treat as no end.
       TOKEN_MINT_END_SECONDS: Number.MAX_SAFE_INTEGER,
       MAX_NATURAL_PLANET_LEVEL: 9,
-      TIME_FACTOR_HUNDREDTHS: 100,
+      TIME_FACTOR_HUNDREDTHS: Number(cfg.timeFactorHundredths),
       PERLIN_THRESHOLD_1: 14,
       PERLIN_THRESHOLD_2: 15,
       PERLIN_THRESHOLD_3: 19,
@@ -959,9 +966,29 @@ export class ContractsAPI extends EventEmitter {
     if (blockNumber <= 0) {
       return Math.floor(Date.now() / 1000);
     }
+    const normalizeTimestamp = (value: number): number => {
+      if (!Number.isFinite(value)) {
+        return Math.floor(Date.now() / 1000);
+      }
+      // Aztec node timestamps may be ms/us/ns; normalize to seconds when needed.
+      if (value > 100_000_000_000_000) return Math.floor(value / 1_000_000);
+      if (value > 10_000_000_000) return Math.floor(value / 1_000);
+      return value;
+    };
     const cached = this.blockTimestampCache.get(blockNumber);
     if (cached) return cached;
     const node = this.aztecConnection.getNode();
+    if (this.blockTimeOverrideSec) {
+      const latestNumber = await node.getBlockNumber();
+      const latestBlock = await node.getBlock(latestNumber);
+      const latestTs = latestBlock
+        ? normalizeTimestamp(Number(latestBlock.timestamp))
+        : Math.floor(Date.now() / 1000);
+      const estimated =
+        latestTs + (blockNumber - latestNumber) * this.blockTimeOverrideSec;
+      this.blockTimestampCache.set(blockNumber, estimated);
+      return estimated;
+    }
     const block = await node.getBlock(blockNumber);
     if (!block) {
       const latestNumber = await node.getBlockNumber();
@@ -972,19 +999,22 @@ export class ContractsAPI extends EventEmitter {
       if (latestNumber > 1) {
         const prevBlock = await node.getBlock(latestNumber - 1);
         if (prevBlock) {
-          const delta = Number(latestBlock.timestamp) - Number(prevBlock.timestamp);
-          if (delta > 0) {
+          const latestTs = normalizeTimestamp(Number(latestBlock.timestamp));
+          const prevTs = normalizeTimestamp(Number(prevBlock.timestamp));
+          const delta = latestTs - prevTs;
+          if (delta > 0 && delta < 600) {
             this.estimatedBlockTimeSec = delta;
           }
         }
       }
       const blocksAhead = Math.max(1, blockNumber - latestNumber);
+      const latestTs = normalizeTimestamp(Number(latestBlock.timestamp));
       const estimated =
-        Number(latestBlock.timestamp) + blocksAhead * this.estimatedBlockTimeSec;
+        latestTs + blocksAhead * this.estimatedBlockTimeSec;
       this.blockTimestampCache.set(blockNumber, estimated);
       return estimated;
     }
-    const timestamp = Number(block.timestamp);
+    const timestamp = normalizeTimestamp(Number(block.timestamp));
     this.blockTimestampCache.set(blockNumber, timestamp);
     return timestamp;
   }
