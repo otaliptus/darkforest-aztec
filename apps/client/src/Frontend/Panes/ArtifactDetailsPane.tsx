@@ -26,9 +26,9 @@ import { AccountLabel } from '../Components/Labels/Labels';
 import { ReadMore } from '../Components/ReadMore';
 import { Green, Red, Sub, Text, White } from '../Components/Text';
 import { TextPreview } from '../Components/TextPreview';
-import { TimeUntil } from '../Components/TimeUntil';
 import dfstyles from '../Styles/dfstyles';
 import { useArtifact, useUIManager } from '../Utils/AppHooks';
+import { useEmitterValue } from '../Utils/EmitterHooks';
 import { ModalHandle } from '../Views/ModalPane';
 import { ArtifactActions } from './ManagePlanetArtifacts/ArtifactActions';
 import { TooltipTrigger } from './Tooltip';
@@ -165,6 +165,7 @@ export function ArtifactDetailsBody({
   const uiManager = useUIManager();
   const artifactWrapper = useArtifact(uiManager, artifactId);
   const artifact = artifactWrapper.value;
+  const currentBlockNumber = useEmitterValue(uiManager.getEthConnection().blockNumber$, undefined);
 
   if (!artifact) {
     return null;
@@ -202,13 +203,11 @@ export function ArtifactDetailsBody({
   let readyInStr = undefined;
 
   if (artifact.artifactType === ArtifactType.PhotoidCannon && isActivated(artifact)) {
+    const readyBlock = artifact.lastActivated + contractConstants.PHOTOID_ACTIVATION_DELAY;
+    const blocksLeft =
+      currentBlockNumber !== undefined ? Math.max(0, readyBlock - currentBlockNumber) : undefined;
     readyInStr = (
-      <TimeUntil
-        timestamp={
-          artifact.lastActivated * 1000 + contractConstants.PHOTOID_ACTIVATION_DELAY * 1000
-        }
-        ifPassed={'now!'}
-      />
+      <span>{blocksLeft === undefined ? '...' : blocksLeft <= 0 ? 'now!' : `${blocksLeft}B`}</span>
     );
   }
 

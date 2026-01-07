@@ -140,6 +140,8 @@ export enum GameManagerEvent {
   Moved = 'Moved',
 }
 
+const AZTEC_PLANET_SYNC_INTERVAL_BLOCKS = 2;
+
 type TxTimings = {
   createdAt: number;
   submittedAt?: number;
@@ -232,6 +234,8 @@ class GameManager extends EventEmitter {
   private readonly contractConstants: ContractConstants;
 
   private paused: boolean;
+  private lastPlanetSyncBlock = 0;
+  private syncingPlanetRefresh = false;
 
   /**
    * @todo change this to the correct timestamp each round.
@@ -529,6 +533,16 @@ class GameManager extends EventEmitter {
 
   public getEthConnection() {
     return this.ethConnection;
+  }
+
+  public getCurrentBlockNumber(): number {
+    return this.ethConnection.getCurrentBlockNumber();
+  }
+
+  public async refreshPlanetsFromChain(planetIds: LocationId[]): Promise<void> {
+    if (planetIds.length === 0) return;
+    await this.bulkHardRefreshPlanets(planetIds);
+    this.emit(GameManagerEvent.PlanetUpdate);
   }
 
   public destroy(): void {
@@ -1068,15 +1082,15 @@ class GameManager extends EventEmitter {
   }
 
   /**
-   * returns timestamp (seconds) that planet will reach percent% of energycap
-   * time may be in the past
+   * returns block number that planet will reach percent% of energycap
+   * block may be in the past
    */
   public getEnergyCurveAtPercent(planet: Planet, percent: number): number {
     return this.entityStore.getEnergyCurveAtPercent(planet, percent);
   }
 
   /**
-   * returns timestamp (seconds) that planet will reach percent% of silcap if
+   * returns block number that planet will reach percent% of silcap if
    * doesn't produce silver, returns undefined if already over percent% of silcap,
    */
   public getSilverCurveAtPercent(planet: Planet, percent: number): number | undefined {
@@ -1650,14 +1664,15 @@ class GameManager extends EventEmitter {
   }
 
   /**
-   * Gets the timestamp (ms) of the next time that we can broadcast the coordinates of a planet.
+   * Gets the block number of the next time that we can broadcast the coordinates of a planet.
    */
   public getNextBroadcastAvailableTimestamp() {
-    return Date.now() + this.timeUntilNextBroadcastAvailable();
+    const currentBlockNumber = this.getCurrentBlockNumber();
+    return currentBlockNumber + this.timeUntilNextBroadcastAvailable();
   }
 
   /**
-   * Gets the amount of time (ms) until the next time the current player can broadcast a planet.
+   * Gets the amount of blocks until the next time the current player can broadcast a planet.
    */
   public timeUntilNextBroadcastAvailable() {
     if (!this.account) {
@@ -1665,8 +1680,10 @@ class GameManager extends EventEmitter {
     }
 
     const myLastRevealTimestamp = this.players.get(this.account)?.lastRevealTimestamp;
+    const currentBlockNumber = this.getCurrentBlockNumber();
 
     return timeUntilNextBroadcastAvailable(
+      currentBlockNumber,
       myLastRevealTimestamp,
       this.contractConstants.LOCATION_REVEAL_COOLDOWN
     );
@@ -1707,8 +1724,8 @@ class GameManager extends EventEmitter {
         throw new Error("you're already broadcasting coordinates");
       }
 
-      const myLastRevealTimestamp = this.players.get(this.account)?.lastRevealTimestamp;
-      if (myLastRevealTimestamp && Date.now() < this.getNextBroadcastAvailableTimestamp()) {
+      const blocksLeft = this.timeUntilNextBroadcastAvailable();
+      if (blocksLeft > 0) {
         throw new Error('still on cooldown for broadcasting');
       }
 
@@ -2836,15 +2853,41 @@ class GameManager extends EventEmitter {
       if (this.captureZoneGenerator) {
         this.captureZoneGenerator.generate(blockNumber);
       }
-      this.resolveMaturedArrivals();
+      this.entityStore.setCurrentBlockNumber(blockNumber);
+      this.resolveMaturedArrivals(blockNumber);
+      void this.syncOwnedPlanets(blockNumber);
     });
   }
 
-  private resolveMaturedArrivals(): void {
-    const nowSeconds = Date.now() / 1000;
+  private async syncOwnedPlanets(blockNumber: number): Promise<void> {
+    if (!this.account || blockNumber <= 0) return;
+    if (this.syncingPlanetRefresh) return;
+    if (blockNumber - this.lastPlanetSyncBlock < AZTEC_PLANET_SYNC_INTERVAL_BLOCKS) return;
+
+    const ownedPlanets = this.getMyPlanets();
+    this.lastPlanetSyncBlock = blockNumber;
+    if (ownedPlanets.length === 0) {
+      return;
+    }
+
+    this.syncingPlanetRefresh = true;
+    try {
+      const planetIds = Array.from(
+        new Set(ownedPlanets.map((planet) => planet.locationId))
+      );
+      await this.bulkHardRefreshPlanets(planetIds);
+      this.emit(GameManagerEvent.PlanetUpdate);
+    } catch (error) {
+      console.error('[Aztec] owned planet sync failed', error);
+    } finally {
+      this.syncingPlanetRefresh = false;
+    }
+  }
+
+  private resolveMaturedArrivals(currentBlockNumber: number): void {
     const arrivals = this.entityStore
       .getAllVoyages()
-      .filter((arrival) => arrival.arrivalTime <= nowSeconds)
+      .filter((arrival) => arrival.arrivalTime <= currentBlockNumber)
       .sort((a, b) => a.arrivalTime - b.arrivalTime);
 
     let started = 0;
@@ -2903,7 +2946,7 @@ class GameManager extends EventEmitter {
       } finally {
         this.resolvingArrivals.delete(arrival.eventId);
         this.arrivalResolveSkips.delete(arrival.eventId);
-        await this.hardRefreshPlanet(arrival.toPlanet);
+        await this.hardRefreshPlanet(toPlanet);
       }
     })();
   }
@@ -3118,7 +3161,7 @@ class GameManager extends EventEmitter {
   }
 
   /**
-   * Gets the amount of time, in seconds that a voyage between from the first to the
+   * Gets the amount of time, in blocks, that a voyage between the first to the
    * second planet would take.
    */
   getTimeForMove(fromId: LocationId, toId: LocationId, abandoning = false): number {

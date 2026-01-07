@@ -59,11 +59,11 @@ export interface MinerWorkerMessage {
 export interface RevealCountdownInfo {
   myLastRevealTimestamp?: number; // if undefined, never revealed before
   currentlyRevealing: boolean; // true iff player has an unconfirmedReveal currently being processed
-  revealCooldownTime: number; // in seconds
+  revealCooldownTime: number; // in blocks
 }
 
 export interface ClaimCountdownInfo {
   myLastClaimTimestamp?: number; // if undefined, never revealed before
   currentlyClaiming: boolean; // true iff player has an unconfirmedReveal currently being processed
-  claimCooldownTime: number; // in seconds
+  claimCooldownTime: number; // in blocks
 }

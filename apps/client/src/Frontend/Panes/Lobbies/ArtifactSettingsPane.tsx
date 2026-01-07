@@ -37,7 +37,7 @@ export function ArtifactSettingsPane({ config, onUpdate }: LobbiesPaneProps) {
   return (
     <>
       <Row>
-        <span>Photoid Cannon activation delay (in seconds)</span>
+        <span>Photoid Cannon activation delay (in blocks)</span>
         <NumberInput
           value={config.PHOTOID_ACTIVATION_DELAY.displayValue}
           onChange={(e: Event & React.ChangeEvent<DarkForestNumberInput>) => {

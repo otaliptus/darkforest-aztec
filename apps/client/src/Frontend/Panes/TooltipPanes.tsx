@@ -58,7 +58,7 @@ export function ActivateArtifactPane() {
 }
 
 export function TimeUntilActivationPossiblePane() {
-  return <>You must wait this amount of time before you can activate this artifact</>;
+  return <>You must wait this many blocks before you can activate this artifact</>;
 }
 
 export function TwitterHandleTooltipPane() {
@@ -186,8 +186,8 @@ export function SelectedSilverTooltipPane() {
           </>
           {selected.value.planetType === PlanetType.SILVER_MINE ? (
             <>
-              Growth:
-              <span>{selected.value.silverGrowth * 60}</span>
+              Growth (per block):
+              <span>{selected.value.silverGrowth}</span>
             </>
           ) : (
             <>
@@ -224,7 +224,7 @@ export function MinEnergyTooltipPane() {
 export function Time50TooltipPane() {
   return (
     <>
-      Time to <White>50%</White> of full energy.
+      Blocks to <White>50%</White> of full energy.
     </>
   );
 }

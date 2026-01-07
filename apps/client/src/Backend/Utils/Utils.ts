@@ -72,7 +72,7 @@ export const getFormatProp = (planet: Planet | undefined, prop: string): string 
   if (!planet) return '0';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const myPlanet = planet as any;
-  if (prop === 'silverGrowth') return formatNumber(myPlanet[prop] * 60);
+  if (prop === 'silverGrowth') return formatNumber(myPlanet[prop]);
   else return formatNumber(myPlanet[prop]);
 };
 

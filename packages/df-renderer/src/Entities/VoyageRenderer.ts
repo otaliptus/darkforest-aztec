@@ -48,7 +48,6 @@ export class VoyageRenderer {
     isShipVoyage: boolean
   ) {
     const {
-      now: nowMs,
       context: gameUIManager,
       circleRenderer: cR,
       textRenderer: tR,
@@ -59,6 +58,7 @@ export class VoyageRenderer {
     const fromPlanet = gameUIManager.getPlanetWithId(voyage.fromPlanet);
     const toLoc = gameUIManager.getLocationOfPlanet(voyage.toPlanet);
     const toPlanet = gameUIManager.getPlanetWithId(voyage.toPlanet);
+    const currentBlockNumber = gameUIManager.getEthConnection().getCurrentBlockNumber();
     if (!fromPlanet || !toLoc) {
       // not enough info to draw anything
       return;
@@ -66,16 +66,15 @@ export class VoyageRenderer {
       // can draw a ring around dest, but don't know source location
       const myMove = voyage.player === gameUIManager.getAccount();
       const shipMove = voyage.player === EMPTY_ADDRESS;
-      const now = nowMs / 1000;
-      const timeLeft = voyage.arrivalTime - now;
-      const radius = (timeLeft * fromPlanet.speed) / 100;
+      const blocksLeft = Math.max(0, voyage.arrivalTime - currentBlockNumber);
+      const radius = (blocksLeft * fromPlanet.speed) / 100;
       const color = getVoyageColor(fromPlanet, toPlanet, myMove, shipMove);
 
       const text = shipMove ? 'Ship' : `${Math.floor(voyage.energyArriving)}`;
 
       cR.queueCircleWorld(toLoc.coords, radius, color, 0.7, 1, true);
       tR.queueTextWorld(
-        `${text} in ${Math.floor(timeLeft)}s`,
+        `${text} in ${Math.floor(blocksLeft)}B`,
         { x: toLoc.coords.x, y: toLoc.coords.y + radius },
         color,
         undefined,
@@ -85,8 +84,8 @@ export class VoyageRenderer {
     } else if (fromLoc && fromPlanet && toLoc && toPlanet) {
       // know source and destination locations
 
-      const now = nowMs / 1000;
-      let proportion = (now - voyage.departureTime) / (voyage.arrivalTime - voyage.departureTime);
+      const totalBlocks = Math.max(1, voyage.arrivalTime - voyage.departureTime);
+      let proportion = (currentBlockNumber - voyage.departureTime) / totalBlocks;
       proportion = Math.max(proportion, 0.01);
       proportion = Math.min(proportion, 0.99);
 
@@ -94,7 +93,7 @@ export class VoyageRenderer {
       const shipsLocationY = (1 - proportion) * fromLoc.coords.y + proportion * toLoc.coords.y;
       const shipsLocation = { x: shipsLocationX, y: shipsLocationY };
 
-      const timeLeftSeconds = Math.floor(voyage.arrivalTime - now);
+      const timeLeftBlocks = Math.max(0, Math.floor(voyage.arrivalTime - currentBlockNumber));
       const voyageColor = getVoyageColor(fromPlanet, toPlanet, isMyVoyage, isShipVoyage);
 
       // alpha calculation
@@ -126,7 +125,7 @@ export class VoyageRenderer {
 
       // queue text
       tR.queueTextWorld(
-        `${timeLeftSeconds.toString()}s`,
+        `${timeLeftBlocks.toString()}B`,
         {
           x: shipsLocationX,
           y: shipsLocationY - 0.5,
@@ -166,11 +165,11 @@ export class VoyageRenderer {
   }
 
   queueVoyages(): void {
-    const { context: gameUIManager, now } = this.renderer;
+    const { context: gameUIManager } = this.renderer;
     const voyages = gameUIManager.getAllVoyages();
     for (const voyage of voyages) {
-      const nowS = now / 1000;
-      if (nowS < voyage.arrivalTime) {
+      const currentBlockNumber = gameUIManager.getEthConnection().getCurrentBlockNumber();
+      if (currentBlockNumber < voyage.arrivalTime) {
         const isMyVoyage =
           voyage.player === gameUIManager.getAccount() ||
           gameUIManager.getArtifactWithId(voyage.artifactId)?.controller ===

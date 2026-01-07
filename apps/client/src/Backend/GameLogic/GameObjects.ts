@@ -152,6 +152,7 @@ export class GameObjects {
    * cancelled for whatever reason.
    */
   private readonly arrivals: Map<VoyageId, ArrivalWithTimer>;
+  private currentBlockNumber = 0;
 
   /**
    * Map from a location id (think of it as the unique id of each planet) to all the ids of the
@@ -323,24 +324,32 @@ export class GameObjects {
       });
     }
 
-    // TODO: do this better...
-    // set interval to update all planets every 120s
-    setInterval(() => {
-      this.planets.forEach((planet) => {
-        if (planet && hasOwner(planet)) {
-          updatePlanetToTime(
-            planet,
-            this.getPlanetArtifacts(planet.locationId),
-            Date.now(),
-            this.contractConstants
-          );
-        }
-      });
-    }, 120 * 1000);
   }
 
   public getWormholes(): Iterable<Wormhole> {
     return this.wormholes.values();
+  }
+
+  public setCurrentBlockNumber(blockNumber: number): void {
+    if (!Number.isFinite(blockNumber) || blockNumber <= this.currentBlockNumber) {
+      return;
+    }
+    this.currentBlockNumber = blockNumber;
+
+    this.planets.forEach((planet) => {
+      if (planet && hasOwner(planet)) {
+        updatePlanetToTime(
+          planet,
+          this.getPlanetArtifacts(planet.locationId),
+          blockNumber,
+          this.contractConstants
+        );
+      }
+    });
+
+    if (!this.arrivalMaturedHandler) {
+      this.processMaturedArrivals(blockNumber);
+    }
   }
 
   public getArtifactById(artifactId?: ArtifactId): Artifact | undefined {
@@ -1107,21 +1116,17 @@ export class GameObjects {
     // process the QueuedArrival[] for a single planet
     const arrivalsWithTimers: ArrivalWithTimer[] = [];
 
-    // sort arrivals by timestamp
+    // sort arrivals by block
     arrivals.sort((a, b) => a.arrivalTime - b.arrivalTime);
-    const nowInSeconds = Date.now() / 1000;
+    const currentBlockNumber = this.currentBlockNumber;
     for (const arrival of arrivals) {
       try {
         if (this.arrivalMaturedHandler) {
-          const delayMs = Math.max(0, arrival.arrivalTime * 1000 - Date.now());
-          const notifyMatured = setTimeout(() => {
-            this.arrivalMaturedHandler?.(arrival);
-          }, delayMs);
-          arrivalsWithTimers.push({ arrivalData: arrival, timer: notifyMatured });
+          arrivalsWithTimers.push({ arrivalData: arrival });
           continue;
         }
 
-        if (nowInSeconds - arrival.arrivalTime > 0) {
+        if (currentBlockNumber > 0 && arrival.arrivalTime <= currentBlockNumber) {
           // if arrival happened in the past, run this arrival
           const update = arrive(
             planet,
@@ -1134,31 +1139,46 @@ export class GameObjects {
           this.removeArrival(planetId, update.arrival.eventId);
           this.emitArrivalNotifications(update);
         } else {
-          // otherwise, set a timer to do this arrival in the future
-          // and append it to arrivalsWithTimers
-          const applyFutureArrival = setTimeout(() => {
-            const update = arrive(
-              planet,
-              this.getPlanetArtifacts(planet.locationId),
-              arrival,
-              this.getArtifactById(arrival.artifactId),
-              this.contractConstants
-            );
-            this.emitArrivalNotifications(update);
-            this.removeArrival(planetId, update.arrival.eventId);
-          }, arrival.arrivalTime * 1000 - Date.now());
-
-          const arrivalWithTimer = {
-            arrivalData: arrival,
-            timer: applyFutureArrival,
-          };
-          arrivalsWithTimers.push(arrivalWithTimer);
+          arrivalsWithTimers.push({ arrivalData: arrival });
         }
       } catch (e) {
         console.error(`error occurred processing arrival for updated planet ${planetId}: ${e}`);
       }
     }
     return arrivalsWithTimers;
+  }
+
+  private processMaturedArrivals(currentBlockNumber: number): void {
+    const arrivals = Array.from(this.arrivals.values())
+      .map((entry) => entry.arrivalData)
+      .sort((a, b) => a.arrivalTime - b.arrivalTime);
+
+    for (const arrival of arrivals) {
+      if (arrival.arrivalTime > currentBlockNumber) {
+        break;
+      }
+
+      const planet = this.planets.get(arrival.toPlanet);
+      if (!planet) {
+        continue;
+      }
+
+      try {
+        const update = arrive(
+          planet,
+          this.getPlanetArtifacts(planet.locationId),
+          arrival,
+          this.getArtifactById(arrival.artifactId),
+          this.contractConstants
+        );
+        this.removeArrival(planet.locationId, update.arrival.eventId);
+        this.emitArrivalNotifications(update);
+      } catch (e) {
+        console.error(
+          `error occurred processing arrival for updated planet ${planet.locationId}: ${e}`
+        );
+      }
+    }
   }
 
   private clearOldArrivals(planet: Planet): void {
@@ -1170,7 +1190,9 @@ export class GameObjects {
       for (const arrivalId of arrivalIds) {
         const arrivalWithTimer = this.arrivals.get(arrivalId);
         if (arrivalWithTimer) {
-          clearTimeout(arrivalWithTimer.timer);
+          if (arrivalWithTimer.timer) {
+            clearTimeout(arrivalWithTimer.timer);
+          }
         } else {
           console.error(`arrival with id ${arrivalId} wasn't found`);
         }
@@ -1394,7 +1416,7 @@ export class GameObjects {
 
       spaceJunk,
 
-      lastUpdated: Math.floor(Date.now() / 1000),
+      lastUpdated: this.currentBlockNumber,
 
       upgradeState: [0, 0, 0],
 
@@ -1425,12 +1447,13 @@ export class GameObjects {
   }
 
   private updatePlanetIfStale(planet: Planet): void {
-    const now = Date.now();
-    if (now / 1000 - planet.lastUpdated > 1) {
+    const currentBlockNumber = this.currentBlockNumber;
+    if (currentBlockNumber <= 0) return;
+    if (currentBlockNumber > planet.lastUpdated) {
       updatePlanetToTime(
         planet,
         this.getPlanetArtifacts(planet.locationId),
-        now,
+        currentBlockNumber,
         this.contractConstants,
         this.setPlanet
       );
@@ -1438,8 +1461,8 @@ export class GameObjects {
   }
 
   /**
-   * returns timestamp (seconds) that planet will reach percent% of energycap
-   * time may be in the past
+   * returns block number that planet will reach percent% of energycap
+   * block may be in the past
    */
   public getEnergyCurveAtPercent(planet: Planet, percent: number): number {
     const p1 = (percent / 100) * planet.energyCap;
@@ -1454,7 +1477,7 @@ export class GameObjects {
   }
 
   /**
-   * returns timestamp (seconds) that planet will reach percent% of silcap if
+   * returns block number that planet will reach percent% of silcap if
    * doesn't produce silver, returns undefined if already over percent% of silcap,
    * returns undefined
    */

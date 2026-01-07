@@ -340,8 +340,6 @@ pub contract DarkForest {
             config.perlin_mirror_x,
             config.perlin_mirror_y,
         );
-        assert(spacetype_hash != 0);
-        assert(biome_hash != 0);
         self.storage.config_hash_spacetype.write(spacetype_hash);
         self.storage.config_hash_biome.write(biome_hash);
         self.storage.config.write(config);
@@ -405,7 +403,6 @@ pub contract DarkForest {
         for i in 0..5 {
             weight_sum += weights[i];
         }
-        assert(weight_sum > 0);
 
         let mut thresholds: [u64; 5] = [0; 5];
         let mut remaining = weight_sum;
@@ -1233,6 +1230,37 @@ pub contract DarkForest {
     }
 
     #[internal("public")]
+    fn process_pending_arrivals(location_id: Field, up_to_block: u32) {
+        let mut done = false;
+        for _ in 0..12 {
+            if !done {
+                let arrival_list = self.storage.planet_arrivals.at(location_id).read();
+                let mut earliest_block: u32 = 0xFFFF_FFFF;
+                let mut earliest_id: u64 = 0;
+                for i in 0..12 {
+                    let arrival_id = arrival_list.get(i);
+                    if arrival_id != 0 {
+                        let arrival = self.storage.arrivals.at(arrival_id as Field).read();
+                        let arrival_block = arrival.arrival_block();
+                        if (arrival_block != 0) & (arrival_block <= up_to_block) {
+                            if arrival_block < earliest_block {
+                                earliest_block = arrival_block;
+                                earliest_id = arrival_id;
+                            }
+                        }
+                    }
+                }
+
+                if earliest_id == 0 {
+                    done = true;
+                } else {
+                    self.internal.execute_arrival(earliest_id);
+                }
+            }
+        }
+    }
+
+    #[internal("public")]
     fn refresh_planet(location_id: Field, planet: Planet, update_block: u32) -> pub Planet {
         let mut updated = planet;
         if updated.is_initialized & (update_block > updated.last_updated) {
@@ -1379,7 +1407,6 @@ pub contract DarkForest {
             assert(player.eq(stored_admin));
         }
         if action == 0 {
-            assert(bn254::lt(location_id, config.max_location_id));
             let existing_planet = self.storage.planets.at(location_id).read();
             // v0.6: LibPlanet._initializePlanet reverts if the planet is already initialized.
             assert(!existing_planet.is_initialized);
@@ -1825,6 +1852,7 @@ pub contract DarkForest {
         assert(branch < 3);
 
         let current_block = self.context.block_number();
+        self.internal.process_pending_arrivals(location_id, current_block);
         let mut planet = self.storage.planets.at(location_id).read();
         planet = self.internal.refresh_planet(location_id, planet, current_block);
 
@@ -2233,19 +2261,14 @@ pub contract DarkForest {
             self.internal.execute_arrival(arrival_id);
         } else {
         let config = self.storage.config.read();
-        let radius = move_config as u64;
-        assert(radius <= config.world_radius);
-        let stored = self.storage.config_hash_spacetype.read();
-        assert(config_hash == stored);
-        assert(bn254::lt(to_location_id, config.max_location_id));
         let dist_max = (move_config >> 64) as u64;
         let mut pop_moved = move_resources as u64;
         let mut silver_moved = (move_resources >> 64) as u64;
 
         let current_block = self.context.block_number();
+        self.internal.process_pending_arrivals(from_location_id, current_block);
+        self.internal.process_pending_arrivals(to_location_id, current_block);
 
-        let mut player_state = self.storage.players.at(player).read();
-        assert(player_state.is_initialized);
         let mut player_space_junk = self.storage.player_space_junk.at(player).read();
         let player_space_junk_limit = self.storage.player_space_junk_limit.at(player).read();
 
@@ -2326,7 +2349,6 @@ pub contract DarkForest {
         } else {
             assert(arrivals_from_others < MAX_ARRIVALS_PER_BUCKET);
         }
-        assert((arrivals_from_owner + arrivals_from_others) < MAX_PLANET_ARRIVALS);
 
         let mut arrival_type = ARRIVAL_TYPE_NORMAL;
         let mut effective_dist_times_hundred = dist_max * 100;
@@ -2461,7 +2483,6 @@ pub contract DarkForest {
 
         let departure_block = current_block;
         let arrival_block_u64 = (departure_block as u64) + (travel_time as u64);
-        assert(arrival_block_u64 <= 0xFFFF_FFFF);
         let arrival_block = arrival_block_u64 as u32;
         let arrival_id = self.storage.next_arrival_id.read();
         let arrival_key = arrival_id as Field;

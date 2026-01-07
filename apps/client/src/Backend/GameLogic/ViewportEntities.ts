@@ -1,4 +1,4 @@
-import { MAX_PLANET_LEVEL, MIN_PLANET_LEVEL } from '@darkforest_eth/constants';
+import { EMPTY_ADDRESS, MAX_PLANET_LEVEL, MIN_PLANET_LEVEL } from '@darkforest_eth/constants';
 import { isLocatable } from '@darkforest_eth/gamelogic';
 import {
   Chunk,
@@ -24,6 +24,8 @@ export class ViewportEntities {
 
   private cachedExploredChunks: Set<Chunk> = new Set();
   private cachedPlanets: Map<LocationId, PlanetRenderInfo> = new Map();
+  private lastViewportSyncBlock = 0;
+  private syncingViewportPlanets = false;
 
   public constructor(gameManager: GameManager, gameUIManager: GameUIManager) {
     this.gameManager = gameManager;
@@ -35,6 +37,10 @@ export class ViewportEntities {
     setInterval(() => {
       this.loadPlanetMessages();
     }, 10 * 1000);
+
+    this.gameManager.getEthConnection().blockNumber$.subscribe((blockNumber) => {
+      void this.syncViewportPlanets(blockNumber);
+    });
   }
 
   public getPlanetsAndChunks() {
@@ -93,6 +99,38 @@ export class ViewportEntities {
     }
 
     this.gameManager.refreshServerPlanetStates(planetIds);
+  }
+
+  private async syncViewportPlanets(blockNumber: number) {
+    const AZTEC_VIEWPORT_SYNC_INTERVAL_BLOCKS = 2;
+    const MAX_VIEWPORT_SYNC_PLANETS = 30;
+
+    if (blockNumber <= 0) return;
+    if (this.syncingViewportPlanets) return;
+    if (blockNumber - this.lastViewportSyncBlock < AZTEC_VIEWPORT_SYNC_INTERVAL_BLOCKS) return;
+
+    const visiblePlanets = Array.from(this.cachedPlanets.values()).map((entry) => entry.planet);
+    if (visiblePlanets.length === 0) return;
+
+    const prioritized = visiblePlanets.filter(
+      (planet) => !planet.isInContract || planet.owner === EMPTY_ADDRESS
+    );
+    const candidates = (prioritized.length ? prioritized : visiblePlanets).slice(
+      0,
+      MAX_VIEWPORT_SYNC_PLANETS
+    );
+    const planetIds = candidates.map((planet) => planet.locationId);
+    if (planetIds.length === 0) return;
+
+    this.lastViewportSyncBlock = blockNumber;
+    this.syncingViewportPlanets = true;
+    try {
+      await this.gameManager.refreshPlanetsFromChain(planetIds);
+    } catch (error) {
+      console.error('[Aztec] viewport planet sync failed', error);
+    } finally {
+      this.syncingViewportPlanets = false;
+    }
   }
 
   private recalculateViewportPlanets(viewport: Viewport) {

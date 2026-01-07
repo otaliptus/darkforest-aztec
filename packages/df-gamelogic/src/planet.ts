@@ -37,16 +37,17 @@ export function isLocatable(planet?: Planet): planet is LocatablePlanet {
 }
 
 /**
- * Gets the time (ms) until we can broadcast the coordinates of a planet.
+ * Gets the number of blocks until we can broadcast the coordinates of a planet.
  */
 export function timeUntilNextBroadcastAvailable(
-  lastRevealTimestamp: number | undefined,
+  currentBlockNumber: number,
+  lastRevealBlock: number | undefined,
   locationRevealCooldown: number
-) {
-  if (!lastRevealTimestamp) {
+): number {
+  if (!lastRevealBlock || currentBlockNumber <= 0) {
     return 0;
   }
 
-  // both the variables in the next line are denominated in seconds
-  return (lastRevealTimestamp + locationRevealCooldown) * 1000 - Date.now();
+  const nextBlock = lastRevealBlock + locationRevealCooldown;
+  return Math.max(0, nextBlock - currentBlockNumber);
 }

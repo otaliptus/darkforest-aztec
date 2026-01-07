@@ -47,7 +47,7 @@ export function hasStatBoost(type: ArtifactType | undefined): boolean {
   );
 }
 
-const artifactCooldownHoursMap = {
+const artifactCooldownBlocksMap = {
   [ArtifactType.Unknown]: 24,
   [ArtifactType.Monolith]: 0,
   [ArtifactType.Colossus]: 0,
@@ -62,20 +62,23 @@ const artifactCooldownHoursMap = {
 
 const artifactIsAncientMap: Map<ArtifactId, boolean> = new Map();
 
-export function durationUntilArtifactAvailable(artifact: Artifact) {
-  return artifactAvailableTimestamp(artifact) - Date.now();
+export function durationUntilArtifactAvailable(
+  artifact: Artifact,
+  currentBlockNumber: number
+): number {
+  const availableBlock = artifactAvailableBlock(artifact);
+  if (availableBlock === 0 || currentBlockNumber <= 0) {
+    return 0;
+  }
+  return Math.max(0, availableBlock - currentBlockNumber);
 }
 
-export function artifactAvailableTimestamp(artifact: Artifact) {
+export function artifactAvailableBlock(artifact: Artifact): number {
   if (artifact.lastDeactivated === 0) {
-    return Date.now();
+    return 0;
   }
 
-  const availableAtTimestampMs =
-    artifact.lastDeactivated * 1000 +
-    artifactCooldownHoursMap[artifact.artifactType] * 60 * 60 * 1000;
-
-  return availableAtTimestampMs;
+  return artifact.lastDeactivated + artifactCooldownBlocksMap[artifact.artifactType];
 }
 
 export function isActivated(artifact: Artifact | undefined) {
@@ -233,7 +236,8 @@ export const dateMintedAt = (artifact: Artifact | undefined): string => {
 export function canActivateArtifact(
   artifact: Artifact,
   planet: Planet | undefined,
-  artifactsOnPlanet: Artifact[]
+  artifactsOnPlanet: Artifact[],
+  currentBlockNumber: number
 ) {
   if (isSpaceShip(artifact.artifactType)) {
     return (
@@ -244,20 +248,14 @@ export function canActivateArtifact(
     );
   }
 
-  const available = artifactAvailableTimestamp(artifact);
-  if (available !== undefined) {
-    const now = Date.now();
-    const anyArtifactActive = artifactsOnPlanet.some((a) => isActivated(a));
-    const waitUntilAvailable = available - now;
-    const availableToActivate =
-      waitUntilAvailable <= -0 &&
-      !anyArtifactActive &&
-      planet?.locationId === artifact.onPlanetId &&
-      !!artifact.onPlanetId;
-    return availableToActivate;
-  }
-
-  return false;
+  const availableBlock = artifactAvailableBlock(artifact);
+  const anyArtifactActive = artifactsOnPlanet.some((a) => isActivated(a));
+  const availableToActivate =
+    (availableBlock === 0 || currentBlockNumber >= availableBlock) &&
+    !anyArtifactActive &&
+    planet?.locationId === artifact.onPlanetId &&
+    !!artifact.onPlanetId;
+  return availableToActivate;
 }
 
 export function canWithdrawArtifact(account: EthAddress, artifact: Artifact, planet?: Planet) {

@@ -37,7 +37,6 @@ import type { OnChainConfig } from './scripts/types';
 import type { ContractConstants } from '../../_types/darkforest/api/ContractsAPITypes';
 
 const ZERO_ADDRESS_REGEX = /^0x0+$/;
-
 const toNumber = (value: bigint | number) => Number(value);
 
 export const toEthAddress = (address: AztecAddress | string): EthAddress => {

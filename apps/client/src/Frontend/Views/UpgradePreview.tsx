@@ -73,8 +73,7 @@ const StatRowFilled = ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mySelected = planet as any;
 
-    if (stat === 'silverGrowth') return mySelected[stat] * 60;
-    else return mySelected[stat];
+    return mySelected[stat];
   };
   const statNow = (stat: string): string => {
     const num = getStat(stat);

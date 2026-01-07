@@ -8,12 +8,12 @@ export type Player = {
   address: EthAddress;
   twitter?: string;
   /**
-   * seconds (not millis)
+   * block number
    */
   initTimestamp: number;
   homePlanetId: LocationId;
   /**
-   * seconds (not millis)
+   * block number
    */
   lastRevealTimestamp: number;
   lastClaimTimestamp: number;

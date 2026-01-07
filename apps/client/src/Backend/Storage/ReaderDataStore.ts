@@ -130,6 +130,7 @@ class ReaderDataStore {
   public async loadPlanetFromContract(planetId: LocationId): Promise<Planet | LocatablePlanet> {
     const planet = await this.contractsAPI.getPlanetById(planetId);
     const contractConstants = await this.contractsAPI.getConstants();
+    const currentBlockNumber = await this.contractsAPI.getCurrentBlockNumber();
 
     if (!planet) {
       throw new Error(`unable to load planet with id ${planetId}`);
@@ -138,14 +139,13 @@ class ReaderDataStore {
     const arrivals = await this.contractsAPI.getArrivalsForPlanet(planetId);
 
     arrivals.sort((a, b) => a.arrivalTime - b.arrivalTime);
-    const nowInSeconds = Date.now() / 1000;
 
     for (const arrival of arrivals) {
-      if (nowInSeconds < arrival.arrivalTime) break;
+      if (currentBlockNumber < arrival.arrivalTime) break;
       arrive(planet, [], arrival, undefined, contractConstants);
     }
 
-    updatePlanetToTime(planet, [], Date.now(), contractConstants);
+    updatePlanetToTime(planet, [], currentBlockNumber, contractConstants);
     this.setPlanetLocationIfKnown(planet);
 
     return planet;

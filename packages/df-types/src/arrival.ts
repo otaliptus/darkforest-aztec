@@ -12,8 +12,10 @@ export interface QueuedArrival {
   energyArriving: number;
   silverMoved: number;
   artifactId?: ArtifactId;
+  /** L2 block number when the voyage departed. */
   departureTime: number;
   distance: number;
+  /** L2 block number when the voyage arrives. */
   arrivalTime: number;
   arrivalType: ArrivalType;
 }
@@ -42,5 +44,5 @@ export interface ArrivalWithTimer {
    * TODO: rename to `arrival` or 'voyage'.
    */
   arrivalData: QueuedArrival;
-  timer: ReturnType<typeof setTimeout>;
+  timer?: ReturnType<typeof setTimeout>;
 }

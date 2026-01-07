@@ -19,7 +19,6 @@ import { Spacer } from '../../Components/CoreUI';
 import { ArtifactRarityLabelAnim } from '../../Components/Labels/ArtifactLabels';
 import { LoadingSpinner } from '../../Components/LoadingSpinner';
 import { Sub } from '../../Components/Text';
-import { formatDuration } from '../../Components/TimeUntil';
 import {
   useAccount,
   useArtifact,
@@ -27,6 +26,7 @@ import {
   usePlanetArtifacts,
   useUIManager,
 } from '../../Utils/AppHooks';
+import { useEmitterValue } from '../../Utils/EmitterHooks';
 import { TooltipTrigger, TooltipTriggerProps } from '../Tooltip';
 
 export function ArtifactActions({
@@ -38,6 +38,7 @@ export function ArtifactActions({
 }) {
   const uiManager = useUIManager();
   const account = useAccount(uiManager);
+  const currentBlockNumber = useEmitterValue(uiManager.getEthConnection().blockNumber$, undefined);
   const artifactWrapper = useArtifact(uiManager, artifactId);
   const artifact = artifactWrapper.value;
 
@@ -101,7 +102,10 @@ export function ArtifactActions({
   const canHandleWithdraw =
     onPlanetWrapper.value && onPlanetWrapper.value.planetLevel > artifact.rarity;
 
-  const wait = durationUntilArtifactAvailable(artifact);
+  const wait =
+    artifact && currentBlockNumber !== undefined
+      ? durationUntilArtifactAvailable(artifact, currentBlockNumber)
+      : 0;
 
   if (canDepositArtifact(account, artifact, depositPlanetWrapper.value)) {
     actions.unshift({
@@ -164,7 +168,7 @@ export function ArtifactActions({
     });
   }
 
-  if (canActivateArtifact(artifact, onPlanet, otherArtifactsOnPlanet)) {
+  if (canActivateArtifact(artifact, onPlanet, otherArtifactsOnPlanet, currentBlockNumber ?? 0)) {
     actions.unshift({
       name: TooltipName.ActivateArtifact,
       children: (
@@ -185,7 +189,7 @@ export function ArtifactActions({
     actions.unshift({
       name: TooltipName.Empty,
       extraContent: <>You have to wait before activating an artifact again</>,
-      children: <Sub>{formatDuration(wait)}</Sub>,
+      children: <Sub>{`${wait}B`}</Sub>,
     });
   }
 

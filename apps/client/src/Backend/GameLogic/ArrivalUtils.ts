@@ -43,8 +43,8 @@ export const isProspectable = (planet: Planet): boolean => {
 
 const getSilverOverTime = (
   planet: Planet,
-  startTimeMillis: number,
-  endTimeMillis: number
+  startBlock: number,
+  endBlock: number
 ): number => {
   if (!hasOwner(planet)) {
     return planet.silver;
@@ -53,12 +53,12 @@ const getSilverOverTime = (
   if (planet.silver > planet.silverCap) {
     return planet.silverCap;
   }
-  const timeElapsed = endTimeMillis / 1000 - startTimeMillis / 1000;
+  const blocksElapsed = endBlock - startBlock;
 
-  return Math.min(timeElapsed * planet.silverGrowth + planet.silver, planet.silverCap);
+  return Math.min(blocksElapsed * planet.silverGrowth + planet.silver, planet.silverCap);
 };
 
-const getEnergyAtTime = (planet: Planet, atTimeMillis: number): number => {
+const getEnergyAtTime = (planet: Planet, atBlock: number): number => {
   if (planet.energy === 0) {
     return 0;
   }
@@ -72,9 +72,9 @@ const getEnergyAtTime = (planet: Planet, atTimeMillis: number): number => {
     }
   }
 
-  const timeElapsed = atTimeMillis / 1000 - planet.lastUpdated;
+  const blocksElapsed = atBlock - planet.lastUpdated;
   const denominator =
-    Math.exp((-4 * planet.energyGrowth * timeElapsed) / planet.energyCap) *
+    Math.exp((-4 * planet.energyGrowth * blocksElapsed) / planet.energyCap) *
       (planet.energyCap / planet.energy - 1) +
     1;
   return planet.energyCap / denominator;
@@ -83,27 +83,27 @@ const getEnergyAtTime = (planet: Planet, atTimeMillis: number): number => {
 export const updatePlanetToTime = (
   planet: Planet,
   planetArtifacts: Artifact[],
-  atTimeMillis: number,
+  atBlockNumber: number,
   contractConstants: ContractConstants,
   setPlanet: (p: Planet) => void = () => {}
 ): void => {
-  if (atTimeMillis < planet.lastUpdated * 1000) {
+  if (atBlockNumber < planet.lastUpdated) {
     return;
   }
 
   if (planet.pausers === 0) {
-    planet.silver = getSilverOverTime(planet, planet.lastUpdated * 1000, atTimeMillis);
-    planet.energy = getEnergyAtTime(planet, atTimeMillis);
+    planet.silver = getSilverOverTime(planet, planet.lastUpdated, atBlockNumber);
+    planet.energy = getEnergyAtTime(planet, atBlockNumber);
   }
 
-  planet.lastUpdated = atTimeMillis / 1000;
+  planet.lastUpdated = atBlockNumber;
 
-  const photoidActivationTime = contractConstants.PHOTOID_ACTIVATION_DELAY * 1000;
+  const photoidActivationDelayBlocks = contractConstants.PHOTOID_ACTIVATION_DELAY;
   const activePhotoid = planetArtifacts.find(
     (a) =>
       a.artifactType === ArtifactType.PhotoidCannon &&
       isActivated(a) &&
-      atTimeMillis - a.lastActivated * 1000 >= photoidActivationTime
+      atBlockNumber - a.lastActivated >= photoidActivationDelayBlocks
   );
 
   if (activePhotoid && !planet.localPhotoidUpgrade) {
@@ -154,7 +154,7 @@ export const arrive = (
   }
 
   // update toPlanet energy and silver right before arrival
-  updatePlanetToTime(toPlanet, artifactsOnPlanet, arrival.arrivalTime * 1000, contractConstants);
+  updatePlanetToTime(toPlanet, artifactsOnPlanet, arrival.arrivalTime, contractConstants);
 
   const prevPlanet = _.cloneDeep(toPlanet);
   if (toPlanet.destroyed) {

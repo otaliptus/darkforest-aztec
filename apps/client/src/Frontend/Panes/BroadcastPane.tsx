@@ -6,7 +6,6 @@ import { Btn } from '../Components/Btn';
 import { CenterBackgroundSubtext, Spacer } from '../Components/CoreUI';
 import { LoadingSpinner } from '../Components/LoadingSpinner';
 import { Blue, White } from '../Components/Text';
-import { formatDuration, TimeUntil } from '../Components/TimeUntil';
 import dfstyles from '../Styles/dfstyles';
 import { usePlanet, useUIManager } from '../Utils/AppHooks';
 import { useEmitterValue } from '../Utils/EmitterHooks';
@@ -76,7 +75,13 @@ export function BroadcastPane({
 
   const [account, setAccount] = useState<EthAddress | undefined>(undefined); // consider moving this one to parent
   const isRevealed = planet?.coordsRevealed;
-  const broadcastCooldownPassed = uiManager.getNextBroadcastAvailableTimestamp() <= Date.now();
+  const currentBlockNumber = useEmitterValue(uiManager.getEthConnection().blockNumber$, undefined);
+  const nextBroadcastBlock = uiManager.getNextBroadcastAvailableTimestamp();
+  const blocksLeft =
+    currentBlockNumber !== undefined
+      ? Math.max(0, nextBroadcastBlock - currentBlockNumber)
+      : undefined;
+  const broadcastCooldownPassed = blocksLeft === undefined ? true : blocksLeft <= 0;
   const currentlyBroadcastingAnyPlanet = uiManager.isCurrentlyRevealing();
 
   useEffect(() => {
@@ -125,8 +130,8 @@ export function BroadcastPane({
       {!broadcastCooldownPassed && (
         <p>
           <Blue>INFO:</Blue> You must wait{' '}
-          <TimeUntil timestamp={uiManager.getNextBroadcastAvailableTimestamp()} ifPassed={'now!'} />{' '}
-          to reveal another planet.
+          <White>{blocksLeft === undefined ? '...' : `${blocksLeft}B`}</White> to reveal another
+          planet.
         </p>
       )}
     </div>
@@ -138,10 +143,7 @@ export function BroadcastPane({
         <div>
           You can broadcast a planet to publically reveal its location on the map. You can only
           broadcast a planet's location once every{' '}
-          <White>
-            {formatDuration(uiManager.contractConstants.LOCATION_REVEAL_COOLDOWN * 1000)}
-          </White>
-          .
+          <White>{uiManager.contractConstants.LOCATION_REVEAL_COOLDOWN} blocks</White>.
         </div>
         <div className='message'>{warningsSection}</div>
         <div className='row'>

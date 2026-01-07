@@ -43,7 +43,7 @@ export function GameSettingsPane({ config, onUpdate }: LobbiesPaneProps) {
         <Warning>{config.PLANET_TRANSFER_ENABLED.warning}</Warning>
       </Row>
       <Row>
-        <span>Location reveal cooldown (in seconds)</span>
+        <span>Location reveal cooldown (in blocks)</span>
         <NumberInput
           value={config.LOCATION_REVEAL_COOLDOWN.displayValue}
           onChange={(e: Event & React.ChangeEvent<DarkForestNumberInput>) => {
