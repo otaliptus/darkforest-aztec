@@ -18,3 +18,6 @@ This repo mixes active Aztec port work with vendored reference material. Use thi
 ## Notes
 - Reference repos are kept for lookup and comparison only. They are not part of the build or deployment workflow.
 - If a path you are using starts with `reference/`, it should not be imported into production code without an explicit port.
+
+## Updates
+- 2026-01-07: Added `docs/giga-truth-report.md` (current architecture + gaps) and `docs/action-call-graphs.md` (client → Aztec → Noir call graphs).
