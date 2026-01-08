@@ -20,10 +20,12 @@ import OnboardingPane from '../Panes/OnboardingPane';
 import { PlanetContextPane } from '../Panes/PlanetContextPane';
 import { PlanetDexPane } from '../Panes/PlanetDexPane';
 import { PlayerArtifactsPane } from '../Panes/PlayerArtifactsPane';
+import { PluginLibraryPane } from '../Panes/PluginLibraryPane';
 import { PrivatePane } from '../Panes/PrivatePane';
 import { SettingsPane } from '../Panes/SettingsPane';
 import { TransactionLogPane } from '../Panes/TransactionLogPane';
 import { TutorialPane } from '../Panes/TutorialPane';
+import { TwitterVerifyPane } from '../Panes/TwitterVerifyPane';
 import { ZoomPane } from '../Panes/ZoomPane';
 import { useSelectedPlanet, useUIManager } from '../Utils/AppHooks';
 import { useOnUp } from '../Utils/KeyEmitters';
@@ -71,8 +73,12 @@ export function GameWindowLayout({
   const [playerArtifactsVisible, setPlayerArtifactsVisible] = useState<boolean>(
     isModalOpen(ModalName.YourArtifacts)
   );
+  const [twitterVerifyVisible, setTwitterVerifyVisible] = useState<boolean>(
+    isModalOpen(ModalName.TwitterVerify)
+  );
   const [settingsVisible, setSettingsVisible] = useState<boolean>(isModalOpen(ModalName.Settings));
   const [privateVisible, setPrivateVisible] = useState<boolean>(isModalOpen(ModalName.Private));
+  const [pluginsVisible, setPluginsVisible] = useState<boolean>(isModalOpen(ModalName.Plugins));
   const [diagnosticsVisible, setDiagnosticsVisible] = useState<boolean>(
     isModalOpen(ModalName.Diagnostics)
   );
@@ -121,7 +127,7 @@ export function GameWindowLayout({
     <WindowWrapper>
       <TopBarPaneContainer>
         <BorderlessPane>
-          <TopBar />
+          <TopBar twitterVerifyHook={[twitterVerifyVisible, setTwitterVerifyVisible]} />
         </BorderlessPane>
       </TopBarPaneContainer>
 
@@ -133,7 +139,12 @@ export function GameWindowLayout({
           onClose={() => setTransactionLogVisible(false)}
         />
         <PlanetDexPane visible={planetdexVisible} onClose={() => setPlanetdexVisible(false)} />
+        <TwitterVerifyPane
+          visible={twitterVerifyVisible}
+          onClose={() => setTwitterVerifyVisible(false)}
+        />
         <SettingsPane
+          ethConnection={uiManager.getEthConnection()}
           visible={settingsVisible}
           onClose={() => setSettingsVisible(false)}
           onOpenPrivate={() => setPrivateVisible(true)}
@@ -151,6 +162,14 @@ export function GameWindowLayout({
           visible={diagnosticsVisible}
           onClose={() => setDiagnosticsVisible(false)}
         />
+        {modalsContainer && (
+          <PluginLibraryPane
+            modalsContainer={modalsContainer}
+            gameUIManager={uiManager}
+            visible={pluginsVisible}
+            onClose={() => setPluginsVisible(false)}
+          />
+        )}
       </div>
 
       <OnboardingPane visible={onboardingVisible} onClose={() => setOnboardingVisible(false)} />
@@ -164,6 +183,7 @@ export function GameWindowLayout({
             transactionLogHook={[transactionLogVisible, setTransactionLogVisible]}
             settingsHook={[settingsVisible, setSettingsVisible]}
             helpHook={[helpVisible, setHelpVisible]}
+            pluginsHook={[pluginsVisible, setPluginsVisible]}
             yourArtifactsHook={[playerArtifactsVisible, setPlayerArtifactsVisible]}
             planetdexHook={[planetdexVisible, setPlanetdexVisible]}
           />

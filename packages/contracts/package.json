@@ -10,7 +10,8 @@
         "deploy:local": "node scripts/deploy_local.js",
         "test": "yarn test:nr",
         "test:nr": "yarn workspace @darkforest-aztec/nft compile && cp ../nft/target/darkforest_nft-NFT.json ./darkforest_nft-NFT.json && aztec test --test-threads 1",
-        "test:e2e": "node scripts/e2e_darkforest.js"
+        "test:e2e": "node scripts/e2e_darkforest.js",
+        "bench:move": "node scripts/bench_move.js"
     },
     "dependencies": {
         "@aztec/accounts": "3.0.0-devnet.20251212",

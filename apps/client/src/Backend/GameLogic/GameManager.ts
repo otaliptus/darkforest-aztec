@@ -130,6 +130,8 @@ import { CaptureZoneGenerator, CaptureZonesGeneratedEvent } from './CaptureZoneG
 import { ContractsAPI, makeContractsAPI } from './ContractsAPI';
 import { GameObjects } from './GameObjects';
 import { InitialGameStateDownloader } from './InitialGameStateDownloader';
+import { startSnapshotLiveUpdates, type SnapshotUpdate } from './SnapshotLoader';
+import { detailedLogger } from '../Utils/DetailedLogger';
 
 export enum GameManagerEvent {
   PlanetUpdate = 'PlanetUpdate',
@@ -146,6 +148,8 @@ type TxTimings = {
   createdAt: number;
   submittedAt?: number;
   confirmedAt?: number;
+  proveMs?: number;
+  sendMs?: number;
   submitMs?: number;
   confirmMs?: number;
   totalMs?: number;
@@ -236,6 +240,31 @@ class GameManager extends EventEmitter {
   private paused: boolean;
   private lastPlanetSyncBlock = 0;
   private syncingPlanetRefresh = false;
+  private snapshotUpdateInFlight = false;
+  private snapshotUpdateStop?: () => void;
+
+  private logActionStart(action: string, payload?: Record<string, unknown>) {
+    return detailedLogger.start('game', action, {
+      account: this.account,
+      ...payload,
+    });
+  }
+
+  private logActionEnd(action: string, correlationId: string, payload?: Record<string, unknown>) {
+    detailedLogger.end('game', action, correlationId, payload);
+  }
+
+  private logActionError(
+    action: string,
+    correlationId: string,
+    error: unknown,
+    payload?: Record<string, unknown>
+  ) {
+    detailedLogger.error('game', action, correlationId, {
+      error: (error as Error)?.message ?? error,
+      ...payload,
+    });
+  }
 
   /**
    * @todo change this to the correct timestamp each round.
@@ -558,6 +587,103 @@ class GameManager extends EventEmitter {
     clearInterval(this.scoreboardInterval);
     clearInterval(this.networkHealthInterval);
     this.settingsSubscription?.unsubscribe();
+    this.snapshotUpdateStop?.();
+    this.snapshotUpdateStop = undefined;
+  }
+
+  public startSnapshotLiveUpdates(): void {
+    if (this.snapshotUpdateStop) return;
+    const stop = startSnapshotLiveUpdates(this.contractsAPI, async (update) => {
+      await this.applySnapshotUpdate(update);
+    });
+    if (stop) {
+      this.snapshotUpdateStop = stop;
+    }
+  }
+
+  public async applySnapshotUpdate(update: SnapshotUpdate): Promise<void> {
+    if (this.snapshotUpdateInFlight) return;
+    this.snapshotUpdateInFlight = true;
+    const logId = this.logActionStart('snapshot_update', {
+      planets: update.planets.length,
+      arrivals: update.arrivals.length,
+      artifacts: update.artifacts.length,
+      players: update.players.length,
+    });
+    try {
+      const arrivalsByPlanet = new Map<LocationId, QueuedArrival[]>();
+      for (const planet of update.planets) {
+        arrivalsByPlanet.set(planet.locationId, []);
+      }
+      for (const arrival of update.arrivals) {
+        const list = arrivalsByPlanet.get(arrival.toPlanet) ?? [];
+        list.push(arrival);
+        arrivalsByPlanet.set(arrival.toPlanet, list);
+      }
+
+      for (const artifact of update.artifacts) {
+        this.entityStore.replaceArtifactFromContractData(artifact);
+      }
+
+      for (const planet of update.planets) {
+        const revealed = update.revealedCoordsMap.get(planet.locationId);
+        let revealedLocation: RevealedLocation | undefined;
+        if (revealed) {
+          const coords: WorldCoords = { x: revealed.x, y: revealed.y };
+          const location: WorldLocation = {
+            hash: planet.locationId,
+            coords,
+            perlin: planet.perlin,
+            biomebase: this.biomebasePerlin(coords, true),
+          };
+          revealedLocation = { ...location, revealer: revealed.revealer };
+        }
+
+        const arrivals = arrivalsByPlanet.get(planet.locationId) ?? [];
+        this.entityStore.replacePlanetFromContractData(
+          planet,
+          arrivals,
+          planet.heldArtifactIds,
+          revealedLocation
+        );
+      }
+
+      if (update.touchedPlanetIds.length > 0) {
+        void this.persistentChunkStore.saveTouchedPlanetIds(update.touchedPlanetIds);
+      }
+      if (update.revealedCoords.length > 0) {
+        void this.persistentChunkStore.saveRevealedCoords(update.revealedCoords);
+      }
+
+      let playersUpdated = false;
+      for (const player of update.players) {
+        const existing = this.players.get(player.address);
+        if (existing?.twitter) {
+          player.twitter = existing.twitter;
+        }
+        this.players.set(player.address, player);
+        playersUpdated = true;
+      }
+      if (playersUpdated) {
+        this.playersUpdated$.publish();
+      }
+
+      this.emit(GameManagerEvent.PlanetUpdate);
+      this.terminal.current?.println(
+        `Snapshot applied: ${update.planets.length} planets, ${update.arrivals.length} arrivals.`,
+        TerminalTextStyle.Sub
+      );
+      this.logActionEnd('snapshot_update', logId, {
+        planets: update.planets.length,
+        arrivals: update.arrivals.length,
+        artifacts: update.artifacts.length,
+        players: update.players.length,
+      });
+    } catch (error) {
+      this.logActionError('snapshot_update', logId, error);
+    } finally {
+      this.snapshotUpdateInFlight = false;
+    }
   }
 
   static async create({
@@ -955,7 +1081,10 @@ class GameManager extends EventEmitter {
     const hash = tx.hash ?? '';
     const shortHash = hash ? hash.slice(0, 6) : 'pending';
     const timings = (tx as Transaction & { __dfTimings?: TxTimings }).__dfTimings;
+    const proveMs = formatDuration(timings?.proveMs);
+    const sendMs = formatDuration(timings?.sendMs);
     const submitMs = formatDuration(timings?.submitMs);
+    const showSend = timings?.sendMs !== undefined && timings?.sendMs !== timings?.proveMs;
     this.terminal.current?.print(`${tx.intent.methodName} transaction (`, TerminalTextStyle.Blue);
     this.terminal.current?.printLink(
       `${shortHash}`,
@@ -964,7 +1093,12 @@ class GameManager extends EventEmitter {
       },
       TerminalTextStyle.White
     );
-    this.terminal.current?.println(`) submitted${submitMs ? ` in ${submitMs}` : ''}`, TerminalTextStyle.Blue);
+    const timingLabel = submitMs
+      ? ` in ${submitMs}${
+          proveMs ? ` (prove ${proveMs}${showSend && sendMs ? `, send ${sendMs}` : ''})` : ''
+        }`
+      : '';
+    this.terminal.current?.println(`) submitted${timingLabel}`, TerminalTextStyle.Blue);
     if (VERBOSE_LOGGING && hash) {
       this.terminal.current?.println(`  hash: ${hash}`, TerminalTextStyle.Sub);
     }
@@ -1697,6 +1831,7 @@ class GameManager extends EventEmitter {
    * Reveals a planet's location on-chain.
    */
   public async revealLocation(planetId: LocationId): Promise<Transaction<UnconfirmedReveal>> {
+    const logId = this.logActionStart('reveal_location', { planetId });
     try {
       if (!this.account) {
         throw new Error('no account set');
@@ -1751,14 +1886,17 @@ class GameManager extends EventEmitter {
       // Always await the submitTransaction so we can catch rejections
       const tx = await this.contractsAPI.submitTransaction(txIntent);
 
+      this.logActionEnd('reveal_location', logId, { txId: tx.id, hash: tx.hash });
       return tx;
     } catch (e) {
+      this.logActionError('reveal_location', logId, e);
       this.getNotificationsManager().txInitError('revealLocation', e.message);
       throw e;
     }
   }
 
   public async invadePlanet(locationId: LocationId) {
+    const logId = this.logActionStart('invade_planet', { locationId });
     try {
       if (!this.captureZoneGenerator) {
         throw new Error('Capture zones are not enabled in this game');
@@ -1804,14 +1942,17 @@ class GameManager extends EventEmitter {
       };
 
       const tx = await this.contractsAPI.submitTransaction(txIntent);
+      this.logActionEnd('invade_planet', logId, { txId: tx.id, hash: tx.hash });
       return tx;
     } catch (e) {
+      this.logActionError('invade_planet', logId, e);
       this.getNotificationsManager().txInitError('invadePlanet', e.message);
       throw e;
     }
   }
 
   public async capturePlanet(locationId: LocationId) {
+    const logId = this.logActionStart('capture_planet', { locationId });
     try {
       const planet = this.entityStore.getPlanetWithId(locationId);
 
@@ -1855,8 +1996,10 @@ class GameManager extends EventEmitter {
       };
 
       const tx = await this.contractsAPI.submitTransaction(txIntent);
+      this.logActionEnd('capture_planet', logId, { txId: tx.id, hash: tx.hash });
       return tx;
     } catch (e) {
+      this.logActionError('capture_planet', logId, e);
       this.getNotificationsManager().txInitError('capturePlanet', e.message);
       throw e;
     }
@@ -1866,12 +2009,17 @@ class GameManager extends EventEmitter {
    * Attempts to join the game. Should not be called once you've already joined.
    */
   public async joinGame(beforeRetry: (e: Error) => Promise<boolean>): Promise<void> {
+    const logId = this.logActionStart('join_game');
     try {
       if (this.checkGameHasEnded()) {
         throw new Error('game has ended');
       }
 
       const planet = await this.findRandomHomePlanet();
+      detailedLogger.log('game', 'join_game.home_planet', {
+        locationId: planet.locationId,
+        coords: planet.location.coords,
+      }, 'info', logId);
       this.homeLocation = planet.location;
       this.terminal.current?.println('');
       this.terminal.current?.println(`Found Suitable Home Planet: ${getPlanetName(planet)} `);
@@ -1928,7 +2076,9 @@ class GameManager extends EventEmitter {
       await this.hardRefreshPlanet(planet.locationId);
 
       this.emit(GameManagerEvent.InitializedPlayer);
+      this.logActionEnd('join_game', logId, { locationId: planet.locationId });
     } catch (e) {
+      this.logActionError('join_game', logId, e);
       this.getNotificationsManager().txInitError('initializePlayer', e.message);
       throw e;
     }
@@ -2124,6 +2274,7 @@ class GameManager extends EventEmitter {
     bypassChecks = false
   ): Promise<Transaction<UnconfirmedProspectPlanet>> {
     const planet = this.entityStore.getPlanetWithId(planetId);
+    const logId = this.logActionStart('prospect_planet', { planetId, bypassChecks });
 
     try {
       if (!planet || !isLocatable(planet)) {
@@ -2173,8 +2324,10 @@ class GameManager extends EventEmitter {
         NotificationManager.getInstance().artifactProspected(planet as LocatablePlanet)
       );
 
+      this.logActionEnd('prospect_planet', logId, { txId: tx.id, hash: tx.hash });
       return tx;
     } catch (e) {
+      this.logActionError('prospect_planet', logId, e);
       this.getNotificationsManager().txInitError('prospectPlanet', e.message);
       throw e;
     }
@@ -2188,6 +2341,7 @@ class GameManager extends EventEmitter {
     bypassChecks = false
   ): Promise<Transaction<UnconfirmedFindArtifact>> {
     const planet = this.entityStore.getPlanetWithId(planetId);
+    const logId = this.logActionStart('find_artifact', { planetId, bypassChecks });
 
     try {
       if (!planet) {
@@ -2247,8 +2401,10 @@ class GameManager extends EventEmitter {
         })
         .catch(console.log);
 
+      this.logActionEnd('find_artifact', logId, { txId: tx.id, hash: tx.hash });
       return tx;
     } catch (e) {
+      this.logActionError('find_artifact', logId, e);
       this.getNotificationsManager().txInitError('findArtifact', e.message);
       throw e;
     }
@@ -2266,6 +2422,7 @@ class GameManager extends EventEmitter {
     locationId: LocationId,
     artifactId: ArtifactId
   ): Promise<Transaction<UnconfirmedDepositArtifact>> {
+    const logId = this.logActionStart('deposit_artifact', { locationId, artifactId });
     try {
       localStorage.setItem(`${this.getAccount()?.toLowerCase()}-depositPlanet`, locationId);
       localStorage.setItem(`${this.getAccount()?.toLowerCase()}-depositArtifact`, artifactId);
@@ -2290,8 +2447,10 @@ class GameManager extends EventEmitter {
         this.getGameObjects().updateArtifact(artifactId, (a) => (a.onPlanetId = locationId))
       );
 
+      this.logActionEnd('deposit_artifact', logId, { txId: tx.id, hash: tx.hash });
       return tx;
     } catch (e) {
+      this.logActionError('deposit_artifact', logId, e);
       this.getNotificationsManager().txInitError('depositArtifact', e.message);
       throw e;
     }
@@ -2305,6 +2464,11 @@ class GameManager extends EventEmitter {
     artifactId: ArtifactId,
     bypassChecks = true
   ): Promise<Transaction<UnconfirmedWithdrawArtifact>> {
+    const logId = this.logActionStart('withdraw_artifact', {
+      locationId,
+      artifactId,
+      bypassChecks,
+    });
     try {
       if (!bypassChecks) {
         if (this.checkGameHasEnded()) {
@@ -2343,8 +2507,10 @@ class GameManager extends EventEmitter {
         this.getGameObjects().updateArtifact(artifactId, (a) => (a.onPlanetId = undefined))
       );
 
+      this.logActionEnd('withdraw_artifact', logId, { txId: tx.id, hash: tx.hash });
       return tx;
     } catch (e) {
+      this.logActionError('withdraw_artifact', logId, e);
       this.getNotificationsManager().txInitError('withdrawArtifact', e.message);
       throw e;
     }
@@ -2356,6 +2522,12 @@ class GameManager extends EventEmitter {
     wormholeTo: LocationId | undefined,
     bypassChecks = false
   ): Promise<Transaction<UnconfirmedActivateArtifact>> {
+    const logId = this.logActionStart('activate_artifact', {
+      locationId,
+      artifactId,
+      wormholeTo,
+      bypassChecks,
+    });
     try {
       if (this.checkGameHasEnded()) {
         throw new Error('game has ended');
@@ -2393,8 +2565,10 @@ class GameManager extends EventEmitter {
       // Always await the submitTransaction so we can catch rejections
       const tx = await this.contractsAPI.submitTransaction(txIntent);
 
+      this.logActionEnd('activate_artifact', logId, { txId: tx.id, hash: tx.hash });
       return tx;
     } catch (e) {
+      this.logActionError('activate_artifact', logId, e);
       this.getNotificationsManager().txInitError('activateArtifact', e.message);
       throw e;
     }
@@ -2405,6 +2579,11 @@ class GameManager extends EventEmitter {
     artifactId: ArtifactId,
     bypassChecks = false
   ): Promise<Transaction<UnconfirmedDeactivateArtifact>> {
+    const logId = this.logActionStart('deactivate_artifact', {
+      locationId,
+      artifactId,
+      bypassChecks,
+    });
     try {
       if (!bypassChecks) {
         const planet = this.entityStore.getPlanetWithId(locationId);
@@ -2427,8 +2606,10 @@ class GameManager extends EventEmitter {
       // Always await the submitTransaction so we can catch rejections
       const tx = await this.contractsAPI.submitTransaction(txIntent);
 
+      this.logActionEnd('deactivate_artifact', logId, { txId: tx.id, hash: tx.hash });
       return tx;
     } catch (e) {
+      this.logActionError('deactivate_artifact', logId, e);
       this.getNotificationsManager().txInitError('deactivateArtifact', e.message);
       throw e;
     }
@@ -2439,7 +2620,10 @@ class GameManager extends EventEmitter {
     amount: number,
     bypassChecks = false
   ): Promise<Transaction<UnconfirmedWithdrawSilver>> {
-    throw new Error('Withdraw silver is not supported in the Aztec client.');
+    const logId = this.logActionStart('withdraw_silver', { locationId, amount, bypassChecks });
+    const error = new Error('Withdraw silver is not supported in the Aztec client.');
+    this.logActionError('withdraw_silver', logId, error);
+    throw error;
     try {
       if (!bypassChecks) {
         if (!this.account) throw new Error('no account');
@@ -2561,6 +2745,15 @@ class GameManager extends EventEmitter {
     abandoning = false,
     bypassChecks = false
   ): Promise<Transaction<UnconfirmedMove>> {
+    const logId = this.logActionStart('move', {
+      from,
+      to,
+      forces,
+      silver,
+      artifactMoved,
+      abandoning,
+      bypassChecks,
+    });
     localStorage.setItem(`${this.getAccount()?.toLowerCase()}-fromPlanet`, from);
     localStorage.setItem(`${this.getAccount()?.toLowerCase()}-toPlanet`, to);
 
@@ -2662,8 +2855,10 @@ class GameManager extends EventEmitter {
       // Always await the submitTransaction so we can catch rejections
       const tx = await this.contractsAPI.submitTransaction(txIntent);
 
+      this.logActionEnd('move', logId, { txId: tx.id, hash: tx.hash });
       return tx;
     } catch (e) {
+      this.logActionError('move', logId, e, { from, to });
       this.getNotificationsManager().txInitError('move', e.message);
       throw e;
     }
@@ -2679,6 +2874,7 @@ class GameManager extends EventEmitter {
     branch: number,
     _bypassChecks = false
   ): Promise<Transaction<UnconfirmedUpgrade>> {
+    const logId = this.logActionStart('upgrade', { planetId, branch });
     try {
       // this is shitty
       localStorage.setItem(`${this.getAccount()?.toLowerCase()}-upPlanet`, planetId);
@@ -2695,8 +2891,10 @@ class GameManager extends EventEmitter {
       // Always await the submitTransaction so we can catch rejections
       const tx = await this.contractsAPI.submitTransaction(txIntent);
 
+      this.logActionEnd('upgrade', logId, { txId: tx.id, hash: tx.hash });
       return tx;
     } catch (e) {
+      this.logActionError('upgrade', logId, e);
       this.getNotificationsManager().txInitError('upgradePlanet', e.message);
       throw e;
     }
@@ -2712,6 +2910,7 @@ class GameManager extends EventEmitter {
     planetId: LocationId,
     _bypassChecks = false
   ): Promise<Transaction<UnconfirmedBuyHat>> {
+    const logId = this.logActionStart('buy_hat', { planetId });
     const planetLoc = this.entityStore.getLocationOfPlanet(planetId);
     const planet = this.entityStore.getPlanetWithLocation(planetLoc);
 
@@ -2746,8 +2945,10 @@ class GameManager extends EventEmitter {
           .toString(),
       });
 
+      this.logActionEnd('buy_hat', logId, { txId: tx.id, hash: tx.hash });
       return tx;
     } catch (e) {
+      this.logActionError('buy_hat', logId, e);
       this.getNotificationsManager().txInitError('buyHat', e.message);
       throw e;
     }
@@ -2759,6 +2960,7 @@ class GameManager extends EventEmitter {
     newOwner: EthAddress,
     bypassChecks = false
   ): Promise<Transaction<UnconfirmedPlanetTransfer>> {
+    const logId = this.logActionStart('transfer_ownership', { planetId, newOwner, bypassChecks });
     try {
       if (!bypassChecks) {
         if (this.checkGameHasEnded()) {
@@ -2790,8 +2992,10 @@ class GameManager extends EventEmitter {
       // Always await the submitTransaction so we can catch rejections
       const tx = await this.contractsAPI.submitTransaction(txIntent);
 
+      this.logActionEnd('transfer_ownership', logId, { txId: tx.id, hash: tx.hash });
       return tx;
     } catch (e) {
+      this.logActionError('transfer_ownership', logId, e);
       this.getNotificationsManager().txInitError('transferPlanet', e.message);
       throw e;
     }
@@ -2801,6 +3005,7 @@ class GameManager extends EventEmitter {
    * Receive XDAI for the claiming player based on their score rank at the end of the round.
    */
   async claimRoundEndReward(bypassChecks = false): Promise<Transaction<UnconfirmedClaimReward>> {
+    const logId = this.logActionStart('claim_round_end_reward', { bypassChecks });
     try {
       if (!bypassChecks) {
         if (!this.checkGameHasEnded()) {
@@ -2824,8 +3029,10 @@ class GameManager extends EventEmitter {
       // Always await the submitTransaction so we can catch rejections
       const tx = await this.contractsAPI.submitTransaction(txIntent);
 
+      this.logActionEnd('claim_round_end_reward', logId, { txId: tx.id, hash: tx.hash });
       return tx;
     } catch (e) {
+      this.logActionError('claim_round_end_reward', logId, e);
       this.getNotificationsManager().txInitError('claimReward', e.message);
       throw e;
     }
@@ -2903,16 +3110,22 @@ class GameManager extends EventEmitter {
   private queueResolveArrival(arrival: QueuedArrival): void {
     if (this.resolvingArrivals.has(arrival.eventId)) return;
     this.resolvingArrivals.add(arrival.eventId);
+    const logId = this.logActionStart('resolve_arrival', {
+      arrivalId: arrival.eventId,
+      toPlanet: arrival.toPlanet,
+    });
     void (async () => {
       let arrivalBlock = 0;
       let currentBlock = 0;
       let toPlanet = arrival.toPlanet;
+      let outcome = 'started';
       try {
         const arrivalState = await this.contractsAPI.getArrivalState(arrival.eventId);
         if (!arrivalState || arrivalState.arrivalBlock === 0) {
           console.info('[Aztec] arrival already resolved or missing', {
             arrivalId: arrival.eventId,
           });
+          outcome = 'missing';
           return;
         }
         arrivalBlock = arrivalState.arrivalBlock;
@@ -2932,10 +3145,19 @@ class GameManager extends EventEmitter {
               TerminalTextStyle.Sub
             );
           }
+          outcome = 'not_ready';
           return;
         }
         await this.contractsAPI.resolveArrival(arrival.eventId);
+        outcome = 'resolved';
       } catch (err) {
+        outcome = 'error';
+        this.logActionError('resolve_arrival', logId, err, {
+          arrivalId: arrival.eventId,
+          arrivalBlock,
+          currentBlock,
+          toPlanet,
+        });
         console.error('[Aztec] resolve arrival failed', {
           arrivalId: arrival.eventId,
           error: (err as Error)?.message ?? err,
@@ -2947,6 +3169,13 @@ class GameManager extends EventEmitter {
         this.resolvingArrivals.delete(arrival.eventId);
         this.arrivalResolveSkips.delete(arrival.eventId);
         await this.hardRefreshPlanet(toPlanet);
+        this.logActionEnd('resolve_arrival', logId, {
+          arrivalId: arrival.eventId,
+          arrivalBlock,
+          currentBlock,
+          toPlanet,
+          outcome,
+        });
       }
     })();
   }

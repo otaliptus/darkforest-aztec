@@ -13,6 +13,8 @@ See `docs/PROJECT_MAP.md` for active vs reference directories.
 
 - `docs/giga-truth-report.md`: Current architecture + implemented vs missing report.
 - `docs/action-call-graphs.md`: Call graphs for each on-chain action and client flow.
+- `docs/devnet.md`: Local/devnet deployment runbook + troubleshooting.
+- `docs/performance.md`: Turn-time benchmark notes.
 
 ## Workspace Layout
 

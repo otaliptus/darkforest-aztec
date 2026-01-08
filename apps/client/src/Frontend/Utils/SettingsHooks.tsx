@@ -72,12 +72,6 @@ const defaultSettings: Record<Setting, string> = {
   [Setting.RendererColorDeadSpace]: '#11291b',
 };
 
-const forceReloadEmbeddedPluginsSetting = (Setting as unknown as { ForceReloadEmbeddedPlugins?: Setting })
-  .ForceReloadEmbeddedPlugins;
-if (forceReloadEmbeddedPluginsSetting) {
-  defaultSettings[forceReloadEmbeddedPluginsSetting] = 'false';
-}
-
 interface SettingStorageConfig {
   contractAddress: EthAddress;
   account: EthAddress | undefined;

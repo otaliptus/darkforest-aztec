@@ -1,32 +1,89 @@
-# Dark Forest Client
+# Dark Forest Client (Aztec)
 
 ## Development Guide
 
-### Installing Core Dependencies
+### Core Dependencies
 
-- Node (v14.x OR v16.x)
-- Yarn (Javascript Package Manager)
+- Node (>=16)
+- Yarn 1.x (Classic)
+- Docker (only required for local Aztec devnet via `scripts/df-local.sh`)
 
-#### Installing The Correct Node Version Using NVM
-
-Dark Forest is built and tested using Node.js v14/v16 and might not run properly on other Node.js versions. We recommend using NVM to switch between multiple Node.js version on your machine.
+Install deps from the repo root:
 
 ```sh
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.35.3/install.sh | bash
-nvm install
+yarn install
 ```
 
-After the installation is finished, you can run `node --version` to verify that you are running v14 or v16
+### Running the client (local devnet)
 
-#### Installing Yarn
+Quick start (builds, deploys, mines blocks, runs client):
 
-Refer to [Yarn's official documentation](https://classic.yarnpkg.com/en/docs/install) for the installation guide.
+```sh
+scripts/df-local.sh --run
+```
 
-After you have Yarn installed, run `yarn` to install the dependencies:
+Manual flow:
 
-### Running the client
+```sh
+scripts/df-local.sh --deploy
+scripts/df-local.sh --mine-blocks
+yarn client:dev
+```
 
-To connecting to the mainnet client, simply run `yarn start:prod`. When asked you can use your whitelist key or import your mainnet burner secret and home coordinates.
+The deploy step writes `apps/client/.env.local` with contract addresses. You can override the
+defaults by editing that file or setting env vars.
+
+### Client config
+
+`apps/client/.env.local` (Vite-style):
+
+```sh
+VITE_AZTEC_NODE_URL=http://localhost:8080
+VITE_DARKFOREST_ADDRESS=0x...
+VITE_NFT_ADDRESS=0x...
+VITE_SPONSORED_FPC_ADDRESS=0x...
+```
+
+Optional account selection (local devnet ships with test accounts 0-2):
+
+```sh
+ACCOUNT_INDEX=0
+```
+
+Optional perlin overrides:
+
+```sh
+VITE_PLANETHASH_KEY=42
+VITE_SPACETYPE_KEY=43
+VITE_PERLIN_LENGTH_SCALE=1024
+VITE_PERLIN_MIRROR_X=false
+VITE_PERLIN_MIRROR_Y=false
+```
+
+Optional init/reveal defaults:
+
+```sh
+VITE_INIT_X=990
+VITE_INIT_Y=0
+VITE_INIT_RADIUS=1000
+VITE_REVEAL_X=123
+VITE_REVEAL_Y=456
+```
+
+The config loader also accepts non-VITE variants (e.g. `AZTEC_NODE_URL`, `DARKFOREST_ADDRESS`).
+
+### Detailed action logging
+
+The Aztec client can emit high-detail gameplay logs to a local file for debugging.
+
+- Enable from the client UI: `Settings` → `Detailed Action Logs` → toggle on, then click `Pick Log File`.
+- Logs are written as NDJSON (one JSON object per line) and can be tailed while the game runs.
+- Optional env flags (pre-populate the toggle on load):
+  - `DF_DETAILED_LOGS=1` (enables detailed logging)
+  - `DF_FILE_LOGS=1` (same as above, plus encourages file logging)
+  - `DF_LOG_TO_CONSOLE=1` (mirror detailed logs to the browser console)
+
+If your browser does not support the File System Access API, use `Download recent logs` to export the in-memory buffer.
 
 ### Plugin development
 

@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import dotenv from "dotenv";
 
 import { createAztecNodeClient, waitForNode } from "@aztec/aztec.js/node";
 import { AztecAddress } from "@aztec/aztec.js/addresses";
@@ -10,6 +11,11 @@ import { deriveStorageSlotInMap } from "@aztec/stdlib/hash";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CONTRACTS_DIR = path.resolve(__dirname, "..");
+const ROOT_DIR = path.resolve(CONTRACTS_DIR, "..", "..");
+const CLIENT_ENV_PATH = path.join(ROOT_DIR, "apps", "client", ".env.local");
+
+dotenv.config({ path: CLIENT_ENV_PATH });
+dotenv.config({ path: path.join(ROOT_DIR, ".env") });
 
 const DEFAULT_ARTIFACT_PATH = path.join(CONTRACTS_DIR, "target", "darkforest_contract-DarkForest.json");
 const DEFAULT_NFT_ARTIFACT_PATH = path.join(CONTRACTS_DIR, "darkforest_nft-NFT.json");
@@ -18,13 +24,17 @@ const ZERO_ADDRESS = AztecAddress.fromBigInt(0n).toString();
 
 const parseArgs = () => {
   const args = process.argv.slice(2);
+  const envOr = (...values) => values.find((value) => value !== undefined && value !== "");
   const out = {
-    nodeUrl: process.env.AZTEC_NODE_URL ?? "http://localhost:8080",
-    contractAddress: process.env.DARKFOREST_ADDRESS ?? "",
-    nftAddress: process.env.NFT_ADDRESS ?? "",
+    nodeUrl: envOr(process.env.AZTEC_NODE_URL, process.env.VITE_AZTEC_NODE_URL, "http://localhost:8080"),
+    contractAddress: envOr(process.env.DARKFOREST_ADDRESS, process.env.VITE_DARKFOREST_ADDRESS, ""),
+    nftAddress: envOr(process.env.NFT_ADDRESS, process.env.VITE_NFT_ADDRESS, ""),
     outPath: path.resolve(process.cwd(), "snapshot.json"),
     batchSize: 200,
     concurrency: 8,
+    watch: false,
+    pollMs: 5000,
+    minIntervalMs: 15000,
   };
 
   for (let i = 0; i < args.length; i += 1) {
@@ -35,6 +45,9 @@ const parseArgs = () => {
     else if (arg === "--out") out.outPath = path.resolve(process.cwd(), args[++i] ?? out.outPath);
     else if (arg === "--batch") out.batchSize = Number(args[++i] ?? out.batchSize);
     else if (arg === "--concurrency") out.concurrency = Number(args[++i] ?? out.concurrency);
+    else if (arg === "--watch") out.watch = true;
+    else if (arg === "--poll") out.pollMs = Number(args[++i] ?? out.pollMs);
+    else if (arg === "--min-interval") out.minIntervalMs = Number(args[++i] ?? out.minIntervalMs);
   }
 
   return out;
@@ -447,10 +460,35 @@ const uniqueBigInts = (values) => {
   return out;
 };
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const writeSnapshotFile = (outPath, snapshot) => {
+  fs.mkdirSync(path.dirname(outPath), { recursive: true });
+  const tmpPath = `${outPath}.tmp`;
+  fs.writeFileSync(tmpPath, stringifySnapshot(snapshot));
+  fs.renameSync(tmpPath, outPath);
+};
+
 const main = async () => {
-  const { nodeUrl, contractAddress, nftAddress, outPath, batchSize, concurrency } = parseArgs();
+  const {
+    nodeUrl,
+    contractAddress,
+    nftAddress,
+    outPath,
+    batchSize,
+    concurrency,
+    watch,
+    pollMs,
+    minIntervalMs,
+  } = parseArgs();
   if (!contractAddress) {
     throw new Error("Missing --contract or DARKFOREST_ADDRESS.");
+  }
+  if (!Number.isFinite(pollMs) || pollMs <= 0) {
+    throw new Error("--poll must be a positive number.");
+  }
+  if (!Number.isFinite(minIntervalMs) || minIntervalMs < 0) {
+    throw new Error("--min-interval must be >= 0.");
   }
 
   const node = createAztecNodeClient(nodeUrl);
@@ -469,99 +507,52 @@ const main = async () => {
     nftSlots = getStorageSlots(nftJson, "NFT");
   }
 
-  const gameConfig = await readGameConfig(node, contractAddr, storageSlots);
-  const blockNumber = Number(await node.getBlockNumber());
+  const buildSnapshot = async () => {
+    const gameConfig = await readGameConfig(node, contractAddr, storageSlots);
+    const blockNumber = Number(await node.getBlockNumber());
 
-  const blockTimestampCache = new Map();
-  const getBlockTimestamp = async (blockNum) => {
-    if (!blockNum) return 0;
-    if (blockTimestampCache.has(blockNum)) return blockTimestampCache.get(blockNum);
-    const block = await node.getBlock(blockNum);
-    const ts = block ? Number(block.timestamp) : 0;
-    blockTimestampCache.set(blockNum, ts);
-    return ts;
-  };
+    const blockTimestampCache = new Map();
+    const getBlockTimestamp = async (blockNum) => {
+      if (!blockNum) return 0;
+      if (blockTimestampCache.has(blockNum)) return blockTimestampCache.get(blockNum);
+      const block = await node.getBlock(blockNum);
+      const ts = block ? Number(block.timestamp) : 0;
+      blockTimestampCache.set(blockNum, ts);
+      return ts;
+    };
 
-  const touchedCount = Number(await readTouchedPlanetIdsCount(node, contractAddr, storageSlots));
-  const touchedIndices = Array.from({ length: touchedCount }, (_, i) => BigInt(i));
-  const touchedPlanetIds = [];
-  for (let i = 0; i < touchedIndices.length; i += batchSize) {
-    const batch = touchedIndices.slice(i, i + batchSize);
-    const results = await Promise.all(
-      batch.map((index) => readTouchedPlanetIdAt(node, contractAddr, storageSlots, index))
-    );
-    touchedPlanetIds.push(...results);
-    process.stdout.write(`\rTouched planet ids ${Math.min(i + batchSize, touchedCount)}/${touchedCount}`);
-  }
-  process.stdout.write("\n");
-
-  const revealedCount = Number(await readRevealedCoordsCount(node, contractAddr, storageSlots));
-  const revealedIndices = Array.from({ length: revealedCount }, (_, i) => BigInt(i));
-  const revealedCoords = [];
-  for (let i = 0; i < revealedIndices.length; i += batchSize) {
-    const batch = revealedIndices.slice(i, i + batchSize);
-    const results = await Promise.all(
-      batch.map((index) => readRevealedCoordsAt(node, contractAddr, storageSlots, index))
-    );
-    revealedCoords.push(...results);
-    process.stdout.write(`\rRevealed coords ${Math.min(i + batchSize, revealedCount)}/${revealedCount}`);
-  }
-  process.stdout.write("\n");
-
-  const revealedIds = revealedCoords.map((coord) => coord.locationId);
-  const planetIds = uniqueBigInts(touchedPlanetIds.concat(revealedIds).filter((id) => id !== 0n));
-  const planetIdSet = new Set(planetIds.map((id) => id.toString()));
-
-  const planetBundles = await mapWithConcurrency(
-    planetIds,
-    concurrency,
-    async (locationId) => {
-      const bundle = await readLocationBundle(node, contractAddr, storageSlots, locationId);
-      const lastUpdatedTimestamp = await getBlockTimestamp(bundle.planet.lastUpdated);
-      return { locationId, ...bundle, lastUpdatedTimestamp };
+    const touchedCount = Number(await readTouchedPlanetIdsCount(node, contractAddr, storageSlots));
+    const touchedIndices = Array.from({ length: touchedCount }, (_, i) => BigInt(i));
+    const touchedPlanetIds = [];
+    for (let i = 0; i < touchedIndices.length; i += batchSize) {
+      const batch = touchedIndices.slice(i, i + batchSize);
+      const results = await Promise.all(
+        batch.map((index) => readTouchedPlanetIdAt(node, contractAddr, storageSlots, index))
+      );
+      touchedPlanetIds.push(...results);
+      process.stdout.write(`\rTouched planet ids ${Math.min(i + batchSize, touchedCount)}/${touchedCount}`);
     }
-  );
+    process.stdout.write("\n");
 
-  const arrivalIdSet = new Set();
-  const artifactIdSet = new Set();
-  const playerAddressSet = new Set();
-
-  for (const bundle of planetBundles) {
-    const owner = toAddress(bundle.planet.owner);
-    if (owner !== ZERO_ADDRESS) playerAddressSet.add(owner);
-    const revealer = toAddress(bundle.revealed?.revealer);
-    if (revealer && revealer !== ZERO_ADDRESS) playerAddressSet.add(revealer);
-
-    for (const id of bundle.artifacts.ids) {
-      if (id !== 0n) artifactIdSet.add(id.toString());
+    const revealedCount = Number(await readRevealedCoordsCount(node, contractAddr, storageSlots));
+    const revealedIndices = Array.from({ length: revealedCount }, (_, i) => BigInt(i));
+    const revealedCoords = [];
+    for (let i = 0; i < revealedIndices.length; i += batchSize) {
+      const batch = revealedIndices.slice(i, i + batchSize);
+      const results = await Promise.all(
+        batch.map((index) => readRevealedCoordsAt(node, contractAddr, storageSlots, index))
+      );
+      revealedCoords.push(...results);
+      process.stdout.write(`\rRevealed coords ${Math.min(i + batchSize, revealedCount)}/${revealedCount}`);
     }
+    process.stdout.write("\n");
 
-    for (const id of bundle.arrivals.ids) {
-      if (id !== 0n) arrivalIdSet.add(id.toString());
-    }
-  }
+    const revealedIds = revealedCoords.map((coord) => coord.locationId);
+    const planetIds = uniqueBigInts(touchedPlanetIds.concat(revealedIds).filter((id) => id !== 0n));
+    const planetIdSet = new Set(planetIds.map((id) => id.toString()));
 
-  const arrivalIds = Array.from(arrivalIdSet, (value) => BigInt(value));
-  const arrivals = await mapWithConcurrency(arrivalIds, concurrency, async (arrivalId) => {
-    const arrivalState = await readArrivalState(node, contractAddr, storageSlots, arrivalId);
-    const departureTimestamp = await getBlockTimestamp(arrivalState.departureBlock);
-    const arrivalTimestamp = await getBlockTimestamp(arrivalState.arrivalBlock);
-    const player = toAddress(arrivalState.player);
-    if (player !== ZERO_ADDRESS) playerAddressSet.add(player);
-    if (arrivalState.carriedArtifactId !== 0n) {
-      artifactIdSet.add(arrivalState.carriedArtifactId.toString());
-    }
-    return { arrivalId, arrivalState, departureTimestamp, arrivalTimestamp };
-  });
-
-  const extraPlanetIds = uniqueBigInts(
-    arrivals
-      .map((entry) => entry.arrivalState.fromPlanet)
-      .filter((id) => id !== 0n && !planetIdSet.has(id.toString()))
-  );
-  if (extraPlanetIds.length > 0) {
-    const extraBundles = await mapWithConcurrency(
-      extraPlanetIds,
+    const planetBundles = await mapWithConcurrency(
+      planetIds,
       concurrency,
       async (locationId) => {
         const bundle = await readLocationBundle(node, contractAddr, storageSlots, locationId);
@@ -569,10 +560,12 @@ const main = async () => {
         return { locationId, ...bundle, lastUpdatedTimestamp };
       }
     );
-    for (const bundle of extraBundles) {
-      planetBundles.push(bundle);
-      planetIdSet.add(bundle.locationId.toString());
 
+    const arrivalIdSet = new Set();
+    const artifactIdSet = new Set();
+    const playerAddressSet = new Set();
+
+    for (const bundle of planetBundles) {
       const owner = toAddress(bundle.planet.owner);
       if (owner !== ZERO_ADDRESS) playerAddressSet.add(owner);
       const revealer = toAddress(bundle.revealed?.revealer);
@@ -581,50 +574,129 @@ const main = async () => {
       for (const id of bundle.artifacts.ids) {
         if (id !== 0n) artifactIdSet.add(id.toString());
       }
+
+      for (const id of bundle.arrivals.ids) {
+        if (id !== 0n) arrivalIdSet.add(id.toString());
+      }
     }
-  }
 
-  const artifactIds = Array.from(artifactIdSet, (value) => BigInt(value));
-  const artifacts = await mapWithConcurrency(artifactIds, concurrency, async (artifactId) => {
-    const bundle = await readArtifactBundle(node, contractAddr, storageSlots, artifactId, nftAddr, nftSlots);
-    const lastActivatedTimestamp = await getBlockTimestamp(bundle.artifact.lastActivated);
-    const lastDeactivatedTimestamp = await getBlockTimestamp(bundle.artifact.lastDeactivated);
-    return { artifactId, ...bundle, lastActivatedTimestamp, lastDeactivatedTimestamp };
-  });
+    const arrivalIds = Array.from(arrivalIdSet, (value) => BigInt(value));
+    const arrivals = await mapWithConcurrency(arrivalIds, concurrency, async (arrivalId) => {
+      const arrivalState = await readArrivalState(node, contractAddr, storageSlots, arrivalId);
+      const departureTimestamp = await getBlockTimestamp(arrivalState.departureBlock);
+      const arrivalTimestamp = await getBlockTimestamp(arrivalState.arrivalBlock);
+      const player = toAddress(arrivalState.player);
+      if (player !== ZERO_ADDRESS) playerAddressSet.add(player);
+      if (arrivalState.carriedArtifactId !== 0n) {
+        artifactIdSet.add(arrivalState.carriedArtifactId.toString());
+      }
+      return { arrivalId, arrivalState, departureTimestamp, arrivalTimestamp };
+    });
 
-  const playerAddresses = Array.from(playerAddressSet)
-    .map((value) => AztecAddress.fromString(value))
-    .filter((addr) => addr.toString() !== ZERO_ADDRESS);
+    const extraPlanetIds = uniqueBigInts(
+      arrivals
+        .map((entry) => entry.arrivalState.fromPlanet)
+        .filter((id) => id !== 0n && !planetIdSet.has(id.toString()))
+    );
+    if (extraPlanetIds.length > 0) {
+      const extraBundles = await mapWithConcurrency(
+        extraPlanetIds,
+        concurrency,
+        async (locationId) => {
+          const bundle = await readLocationBundle(node, contractAddr, storageSlots, locationId);
+          const lastUpdatedTimestamp = await getBlockTimestamp(bundle.planet.lastUpdated);
+          return { locationId, ...bundle, lastUpdatedTimestamp };
+        }
+      );
+      for (const bundle of extraBundles) {
+        planetBundles.push(bundle);
+        planetIdSet.add(bundle.locationId.toString());
 
-  const players = await mapWithConcurrency(playerAddresses, concurrency, async (address) => {
-    const bundle = await readPlayerBundle(node, contractAddr, storageSlots, address);
-    if (!bundle.player.isInitialized) return undefined;
-    const lastRevealTimestamp = await getBlockTimestamp(bundle.player.lastRevealBlock);
-    return { address, ...bundle, lastRevealTimestamp };
-  });
+        const owner = toAddress(bundle.planet.owner);
+        if (owner !== ZERO_ADDRESS) playerAddressSet.add(owner);
+        const revealer = toAddress(bundle.revealed?.revealer);
+        if (revealer && revealer !== ZERO_ADDRESS) playerAddressSet.add(revealer);
 
-  const snapshot = {
-    meta: {
-      format: "df-aztec-snapshot",
-      snapshotVersion: 1,
-      contractAddress: contractAddr.toString(),
-      blockNumber,
-      createdAt: new Date().toISOString(),
-      worldRadius: gameConfig.worldRadius,
-      configHashSpacetype: gameConfig.configHashSpacetype,
-      configHashBiome: gameConfig.configHashBiome,
-    },
-    players: players.filter(Boolean),
-    touchedPlanetIds,
-    revealedCoords,
-    planets: planetBundles,
-    arrivals,
-    artifacts,
+        for (const id of bundle.artifacts.ids) {
+          if (id !== 0n) artifactIdSet.add(id.toString());
+        }
+      }
+    }
+
+    const artifactIds = Array.from(artifactIdSet, (value) => BigInt(value));
+    const artifacts = await mapWithConcurrency(artifactIds, concurrency, async (artifactId) => {
+      const bundle = await readArtifactBundle(node, contractAddr, storageSlots, artifactId, nftAddr, nftSlots);
+      const lastActivatedTimestamp = await getBlockTimestamp(bundle.artifact.lastActivated);
+      const lastDeactivatedTimestamp = await getBlockTimestamp(bundle.artifact.lastDeactivated);
+      return { artifactId, ...bundle, lastActivatedTimestamp, lastDeactivatedTimestamp };
+    });
+
+    const playerAddresses = Array.from(playerAddressSet)
+      .map((value) => AztecAddress.fromString(value))
+      .filter((addr) => addr.toString() !== ZERO_ADDRESS);
+
+    const players = await mapWithConcurrency(playerAddresses, concurrency, async (address) => {
+      const bundle = await readPlayerBundle(node, contractAddr, storageSlots, address);
+      if (!bundle.player.isInitialized) return undefined;
+      const lastRevealTimestamp = await getBlockTimestamp(bundle.player.lastRevealBlock);
+      return { address, ...bundle, lastRevealTimestamp };
+    });
+
+    const snapshot = {
+      meta: {
+        format: "df-aztec-snapshot",
+        snapshotVersion: 1,
+        contractAddress: contractAddr.toString(),
+        blockNumber,
+        createdAt: new Date().toISOString(),
+        worldRadius: gameConfig.worldRadius,
+        configHashSpacetype: gameConfig.configHashSpacetype,
+        configHashBiome: gameConfig.configHashBiome,
+      },
+      players: players.filter(Boolean),
+      touchedPlanetIds,
+      revealedCoords,
+      planets: planetBundles,
+      arrivals,
+      artifacts,
+    };
+
+    writeSnapshotFile(outPath, snapshot);
+    console.log(`Snapshot written to ${outPath} (block ${blockNumber})`);
+    return blockNumber;
   };
 
-  fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  fs.writeFileSync(outPath, stringifySnapshot(snapshot));
-  console.log(`Snapshot written to ${outPath}`);
+  let lastSnapshotBlock = await buildSnapshot();
+
+  if (!watch) return;
+
+  console.log(
+    `Watching for new blocks every ${pollMs}ms (min rebuild interval ${minIntervalMs}ms)...`
+  );
+  let lastSnapshotAt = Date.now();
+  let pending = false;
+  let lastSeenBlock = Number.isFinite(lastSnapshotBlock) ? lastSnapshotBlock : 0;
+
+  while (true) {
+    await sleep(pollMs);
+    try {
+      const latest = Number(await node.getBlockNumber());
+      if (latest > lastSeenBlock) {
+        lastSeenBlock = latest;
+        pending = true;
+      }
+      const now = Date.now();
+      if (pending && now - lastSnapshotAt >= minIntervalMs) {
+        console.log(`New blocks detected (latest ${lastSeenBlock}); rebuilding snapshot...`);
+        lastSnapshotBlock = await buildSnapshot();
+        lastSnapshotAt = now;
+        pending = false;
+      }
+    } catch (err) {
+      const msg = err && typeof err === "object" && "message" in err ? err.message : String(err);
+      console.error(`Snapshot watch error: ${msg}`);
+    }
+  }
 };
 
 main().catch((err) => {

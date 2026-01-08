@@ -25,8 +25,9 @@ export function ManagePlanetArtifactsHelpContent() {
       </p>
       <br />
       <p>
-        If your planet is a <Underline>Spacetime Rip</Underline>, you can also deposit artifacts
-        from your inventory. Artifact withdrawals are disabled in this build.
+        If your planet is a <Underline>Spacetime Rip</Underline>, you can also withdraw and deposit
+        artifacts. When you withdraw an artifact, it is transferred to your address as an ERC 721
+        token.
       </p>
     </div>
   );
@@ -34,8 +35,8 @@ export function ManagePlanetArtifactsHelpContent() {
 
 /**
  * This is the place where a user can manage all of their artifacts on a
- * particular planet. This includes prospecting, depositing, activating, and
- * deactivating artifacts.
+ * particular planet. This includes prospecting, withdrawing, depositing,
+ * activating, and deactivating artifacts.
  */
 export function ManagePlanetArtifactsPane({
   initialPlanetId,

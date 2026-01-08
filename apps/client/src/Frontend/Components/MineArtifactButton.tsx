@@ -47,10 +47,8 @@ export function MineArtifactButton({
         .find((artifact) => artifact?.artifactType === ArtifactType.ShipGear),
     [planetWrapper, uiManager]
   );
-  const gearEnabled = uiManager.contractConstants.SPACESHIPS.GEAR;
 
-  let prospectable = isRuins;
-  if (gearEnabled) prospectable = isRuins && !!hasGear;
+  const prospectable = isRuins && hasGear;
 
   const prospecting = useMemo(
     () => planetWrapper.value?.transactions?.hasTransaction(isUnconfirmedProspectPlanetTx),
@@ -95,14 +93,12 @@ export function MineArtifactButton({
               shortcutText={MINE_ARTIFACT}
             >
               <TooltipTrigger
-                name={!gearEnabled || hasGear ? TooltipName.FindArtifact : TooltipName.Empty}
+                name={hasGear ? TooltipName.FindArtifact : TooltipName.Empty}
                 extraContent={
-                  !gearEnabled || hasGear ? (
+                  hasGear ? (
                     ''
                   ) : (
-                    <>
-                      <Red>You must have a Gear ship on this planet to prospect artifacts.</Red>
-                    </>
+                    <Red>You must have a Gear ship on this planet to prospect artifacts.</Red>
                   )
                 }
               >
@@ -116,16 +112,16 @@ export function MineArtifactButton({
               className='button'
               size='stretch'
               active={finding}
-              disabled={!findable || !(gearEnabled && hasGear)}
+              disabled={!findable || !hasGear}
               onClick={find}
               onShortcutPressed={find}
               shortcutKey={MINE_ARTIFACT}
               shortcutText={MINE_ARTIFACT}
             >
               <TooltipTrigger
-                name={!gearEnabled || hasGear ? TooltipName.FindArtifact : TooltipName.Empty}
+                name={hasGear ? TooltipName.FindArtifact : TooltipName.Empty}
                 extraContent={
-                  !gearEnabled || hasGear ? (
+                  hasGear ? (
                     ''
                   ) : (
                     <>

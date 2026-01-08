@@ -90,6 +90,7 @@ const PERLIN_THRESHOLD_3 = 19n;
 const BIOME_THRESHOLD_1 = 15n;
 const BIOME_THRESHOLD_2 = 17n;
 const MAX_NATURAL_PLANET_LEVEL = 9;
+const MAX_COORD_ABS = 2147483648n;
 const SHIP_ID_SALT = 1000n;
 const PHOTOID_ACTIVATION_DELAY_BLOCKS = 4;
 
@@ -157,6 +158,28 @@ const PLANET_TYPE_WEIGHTS = [
     ],
 ];
 
+const LOG_LEVELS = { debug: 10, info: 20, warn: 30, error: 40 };
+const normalizeLogLevel = (value) => {
+    const normalized = String(value ?? "").toLowerCase();
+    if (normalized in LOG_LEVELS) return normalized;
+    return "info";
+};
+const SCRIPT_LOG_LEVEL = normalizeLogLevel(
+    process.env.DF_SCRIPT_LOG_LEVEL ??
+        process.env.DF_LOG_LEVEL ??
+        (process.env.DF_VERBOSE_LOGS === "true" ? "debug" : "info")
+);
+const shouldLog = (level) => LOG_LEVELS[level] >= LOG_LEVELS[SCRIPT_LOG_LEVEL];
+const log = (level, message, data) => {
+    if (!shouldLog(level)) return;
+    const ts = new Date().toISOString();
+    if (data && Object.keys(data).length > 0) {
+        console.log(`[${ts}] ${level.toUpperCase()} ${message}`, data);
+    } else {
+        console.log(`[${ts}] ${level.toUpperCase()} ${message}`);
+    }
+};
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const toBool = (value) => value === 1n;
@@ -187,6 +210,18 @@ const jsonRpcCall = async (url, method, params = []) => {
         throw new Error(payload.error.message || `RPC ${method} failed`);
     }
     return payload.result;
+};
+
+const formatTxHash = (hash) => {
+    if (hash === undefined || hash === null) return undefined;
+    if (typeof hash === "string") return hash;
+    if (typeof hash === "bigint") return `0x${hash.toString(16)}`;
+    const toString = hash?.toString;
+    if (typeof toString === "function") {
+        const value = toString.call(hash);
+        if (value && value !== "[object Object]") return value;
+    }
+    return String(hash);
 };
 
 const isExistingNullifierError = (err) => {
@@ -631,9 +666,10 @@ const readGameConfig = async (node, contractAddress, slots) => {
         worldRadius,
         spawnRimArea,
         locationRevealCooldown,
+        timeFactorHundredths,
         planetRarity,
         maxLocationId,
-    ] = await readPublicFields(node, contractAddress, configSlot, 13);
+    ] = await readPublicFields(node, contractAddress, configSlot, 14);
 
     const configHashSpacetype = await readPublicField(
         node,
@@ -658,6 +694,7 @@ const readGameConfig = async (node, contractAddress, slots) => {
         worldRadius,
         spawnRimArea,
         locationRevealCooldown,
+        timeFactorHundredths,
         planetRarity,
         maxLocationId,
         configHashSpacetype,
@@ -827,21 +864,54 @@ const shipArtifactId = (locationId, shipType, planethashKey) => {
     return mimcSponge2_220(locationId, salt, planethashKey);
 };
 
-const sendTx = async (label, call, from, fee, timeout) => {
-    console.log(`→ ${label}`);
-    const sent = await call.send(fee ? { from, fee } : { from });
-    const receipt = await sent.wait({ timeout });
-    console.log(`✓ ${label}`);
-    return receipt;
+const sendTx = async (label, call, from, fee, timeout, meta) => {
+    const startedAt = Date.now();
+    log("info", `tx.start ${label}`, {
+        from: from?.toString ? from.toString() : String(from),
+        ...(meta ?? {}),
+    });
+    try {
+        const sent = await call.send(fee ? { from, fee } : { from });
+        const rawHash = sent.getTxHash ? await sent.getTxHash() : sent.txHash;
+        const txHash = formatTxHash(rawHash);
+        const submittedAt = Date.now();
+        log("info", `tx.submitted ${label}`, {
+            txHash,
+            submitMs: submittedAt - startedAt,
+            ...(meta ?? {}),
+        });
+        const receipt = await sent.wait({ timeout });
+        const confirmedAt = Date.now();
+        log("info", `tx.confirmed ${label}`, {
+            txHash,
+            confirmMs: confirmedAt - submittedAt,
+            totalMs: confirmedAt - startedAt,
+            status: receipt?.status,
+            ...(meta ?? {}),
+        });
+        return receipt;
+    } catch (err) {
+        log("error", `tx.failed ${label}`, {
+            elapsedMs: Date.now() - startedAt,
+            error: err?.message ?? err,
+            stack: err?.stack,
+            ...(meta ?? {}),
+        });
+        throw err;
+    }
 };
 
-const expectFail = async (label, call, from, fee, timeout) => {
+const expectFail = async (label, call, from, fee, timeout, meta) => {
     let failed = false;
+    const startedAt = Date.now();
     try {
-        await sendTx(label, call, from, fee, timeout);
+        await sendTx(label, call, from, fee, timeout, meta);
     } catch (err) {
         failed = true;
-        console.log(`✓ ${label} failed as expected`);
+        log("info", `tx.expected_fail ${label}`, {
+            elapsedMs: Date.now() - startedAt,
+            ...(meta ?? {}),
+        });
     }
     assert(failed, `${label} should fail`);
 };
@@ -912,6 +982,16 @@ async function main() {
         searchMaxDist,
     } = parseArgs();
 
+    log("info", "e2e.config", {
+        nodeUrl,
+        adminUrl,
+        l1RpcUrl,
+        deploy,
+        mineEmptyBlocks,
+        proverEnabled,
+        searchMaxDist,
+    });
+
     console.log(`Connecting to Aztec node at ${nodeUrl}...`);
     const node = createAztecNodeClient(nodeUrl);
     await waitForNode(node);
@@ -926,6 +1006,10 @@ async function main() {
         ? { paymentMethod: new SponsoredFeePaymentMethod(sponsoredAddress) }
         : undefined;
     const { admin, player2 } = await ensureAccounts(wallet, node, txTimeoutMs, fee);
+    log("info", "e2e.accounts", {
+        admin: admin.address.toString(),
+        player2: player2.address.toString(),
+    });
     const mineEmptyBlock = createEmptyBlockMiner(l1RpcUrl);
     let emptyBlockMisses = 0;
 
@@ -955,6 +1039,10 @@ async function main() {
             .set_minter(darkforest.address)
             .send({ from: admin.address, fee })
             .wait({ timeout: txTimeoutMs });
+        log("info", "e2e.deploy", {
+            darkforest: darkforest.address.toString(),
+            nft: nft.address.toString(),
+        });
     } else {
         const dfAddr = AztecAddress.fromString(darkforestAddress);
         const nftAddr = AztecAddress.fromString(nftAddress);
@@ -968,6 +1056,10 @@ async function main() {
         if (!nftInstance) throw new Error("NFT contract not found");
         await wallet.registerContract(nftInstance, nftArtifact);
         nft = Contract.at(nftAddr, nftArtifact, wallet);
+        log("info", "e2e.contracts", {
+            darkforest: darkforest.address.toString(),
+            nft: nft.address.toString(),
+        });
     }
 
     const dfSlots = getStorageSlots(darkforestArtifact, "DarkForest");
@@ -1010,6 +1102,14 @@ async function main() {
         txTimeoutMs
     );
 
+    await expectFail(
+        "reveal_location out of bounds should fail",
+        darkforest.methods.reveal_location(...buildRevealArgs(MAX_COORD_ABS + 1n, 0n, config)),
+        admin.address,
+        fee,
+        txTimeoutMs
+    );
+
     const adminState = await readPlayerState(node, darkforest.address, dfSlots, admin.address);
     const player2State = await readPlayerState(node, darkforest.address, dfSlots, player2.address);
     assert(adminState.isInitialized, "admin should be initialized");
@@ -1045,6 +1145,37 @@ async function main() {
             txTimeoutMs
         );
     };
+
+    const moveTarget = { x: DEFAULT_INIT.x + 3n, y: DEFAULT_INIT.y + 3n };
+    const moveTargetId = locationIdFromCoords(moveTarget.x, moveTarget.y, config.planethashKey);
+    const moveDistMax = calcDistMax({ x: DEFAULT_INIT.x, y: DEFAULT_INIT.y }, moveTarget);
+
+    await expectFail(
+        "move with insufficient population should fail",
+        darkforest.methods.move(
+            DEFAULT_INIT.x,
+            DEFAULT_INIT.y,
+            moveTarget.x,
+            moveTarget.y,
+            config.worldRadius,
+            BigInt(moveDistMax),
+            home1.population + 1n,
+            0n,
+            0n,
+            false,
+            config.planethashKey,
+            config.spacetypeKey,
+            config.perlinLengthScale,
+            config.perlinMirrorX,
+            config.perlinMirrorY,
+            config.configHashSpacetype,
+            config.maxLocationId,
+            config.worldRadius
+        ),
+        admin.address,
+        fee,
+        txTimeoutMs
+    );
 
     const ruins = findPlanetOfType(DEFAULT_INIT, config, PLANET_TYPE_RUINS, searchMaxDist);
     const tradingPost = findPlanetOfType(DEFAULT_INIT, config, PLANET_TYPE_TRADING_POST, searchMaxDist);
@@ -1142,10 +1273,6 @@ async function main() {
         fee,
         txTimeoutMs
     );
-
-    const moveTarget = { x: DEFAULT_INIT.x + 3n, y: DEFAULT_INIT.y + 3n };
-    const moveTargetId = locationIdFromCoords(moveTarget.x, moveTarget.y, config.planethashKey);
-    const moveDistMax = calcDistMax({ x: DEFAULT_INIT.x, y: DEFAULT_INIT.y }, moveTarget);
 
     await sendTx(
         "move (home -> target)",
@@ -1263,6 +1390,14 @@ async function main() {
             darkforest.address
         ),
         admin.address,
+        fee,
+        txTimeoutMs
+    );
+
+    await expectFail(
+        "trade_artifact withdraw by non-owner should fail",
+        darkforest.methods.trade_artifact(tradingPost.locationId, tradingArtifactId, true),
+        player2.address,
         fee,
         txTimeoutMs
     );
@@ -1429,6 +1564,19 @@ async function main() {
     assert(
         wormholeAfterDeactivate.lastDeactivated >= wormholeAfterDeactivate.lastActivated,
         "wormhole should be inactive after deactivation"
+    );
+
+    await expectFail(
+        "activate wormhole during cooldown should fail",
+        darkforest.methods.set_artifact_activation(
+            home1Id,
+            wormholeArtifactId,
+            planetCoords.wormholeB.locationId,
+            true
+        ),
+        admin.address,
+        fee,
+        txTimeoutMs
     );
 
     const wormholeCarryFrom = await readPlanetState(node, darkforest.address, dfSlots, home1Id);

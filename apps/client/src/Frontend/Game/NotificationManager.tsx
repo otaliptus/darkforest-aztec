@@ -1,7 +1,7 @@
 import { biomeName, isLocatable } from '@darkforest_eth/gamelogic';
-import { Biome } from '@darkforest_eth/types';
-import type {
+import {
   Artifact,
+  Biome,
   Chunk,
   ContractMethodName,
   EthTxStatus,

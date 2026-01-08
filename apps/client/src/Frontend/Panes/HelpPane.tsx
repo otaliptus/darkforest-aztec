@@ -3,7 +3,7 @@ import React from 'react';
 import styled from 'styled-components';
 import { EmSpacer, Link, Section, SectionHeader } from '../Components/CoreUI';
 import { ArtifactRarityLabel } from '../Components/Labels/ArtifactLabels';
-import { White } from '../Components/Text';
+import { Gold, White } from '../Components/Text';
 import dfstyles from '../Styles/dfstyles';
 import { useUIManager } from '../Utils/AppHooks';
 import { ModalPane } from '../Views/ModalPane';
@@ -21,12 +21,21 @@ const HelpContent = styled.div`
 export function HelpPane({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const uiManager = useUIManager();
 
+  const silverScoreValue = uiManager.getSilverScoreValue();
   const artifactPointValues = uiManager.getArtifactPointValues();
   const captureZonePointValues = uiManager.getCaptureZonePointValues();
 
   return (
     <ModalPane id={ModalName.Help} title='Help' visible={visible} onClose={onClose}>
       <HelpContent>
+        {uiManager.isRoundOver() && (
+          <Section>
+            <SectionHeader>Round 5 Complete</SectionHeader>
+            Dark Forest v0.6 Round 5 is now complete! Scores are being compiled and winners will be
+            announced shortly. Also, Artifacts will no longer be mintable. Thanks for playing!
+          </Section>
+        )}
+
         <Section>
           <SectionHeader>Firstly, Some Links:</SectionHeader>
           <Link to='https://blog.zkga.me'>Official Info and Announcements</Link>
@@ -42,7 +51,7 @@ export function HelpPane({ visible, onClose }: { visible: boolean; onClose: () =
         </Section>
 
         <Section>
-          <SectionHeader>Dark Forest v0.6 (Aztec Devnet)</SectionHeader>
+          <SectionHeader>Dark Forest v0.6 R5: The Junk Wars</SectionHeader>
           Dark Forest is a vast universe, obfuscated by zero-knowledge cryptography. Your{' '}
           <White>explorer</White> (bottom left) explores the universe, searching for{' '}
           <White>Planets</White> and other players.
@@ -53,22 +62,30 @@ export function HelpPane({ visible, onClose }: { visible: boolean; onClose: () =
           Also scattered through the universe are <White>Asteroid Fields</White>, which produce{' '}
           <White>Silver</White>. Silver can be sent to planets and can be spent on{' '}
           <White>Upgrades</White>.
-          <EmSpacer height={1} /> Some planets contain <White>Artifacts</White>, which can be found,
-          activated, and deposited on planets to buff their stats.
+          <EmSpacer height={1} /> Some planets contain <White>Artifacts</White> - ERC721 tokens that
+          can be traded with other players. Artifacts can be harvested and deposited onto planets,
+          buffing their stats.
         </Section>
 
         <Section>
-          <SectionHeader>Scoring (if enabled)</SectionHeader>
-          This devnet build focuses on core gameplay. If scoring is enabled, it typically comes
-          from discovering artifacts and capturing planets inside of Capture Zones. For more
-          information about capture zones, hover over the 'Capture Zones' section at the top of the
-          screen.
+          <SectionHeader>Prizes and Scoring</SectionHeader>A snapshot of scores will be taken on{' '}
+          <White>February 28, 2022</White> at 9PM Pacific Time. At that time, the top 63
+          highest-scoring players will be awarded prizes from a pool 63 prize planets. You can see
+          the current rankings by scrolling down on the landing page of the game.
           <EmSpacer height={1} />
-          The values for each scoring type are provided below.
+          Scoring this round is made up of three parts: finding artifacts using you Gear ship,
+          withdrawing silver from Spacetime Rips, and invading and capturing planets inside of
+          Capture Zones. For more information about capture zones, hover over the 'Capture Zones'
+          sections at the top of the screen.
+          <EmSpacer height={1} />
+          The values for each scoring type are provided below:
         </Section>
 
         <Section>
           <SectionHeader>Scoring values</SectionHeader>
+          Each single <Gold>silver</Gold> you withdraw increases your score by{' '}
+          {silverScoreValue / 100}.
+          <EmSpacer height={1} />
           Discovering an artifact increases your score based on its rarity:
           <br />
           <ArtifactRarityLabel rarity={ArtifactRarity.Common} />:{' '}

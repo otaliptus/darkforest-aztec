@@ -67,6 +67,7 @@ import {
   toLocationId,
 } from '../Aztec/typeAdapters';
 import { ContractsAPIEvent, ContractConstants } from '../../_types/darkforest/api/ContractsAPITypes';
+import { detailedLogger } from '../Utils/DetailedLogger';
 
 const toBigInt = (id: string) => BigInt(id.startsWith('0x') ? id : `0x${id}`);
 const toFieldBigInt = (value: number | bigint) => toField(BigInt(value));
@@ -108,6 +109,8 @@ type TxTimings = {
   createdAt: number;
   submittedAt?: number;
   confirmedAt?: number;
+  proveMs?: number;
+  sendMs?: number;
   submitMs?: number;
   confirmMs?: number;
   totalMs?: number;
@@ -693,23 +696,58 @@ export class ContractsAPI extends EventEmitter {
   }
 
   public async resolveArrival(arrivalId: VoyageId): Promise<void> {
+    const logId = detailedLogger.start('contracts', 'resolve_arrival', { arrivalId });
     const id = BigInt(arrivalId);
-    const sentTx = await this.aztecConnection.getClient().resolveArrival(id);
-    const rawHash = sentTx.getTxHash ? await sentTx.getTxHash() : sentTx.txHash;
-    const txHash = formatTxHash(rawHash);
-    if (VERBOSE_LOGGING) {
-      console.info('[Aztec tx] submitted', {
-        method: 'resolveArrival',
-        hash: txHash ?? UNKNOWN_HASH,
-        args: [arrivalId],
+    try {
+      const sendStart = Date.now();
+      const sentTx = await this.aztecConnection.getClient().resolveArrival(id);
+      const rawHash = sentTx.getTxHash ? await sentTx.getTxHash() : sentTx.txHash;
+      const txHash = formatTxHash(rawHash);
+      const submittedAt = Date.now();
+      const submitMs = submittedAt - sendStart;
+      if (VERBOSE_LOGGING) {
+        console.info('[Aztec tx] submitted', {
+          method: 'resolveArrival',
+          hash: txHash ?? UNKNOWN_HASH,
+          args: [arrivalId],
+          submitMs,
+        });
+      }
+      detailedLogger.log(
+        'contracts',
+        'resolve_arrival.submitted',
+        {
+          arrivalId,
+          hash: txHash,
+          submitMs,
+        },
+        'info',
+        logId
+      );
+      await sentTx.wait();
+      const confirmedAt = Date.now();
+      const confirmMs = confirmedAt - submittedAt;
+      if (VERBOSE_LOGGING) {
+        console.info('[Aztec tx] confirmed', {
+          method: 'resolveArrival',
+          hash: txHash ?? UNKNOWN_HASH,
+          confirmMs,
+        });
+      }
+      detailedLogger.end('contracts', 'resolve_arrival', logId, {
+        arrivalId,
+        hash: txHash,
+        submitMs,
+        confirmMs,
+        totalMs: confirmedAt - sendStart,
       });
-    }
-    await sentTx.wait();
-    if (VERBOSE_LOGGING) {
-      console.info('[Aztec tx] confirmed', {
-        method: 'resolveArrival',
-        hash: txHash ?? UNKNOWN_HASH,
+    } catch (error) {
+      detailedLogger.error('contracts', 'resolve_arrival', logId, {
+        arrivalId,
+        error,
+        stack: (error as Error)?.stack,
       });
+      throw error;
     }
   }
 
@@ -745,6 +783,9 @@ export class ContractsAPI extends EventEmitter {
   ): Promise<Transaction<T>> {
     const submitted = deferred<providers.TransactionResponse>();
     const confirmed = deferred<providers.TransactionReceipt>();
+    const logId = detailedLogger.start('contracts', 'tx', {
+      method: txIntent.methodName,
+    });
 
     const tx: Transaction<T> = {
       id: this.nextTxId(),
@@ -764,10 +805,19 @@ export class ContractsAPI extends EventEmitter {
 
     this.emit(ContractsAPIEvent.TxQueued, tx);
     setTimeout(() => this.emitTransactionEvents(tx), 0);
+    detailedLogger.log('contracts', 'tx.queued', {
+      txId: tx.id,
+      method: txIntent.methodName,
+    }, 'info', logId);
 
     try {
       tx.state = TxStatus.Processing as EthTxStatus;
       const args = await txIntent.args;
+      detailedLogger.log('contracts', 'tx.args', {
+        txId: tx.id,
+        method: txIntent.methodName,
+        args,
+      }, 'debug', logId);
       const sendStart = Date.now();
       const sentTx = await this.dispatchAztecTransaction(txIntent.methodName, txIntent, args);
       const rawHash = sentTx.getTxHash ? await sentTx.getTxHash() : sentTx.txHash;
@@ -775,6 +825,8 @@ export class ContractsAPI extends EventEmitter {
       const submittedAt = Date.now();
       timings.submittedAt = submittedAt;
       timings.submitMs = submittedAt - sendStart;
+      timings.sendMs = timings.submitMs;
+      timings.proveMs = timings.submitMs;
       tx.hash = txHash;
       tx.state = TxStatus.Submit as EthTxStatus;
       submitted.resolve({ hash: txHash } as providers.TransactionResponse);
@@ -782,10 +834,20 @@ export class ContractsAPI extends EventEmitter {
         console.info('[Aztec tx] submitted', {
           method: txIntent.methodName,
           hash: txHash ?? UNKNOWN_HASH,
+          proveMs: timings.proveMs,
+          sendMs: timings.sendMs,
           submitMs: timings.submitMs,
           args,
         });
       }
+      detailedLogger.log('contracts', 'tx.submitted', {
+        txId: tx.id,
+        method: txIntent.methodName,
+        hash: txHash ?? UNKNOWN_HASH,
+        proveMs: timings.proveMs,
+        sendMs: timings.sendMs,
+        submitMs: timings.submitMs,
+      }, 'info', logId);
 
       const receipt = await sentTx.wait();
       const confirmedAt = Date.now();
@@ -803,6 +865,16 @@ export class ContractsAPI extends EventEmitter {
           status: receipt?.status,
         });
       }
+      detailedLogger.log('contracts', 'tx.confirmed', {
+        txId: tx.id,
+        method: txIntent.methodName,
+        hash: txHash ?? UNKNOWN_HASH,
+        proveMs: timings.proveMs,
+        sendMs: timings.sendMs,
+        confirmMs: timings.confirmMs,
+        totalMs: timings.totalMs,
+        status: receipt?.status,
+      }, 'info', logId);
 
       this.emitAztecSideEffects(txIntent, args);
     } catch (err) {
@@ -814,6 +886,13 @@ export class ContractsAPI extends EventEmitter {
         method: txIntent.methodName,
         hash: tx.hash ?? UNKNOWN_HASH,
         error: (err as Error)?.message ?? err,
+        stack: (err as Error)?.stack,
+      });
+      detailedLogger.error('contracts', 'tx', logId, {
+        txId: tx.id,
+        method: txIntent.methodName,
+        hash: tx.hash ?? UNKNOWN_HASH,
+        error: err,
         stack: (err as Error)?.stack,
       });
     }

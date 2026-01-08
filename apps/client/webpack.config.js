@@ -40,6 +40,9 @@ const ENV_DEFAULTS = {
   // This must be null to indicate to webpack that this environment variable is optional
   DF_WEBSERVER_URL: null,
   DF_SNAPSHOT_URL: null,
+  DF_SNAPSHOT_AUTO_REFRESH: null,
+  DF_SNAPSHOT_POLL_MS: null,
+  DF_SNAPSHOT_MIN_INTERVAL_MS: null,
   AZTEC_NODE_URL: 'http://localhost:8080',
   DARKFOREST_ADDRESS: '',
   NFT_ADDRESS: '',
@@ -89,6 +92,11 @@ module.exports = {
   devServer: {
     port: 8081,
     historyApiFallback: true,
+    static: {
+      directory: path.join(__dirname, 'public'),
+      publicPath: '/public',
+      watch: true,
+    },
   },
 
   resolve: {

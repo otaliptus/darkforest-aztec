@@ -1,0 +1,103 @@
+import { getHatSizeName, getPlanetCosmetic } from '@darkforest_eth/procedural';
+import { isUnconfirmedBuyHatTx } from '@darkforest_eth/serde';
+import { LocationId, Planet } from '@darkforest_eth/types';
+import React from 'react';
+import styled from 'styled-components';
+import { Btn } from '../Components/Btn';
+import { CenterBackgroundSubtext, EmSpacer, Link } from '../Components/CoreUI';
+import { Sub } from '../Components/Text';
+import { useAccount, usePlanet, useUIManager } from '../Utils/AppHooks';
+import { useEmitterValue } from '../Utils/EmitterHooks';
+import { ModalHandle } from '../Views/ModalPane';
+
+const StyledHatPane = styled.div`
+  & > div {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+
+    &:last-child > span {
+      margin-top: 1em;
+      text-align: center;
+      flex-grow: 1;
+    }
+
+    &.margin-top {
+      margin-top: 0.5em;
+    }
+  }
+`;
+
+const getHatCostEth = (planet: Planet) => {
+  return 2 ** planet.hatLevel;
+};
+
+export function HatPane({
+  initialPlanetId,
+  modal: _modal,
+}: {
+  modal: ModalHandle;
+  initialPlanetId?: LocationId;
+}) {
+  const isAztec = true;
+  const uiManager = useUIManager();
+  const account = useAccount(uiManager);
+  const planetId = useEmitterValue(uiManager.selectedPlanetId$, initialPlanetId);
+  const planetWrapper = usePlanet(uiManager, planetId);
+  const planet = planetWrapper.value;
+  const enabled = (planet: Planet): boolean =>
+    !planet.transactions?.hasTransaction(isUnconfirmedBuyHatTx) && planet?.owner === account;
+
+  if (isAztec) {
+    return (
+      <CenterBackgroundSubtext width='100%' height='75px'>
+        Hats are not supported on the Aztec client.
+      </CenterBackgroundSubtext>
+    );
+  }
+
+  if (planet && planet.owner === account) {
+    return (
+      <StyledHatPane>
+        <div>
+          <Sub>HAT</Sub>
+          <span>{getPlanetCosmetic(planet).hatType}</span>
+        </div>
+        <div>
+          <Sub>HAT Level</Sub>
+          <span>{getHatSizeName(planet)}</span>
+        </div>
+        <div className='margin-top'>
+          <Sub>Next Level Cost</Sub>
+          <span>
+            {getHatCostEth(planet)} USD <Sub>/</Sub> {getHatCostEth(planet)} DAI
+          </span>
+        </div>
+        <div>
+          <Sub>Current Balance</Sub>
+          <span>n/a</span>
+        </div>
+
+        <EmSpacer height={1} />
+        <Link to={'https://blog.zkga.me/df-04-faq'}>Learn More</Link>
+        <EmSpacer height={0.5} />
+
+        <Btn
+          onClick={() => {
+            if (!enabled(planet) || !uiManager || !planet) return;
+            uiManager.buyHat(planet);
+          }}
+          disabled={!enabled(planet)}
+        >
+          {planet && planet.hatLevel > 0 ? 'Upgrade' : 'Buy'} HAT
+        </Btn>
+      </StyledHatPane>
+    );
+  } else {
+    return (
+      <CenterBackgroundSubtext width='100%' height='75px'>
+        Select a Planet <br /> You Own
+      </CenterBackgroundSubtext>
+    );
+  }
+}

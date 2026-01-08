@@ -1,15 +1,18 @@
 import { PlanetType, TooltipName } from '@darkforest_eth/types';
 import React from 'react';
 import { getPlanetRank, isFullRank } from '../../Backend/Utils/Utils';
-import { ScoreLabel } from '../Components/Labels/KeywordLabels';
+import { ScoreLabel, SilverLabel } from '../Components/Labels/KeywordLabels';
 import { Green, Red, Text, White } from '../Components/Text';
-import { useSelectedPlanet, useUIManager } from '../Utils/AppHooks';
+import { useAccount, useSelectedPlanet, useUIManager } from '../Utils/AppHooks';
 
 export function NetworkHealthPane() {
   return (
     <>
-      <White>Aztec Tx Speed: </White>This local devnet should confirm quickly. If transactions feel
-      stuck, restart the node and refresh the client.
+      <White>xDAI Tx Speed: </White>For each auto gas setting (which you can choose in the{' '}
+      <White>Settings</White> Pane), the average amount of time it takes a transaction with that
+      setting to confirm. The Dark Forest client uploads diagnostic info (you can turn this off via
+      settings), which is aggregated into this network health indicator. I hope you find it helpful
+      in cases the network is being slow.
     </>
   );
 }
@@ -17,7 +20,8 @@ export function NetworkHealthPane() {
 export function WithdrawSilverButton() {
   return (
     <>
-      This is a <Text>Spacetime Rip</Text>. Silver withdrawal is disabled in this build.
+      This is a <Text>Spacetime Rip</Text> where you can withdraw <SilverLabel /> for <ScoreLabel />
+      !
     </>
   );
 }
@@ -58,13 +62,15 @@ export function ActivateArtifactPane() {
 }
 
 export function TimeUntilActivationPossiblePane() {
-  return <>You must wait this many blocks before you can activate this artifact</>;
+  return <>You must wait this amount of time before you can activate this artifact</>;
 }
 
 export function TwitterHandleTooltipPane() {
   return (
     <>
-      Twitter verification is disabled in this build.
+      You may connect your account to <White>Twitter</White>
+      <br />
+      to identify yourself on the <White>Leaderboard</White>.
     </>
   );
 }
@@ -80,8 +86,8 @@ export function RankTooltipPane() {
 export function ScoreTooltipPane() {
   return (
     <>
-      You earn <ScoreLabel /> by finding artifacts and capturing planets in Capture Zones (if
-      scoring is enabled). Check out the <White>Help Pane</White> for details.
+      You earn <ScoreLabel /> by finding artifacts and withdrawing silver. Check out the{' '}
+      <White>Help Pane</White> for more info on scoring.
     </>
   );
 }
@@ -186,8 +192,8 @@ export function SelectedSilverTooltipPane() {
           </>
           {selected.value.planetType === PlanetType.SILVER_MINE ? (
             <>
-              Growth (per block):
-              <span>{selected.value.silverGrowth}</span>
+              Growth:
+              <span>{selected.value.silverGrowth * 60}</span>
             </>
           ) : (
             <>
@@ -224,7 +230,7 @@ export function MinEnergyTooltipPane() {
 export function Time50TooltipPane() {
   return (
     <>
-      Blocks to <White>50%</White> of full energy.
+      Time to <White>50%</White> of full energy.
     </>
   );
 }

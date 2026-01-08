@@ -2,6 +2,7 @@
 import type { AztecConnection } from '../Aztec/AztecConnection';
 import { AztecConnection as AztecConnectionImpl } from '../Aztec/AztecConnection';
 import { CLIENT_CONFIG } from '../Aztec/config';
+import { detailedLogger } from '../Utils/DetailedLogger';
 
 /**
  * Loads the game contract, which is responsible for updating the state of the game.
@@ -11,5 +12,5 @@ export async function loadDiamondContract() {
 }
 
 export function getEthConnection(): Promise<AztecConnection> {
-  return AztecConnectionImpl.connect(CLIENT_CONFIG);
+  return AztecConnectionImpl.connect(CLIENT_CONFIG, detailedLogger.getAztecLogFn());
 }

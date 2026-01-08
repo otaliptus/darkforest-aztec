@@ -81,8 +81,8 @@ function TutorialPaneContent({ tutorialState }: { tutorialState: TutorialState }
   } else if (tutorialState === TutorialState.Deselect) {
     return (
       <div>
-        Congrats, you've submitted a move to the Aztec local node! Pending moves are shown as
-        dotted lines. Accepted moves are shown as solid lines.
+        Congrats, you've submitted a move to xDAI! Moves that are in the mempool are shown as dotted
+        lines. Accepted moves are shown as solid lines.
         <br />
         <br />
         <White>Try deselecting a planet now. Click in empty space to deselect.</White>
@@ -139,9 +139,9 @@ function TutorialPaneContent({ tutorialState }: { tutorialState: TutorialState }
   } else if (tutorialState === TutorialState.HowToGetScore) {
     return (
       <div className='tutzoom'>
-        <White>Scoring (optional)</White> <br />
+        <White>It's a Junk War!</White> <br />
         <br />
-        This devnet build focuses on core gameplay. Scoring may be enabled for testing.
+        Have the highest score at the end of the round to win!
         <br />
         <div>
           <Btn
@@ -156,9 +156,10 @@ function TutorialPaneContent({ tutorialState }: { tutorialState: TutorialState }
   } else if (tutorialState === TutorialState.ScoringDetails) {
     return (
       <div className='tutzoom'>
-        You can increase your score by finding artifacts and capturing planets in Capture Zones.
-        The rarer the artifact, the more points it gives you! Hover over the 'Capture Zone' section
-        in the top bar for more info about capture zones.
+        You can increase your score by withdrawing silver via space time rips, and by finding
+        artifacts. The rarer the artifact, the more points it gives you! You can also increase your
+        score via Capture Zones. Hover over the 'Capture Zone' section in the top bar for more info
+        about capture zones.
         <div>
           <Btn
             className='btn'
@@ -172,11 +173,11 @@ function TutorialPaneContent({ tutorialState }: { tutorialState: TutorialState }
   } else if (tutorialState === TutorialState.Valhalla) {
     return (
       <div className='tutalmost'>
-        The <Underline>Valhalla</Underline> universe and prize flows are not active in this devnet
-        build.
+        Winners of each round of Dark Forest v0.6.x will receive a prize, and be added to the{' '}
+        <Underline>Valhalla</Underline> universe.
         <br />
         <br />
-        Focus on exploration, upgrades, and artifact gameplay.
+        To win, have the highest score (^:
         <div>
           <Btn className='btn' onClick={() => tutorialManager.acceptInput(TutorialState.Valhalla)}>
             Next

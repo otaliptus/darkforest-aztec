@@ -1,4 +1,5 @@
-import { Chunk, ModalName, Setting } from '@darkforest_eth/types';
+import { EthConnection } from '@darkforest_eth/network';
+import { AutoGasSetting, Chunk, ModalName, Setting } from '@darkforest_eth/types';
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import TutorialManager from '../../Backend/GameLogic/TutorialManager';
@@ -9,9 +10,11 @@ import { Slider } from '../Components/Slider';
 import { Green, Red } from '../Components/Text';
 import Viewport, { getDefaultScroll } from '../Game/Viewport';
 import { useAccount, useUIManager } from '../Utils/AppHooks';
+import { useEmitterValue } from '../Utils/EmitterHooks';
 import {
   BooleanSetting,
   ColorSetting,
+  MultiSelectSetting,
   NumberSetting,
 } from '../Utils/SettingsHooks';
 import { ModalPane } from '../Views/ModalPane';
@@ -42,17 +45,31 @@ const Row = styled.div`
 `;
 
 export function SettingsPane({
+  ethConnection,
   visible,
   onClose,
   onOpenPrivate,
 }: {
+  ethConnection: EthConnection;
   visible: boolean;
   onClose: () => void;
   onOpenPrivate: () => void;
 }) {
   const uiManager = useUIManager();
   const account = useAccount(uiManager);
-  const isAztec = true;
+  const gasPrices = useEmitterValue(ethConnection.gasPrices$, ethConnection.getAutoGasPrices());
+
+  const [rpcUrl, setRpcURL] = useState<string>(ethConnection.getRpcEndpoint());
+  const onChangeRpc = () => {
+    ethConnection
+      .setRpcUrl(rpcUrl)
+      .then(() => {
+        localStorage.setItem('XDAI_RPC_ENDPOINT_v5', rpcUrl);
+      })
+      .catch(() => {
+        setRpcURL(ethConnection.getRpcEndpoint());
+      });
+  };
 
   const [balance, setBalance] = useState<number>(0);
 
@@ -165,27 +182,78 @@ export function SettingsPane({
     <ModalPane id={ModalName.Settings} title='Settings' visible={visible} onClose={onClose}>
       <SettingsContent>
         <Section>
-          <SectionHeader>Account Info</SectionHeader>
+          <SectionHeader>Burner Wallet Info</SectionHeader>
           <Row>
-            <span>Address</span>
+            <span>Public Key</span>
             <span>{account}</span>
           </Row>
           <Row>
             <span>Balance</span>
-            <span>{isAztec ? 'n/a' : balance}</span>
+            <span>{balance}</span>
           </Row>
         </Section>
 
         <Section>
-          <SectionHeader>Home Coordinates (Backup)</SectionHeader>
-          Your home planet coordinates grant you access to your Dark Forest account on different
-          browsers. You should save these somewhere safe.
+          <SectionHeader>Gas Price</SectionHeader>
+          Your gas price setting determines the price you pay for each transaction. A higher gas
+          price means your transactions will be prioritized by the blockchain, making them confirm
+          faster. We recommend using the auto average setting. All auto settings prices are pulled
+          from an oracle and are capped at 15 gwei.
           <Spacer height={16} />
-          <Red>WARNING:</Red> Never ever send these to anyone!
+          <MultiSelectSetting
+            wide
+            uiManager={uiManager}
+            setting={Setting.GasFeeGwei}
+            values={[
+              '1',
+              '2',
+              '5',
+              '10',
+              '20',
+              '40',
+              AutoGasSetting.Slow,
+              AutoGasSetting.Average,
+              AutoGasSetting.Fast,
+            ]}
+            labels={[
+              '1 gwei (default)',
+              '2 gwei (faster)',
+              '5 gwei (turbo)',
+              '10 gwei (mega turbo)',
+              '20 gwei (need4speed)',
+              '40 gwei (gigafast)',
+              `slow auto (~${gasPrices.slow} gwei)`,
+              `average auto (~${gasPrices.average} gwei)`,
+              `fast auto (~${gasPrices.fast} gwei)`,
+            ]}
+          />
+        </Section>
+
+        <Section>
+          <SectionHeader>Burner Wallet Info (Private)</SectionHeader>
+          Your secret key, together with your home planet's coordinates, grant you access to your
+          Dark Forest account on different browsers. You should save this info somewhere on your
+          computer.
+          <Spacer height={16} />
+          <Red>WARNING:</Red> Never ever send this to anyone!
           <Spacer height={8} />
           <Btn size='stretch' variant='danger' onClick={doPrivateClick}>
-            Click {clicks} times to view coordinates
+            Click {clicks} times to view info
           </Btn>
+        </Section>
+
+        <Section>
+          <SectionHeader>Auto Confirm Transactions</SectionHeader>
+          Whether or not to auto-confirm all transactions, except purchases. This will allow you to
+          make moves, spend silver on upgrades, etc. without requiring you to confirm each
+          transaction. However, the client WILL ask for confirmation before sending transactions
+          that spend wallet funds.
+          <Spacer height={16} />
+          <BooleanSetting
+            uiManager={uiManager}
+            setting={Setting.AutoApproveNonPurchaseTransactions}
+            settingDescription={'auto confirm non-purchase transactions'}
+          />
         </Section>
 
         <Section>
@@ -222,9 +290,26 @@ export function SettingsPane({
         </Section>
 
         <Section>
+          <SectionHeader>Change RPC Endpoint</SectionHeader>
+          <Spacer height={8} />
+          Current RPC Endpoint: {rpcUrl}
+          <Spacer height={8} />
+          <TextInput
+            value={rpcUrl}
+            onChange={(e: Event & React.ChangeEvent<DarkForestTextInput>) =>
+              setRpcURL(e.target.value)
+            }
+          />
+          <Spacer height={8} />
+          <Btn size='stretch' onClick={onChangeRpc}>
+            Change RPC URL
+          </Btn>
+        </Section>
+
+        <Section>
           <SectionHeader>Metrics Opt Out</SectionHeader>
           We collect a minimal set of data and statistics such as SNARK proving times, average
-          transaction times across browsers, and transaction errors, to help us optimize
+          transaction times across browsers, and xDAI transaction errors, to help us optimize
           performance and fix bugs. This does not include personal data like email or IP address.
           <Spacer height={8} />
           <BooleanSetting
@@ -243,6 +328,18 @@ export function SettingsPane({
             uiManager={uiManager}
             setting={Setting.HighPerformanceRendering}
             settingDescription='high performance mode'
+          />
+          <Spacer height={8} />
+          <BooleanSetting
+            uiManager={uiManager}
+            setting={Setting.DisableEmojiRendering}
+            settingDescription='disable emoji rendering'
+          />
+          <Spacer height={8} />
+          <BooleanSetting
+            uiManager={uiManager}
+            setting={Setting.DisableHatRendering}
+            settingDescription='disable hat rendering'
           />
         </Section>
 
@@ -292,6 +389,18 @@ export function SettingsPane({
           <Btn size='stretch' onClick={() => TutorialManager.getInstance(uiManager).reset()}>
             Reset Tutorial
           </Btn>
+        </Section>
+
+        <Section>
+          <SectionHeader>Disable Default Shortcuts</SectionHeader>
+          If you'd like to use custom shortcuts via a plugin, you can disable the default shortcuts
+          here.
+          <Spacer height={8} />
+          <BooleanSetting
+            uiManager={uiManager}
+            setting={Setting.DisableDefaultShortcuts}
+            settingDescription='toggle disable default shortcuts'
+          />
         </Section>
 
         <Section>

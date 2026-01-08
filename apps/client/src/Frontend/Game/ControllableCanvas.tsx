@@ -42,6 +42,7 @@ export default function ControllableCanvas() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const glRef = useRef<HTMLCanvasElement | null>(null);
   const bufferRef = useRef<HTMLCanvasElement | null>(null);
+  const overlayRef = useRef<HTMLCanvasElement | null>(null);
 
   const evtRef = canvasRef;
 
@@ -137,6 +138,102 @@ export default function ControllableCanvas() {
     };
   }, [gameUIManager, doResize, canvasRef, glRef, bufferRef, evtRef]);
 
+  // Draw yellow square markers around player-owned planets
+  useEffect(() => {
+    if (!overlayRef.current || !gameUIManager) return;
+
+    const overlayCanvas = overlayRef.current;
+    const ctx = overlayCanvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationFrameId: number;
+
+    const drawOwnedPlanetMarkers = () => {
+      const viewport = Viewport.getInstance();
+      if (!viewport) {
+        animationFrameId = requestAnimationFrame(drawOwnedPlanetMarkers);
+        return;
+      }
+
+      // Clear the overlay
+      ctx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+      // Get player account
+      const account = gameUIManager.getAccount();
+      if (!account) {
+        animationFrameId = requestAnimationFrame(drawOwnedPlanetMarkers);
+        return;
+      }
+
+      // Get all planets owned by the player
+      const allPlanets = gameUIManager.getAllPlanets();
+      const ownedPlanets = [...allPlanets].filter((planet) => planet.owner === account);
+
+      // Draw yellow square markers for each owned planet
+      ctx.strokeStyle = '#ffff00'; // Yellow
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 3]); // Dashed line for visibility
+
+      for (const planet of ownedPlanets) {
+        if (!planet.location) continue;
+
+        const { x, y } = planet.location.coords;
+        
+        // Convert world coordinates to canvas coordinates
+        const canvasCoords = viewport.worldToCanvasCoords({ x, y });
+        
+        // Calculate square size based on planet radius and zoom level
+        const worldRadius = planet.radius || 1;
+        const canvasRadius = viewport.worldToCanvasDist(worldRadius);
+        const squareSize = Math.max(canvasRadius * 2.5, 20); // Minimum 20px
+
+        // Draw square grid around the planet
+        ctx.strokeRect(
+          canvasCoords.x - squareSize / 2,
+          canvasCoords.y - squareSize / 2,
+          squareSize,
+          squareSize
+        );
+
+        // Draw corner brackets for extra visibility
+        const bracketSize = squareSize * 0.2;
+        ctx.setLineDash([]); // Solid lines for brackets
+        ctx.beginPath();
+        
+        // Top-left corner
+        ctx.moveTo(canvasCoords.x - squareSize / 2, canvasCoords.y - squareSize / 2 + bracketSize);
+        ctx.lineTo(canvasCoords.x - squareSize / 2, canvasCoords.y - squareSize / 2);
+        ctx.lineTo(canvasCoords.x - squareSize / 2 + bracketSize, canvasCoords.y - squareSize / 2);
+        
+        // Top-right corner
+        ctx.moveTo(canvasCoords.x + squareSize / 2 - bracketSize, canvasCoords.y - squareSize / 2);
+        ctx.lineTo(canvasCoords.x + squareSize / 2, canvasCoords.y - squareSize / 2);
+        ctx.lineTo(canvasCoords.x + squareSize / 2, canvasCoords.y - squareSize / 2 + bracketSize);
+        
+        // Bottom-right corner
+        ctx.moveTo(canvasCoords.x + squareSize / 2, canvasCoords.y + squareSize / 2 - bracketSize);
+        ctx.lineTo(canvasCoords.x + squareSize / 2, canvasCoords.y + squareSize / 2);
+        ctx.lineTo(canvasCoords.x + squareSize / 2 - bracketSize, canvasCoords.y + squareSize / 2);
+        
+        // Bottom-left corner
+        ctx.moveTo(canvasCoords.x - squareSize / 2 + bracketSize, canvasCoords.y + squareSize / 2);
+        ctx.lineTo(canvasCoords.x - squareSize / 2, canvasCoords.y + squareSize / 2);
+        ctx.lineTo(canvasCoords.x - squareSize / 2, canvasCoords.y + squareSize / 2 - bracketSize);
+        
+        ctx.stroke();
+        ctx.setLineDash([5, 3]); // Reset to dashed
+      }
+
+      animationFrameId = requestAnimationFrame(drawOwnedPlanetMarkers);
+    };
+
+    drawOwnedPlanetMarkers();
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [gameUIManager, width, height]);
+
   // attach event listeners
   useEffect(() => {
     if (!evtRef.current) return;
@@ -182,6 +279,7 @@ export default function ControllableCanvas() {
     <CanvasWrapper style={{ cursor: targeting ? 'crosshair' : undefined }}>
       <canvas ref={glRef} width={width} height={height} />
       <canvas ref={canvasRef} width={width} height={height} />
+      <canvas ref={overlayRef} width={width} height={height} style={{ pointerEvents: 'none' }} />
       <canvas ref={bufferRef} id='buffer' />
     </CanvasWrapper>
   );

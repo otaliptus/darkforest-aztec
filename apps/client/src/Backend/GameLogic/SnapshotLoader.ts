@@ -86,6 +86,18 @@ type SnapshotData = {
   artifacts?: SnapshotArtifact[];
 };
 
+export type SnapshotUpdate = {
+  meta?: SnapshotMeta;
+  signature?: string;
+  touchedPlanetIds: LocationId[];
+  revealedCoords: DFRevealedCoords[];
+  revealedCoordsMap: Map<LocationId, DFRevealedCoords>;
+  planets: Planet[];
+  arrivals: QueuedArrival[];
+  artifacts: Artifact[];
+  players: Player[];
+};
+
 const toBigInt = (value?: string | number | bigint | null) => BigInt(value ?? 0);
 const toNumber = (value?: string | number | bigint | null) => Number(value ?? 0);
 const toBool = (value?: boolean | string | number | null) =>
@@ -193,31 +205,36 @@ const mapWithConcurrency = async <T, R>(
   return results;
 };
 
-export const tryLoadSnapshot = async (
-  contractsAPI: ContractsAPI
-): Promise<InitialGameState | undefined> => {
-  const snapshotUrl = process.env.DF_SNAPSHOT_URL;
-  if (!snapshotUrl) return undefined;
-
-  let payload: SnapshotData | undefined;
+const fetchSnapshotPayload = async (snapshotUrl: string): Promise<SnapshotData | undefined> => {
   try {
     const response = await fetch(snapshotUrl, { cache: 'no-store' });
     if (!response.ok) return undefined;
-    payload = (await response.json()) as SnapshotData;
+    return (await response.json()) as SnapshotData;
   } catch {
     return undefined;
   }
+};
 
-  if (!payload?.meta || payload.meta.format !== 'df-aztec-snapshot') return undefined;
-  if (payload.meta.snapshotVersion && payload.meta.snapshotVersion !== 1) return undefined;
+const isSnapshotCompatible = (payload: SnapshotData | undefined, contractsAPI: ContractsAPI) => {
+  if (!payload?.meta || payload.meta.format !== 'df-aztec-snapshot') return false;
+  if (payload.meta.snapshotVersion && payload.meta.snapshotVersion !== 1) return false;
   const contractAddress = contractsAPI.contractAddress?.toLowerCase();
   const snapshotContract = payload.meta.contractAddress?.toLowerCase();
   if (contractAddress && snapshotContract && contractAddress !== snapshotContract) {
-    return undefined;
+    return false;
   }
+  return true;
+};
+
+export const loadSnapshotUpdate = async (
+  contractsAPI: ContractsAPI,
+  snapshotUrl = process.env.DF_SNAPSHOT_URL
+): Promise<SnapshotUpdate | undefined> => {
+  if (!snapshotUrl) return undefined;
+  const payload = await fetchSnapshotPayload(snapshotUrl);
+  if (!isSnapshotCompatible(payload, contractsAPI)) return undefined;
 
   const contractConstants = await contractsAPI.getConstants();
-  const worldRadius = await contractsAPI.getWorldRadius();
   const onChainConfig = contractsAPI.getOnChainConfig();
   const burnedLocationId = contractsAPI.getBurnedLocationId();
   const contractAztecAddress = contractsAPI.getContractAztecAddress();
@@ -257,15 +274,8 @@ export const tryLoadSnapshot = async (
     }
   );
 
-  const planetMap = new Map<LocationId, Planet>();
-  const loadedPlanets: LocationId[] = [];
-  for (const planet of planets) {
-    planetMap.set(planet.locationId, planet);
-    loadedPlanets.push(planet.locationId);
-  }
-
   const arrivalsRaw = payload.arrivals ?? [];
-  const pendingMoves = await mapWithConcurrency(
+  const arrivals = await mapWithConcurrency(
     arrivalsRaw,
     8,
     async (entry) =>
@@ -276,15 +286,6 @@ export const tryLoadSnapshot = async (
         arrivalTimestamp: toNumber(entry.arrivalTimestamp),
       })
   );
-
-  const arrivals = new Map<VoyageId, QueuedArrival>();
-  const planetVoyageIdMap = new Map<LocationId, VoyageId[]>();
-  for (const arrival of pendingMoves) {
-    arrivals.set(arrival.eventId, arrival);
-    const list = planetVoyageIdMap.get(arrival.toPlanet) ?? [];
-    list.push(arrival.eventId);
-    planetVoyageIdMap.set(arrival.toPlanet, list);
-  }
 
   const artifactsRaw = payload.artifacts ?? [];
   const artifacts = await mapWithConcurrency(
@@ -301,6 +302,71 @@ export const tryLoadSnapshot = async (
         burnedLocationId,
       })
   );
+
+  const players: Player[] = [];
+  const playersRaw = payload.players ?? [];
+  for (const entry of playersRaw) {
+    const address = entry.address;
+    const playerState = parsePlayerState(entry.player);
+    if (!playerState.isInitialized) continue;
+    const player = mapPlayer(
+      AztecAddress.fromString(address),
+      playerState,
+      toBigInt(entry.claimedShips),
+      toBigInt(entry.spaceJunk),
+      toBigInt(entry.spaceJunkLimit),
+      toNumber(entry.lastRevealTimestamp)
+    );
+    players.push(player);
+  }
+
+  return {
+    meta: payload?.meta,
+    touchedPlanetIds,
+    revealedCoords: allRevealedCoords,
+    revealedCoordsMap,
+    planets,
+    arrivals,
+    artifacts,
+    players,
+  };
+};
+
+export const tryLoadSnapshot = async (
+  contractsAPI: ContractsAPI
+): Promise<InitialGameState | undefined> => {
+  const snapshotUrl = process.env.DF_SNAPSHOT_URL;
+  if (!snapshotUrl) return undefined;
+
+  const update = await loadSnapshotUpdate(contractsAPI, snapshotUrl);
+  if (!update) return undefined;
+
+  const contractConstants = await contractsAPI.getConstants();
+  const worldRadius = await contractsAPI.getWorldRadius();
+
+  const allRevealedCoords = update.revealedCoords;
+  const revealedCoordsMap = update.revealedCoordsMap;
+  const touchedPlanetIds = update.touchedPlanetIds;
+
+  const planetMap = new Map<LocationId, Planet>();
+  const loadedPlanets: LocationId[] = [];
+  for (const planet of update.planets) {
+    planetMap.set(planet.locationId, planet);
+    loadedPlanets.push(planet.locationId);
+  }
+
+  const pendingMoves = update.arrivals;
+
+  const arrivals = new Map<VoyageId, QueuedArrival>();
+  const planetVoyageIdMap = new Map<LocationId, VoyageId[]>();
+  for (const arrival of pendingMoves) {
+    arrivals.set(arrival.eventId, arrival);
+    const list = planetVoyageIdMap.get(arrival.toPlanet) ?? [];
+    list.push(arrival.eventId);
+    planetVoyageIdMap.set(arrival.toPlanet, list);
+  }
+
+  const artifacts = update.artifacts;
 
   const artifactMap = new Map<ArtifactId, Artifact>();
   for (const artifact of artifacts) {
@@ -329,19 +395,7 @@ export const tryLoadSnapshot = async (
     : [];
 
   const players = new Map<string, Player>();
-  const playersRaw = payload.players ?? [];
-  for (const entry of playersRaw) {
-    const address = entry.address;
-    const playerState = parsePlayerState(entry.player);
-    if (!playerState.isInitialized) continue;
-    const player = mapPlayer(
-      AztecAddress.fromString(address),
-      playerState,
-      toBigInt(entry.claimedShips),
-      toBigInt(entry.spaceJunk),
-      toBigInt(entry.spaceJunkLimit),
-      toNumber(entry.lastRevealTimestamp)
-    );
+  for (const player of update.players) {
     players.set(player.address, player);
   }
 
@@ -364,5 +418,104 @@ export const tryLoadSnapshot = async (
     arrivals,
     twitters: {},
     paused,
+  };
+};
+
+const parseOptionalNumber = (value: string | null | undefined, fallback: number) => {
+  if (value === undefined || value === null || value === '') return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
+};
+
+const parseOptionalBool = (value: string | null | undefined): boolean | undefined => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const normalized = value.toLowerCase();
+  if (['true', '1', 'yes', 'on'].includes(normalized)) return true;
+  if (['false', '0', 'no', 'off'].includes(normalized)) return false;
+  return undefined;
+};
+
+const getSnapshotSignatureFromMeta = (meta?: SnapshotMeta) => {
+  if (!meta) return undefined;
+  const blockPart = meta.blockNumber ?? '';
+  const timePart = meta.createdAt ?? '';
+  const signature = `${blockPart}-${timePart}`.trim();
+  return signature !== '-' ? signature : undefined;
+};
+
+const fetchSnapshotSignature = async (snapshotUrl: string): Promise<string | undefined> => {
+  try {
+    const head = await fetch(snapshotUrl, { method: 'HEAD', cache: 'no-store' });
+    if (head.ok) {
+      const etag = head.headers.get('etag');
+      if (etag) return etag;
+      const lastModified = head.headers.get('last-modified');
+      if (lastModified) return lastModified;
+    }
+  } catch {
+    // Fall back to GET below.
+  }
+
+  try {
+    const response = await fetch(snapshotUrl, { cache: 'no-store' });
+    if (!response.ok) return undefined;
+    const payload = (await response.json()) as SnapshotData;
+    if (!payload?.meta || payload.meta.format !== 'df-aztec-snapshot') return undefined;
+    return getSnapshotSignatureFromMeta(payload.meta);
+  } catch {
+    return undefined;
+  }
+};
+
+export const startSnapshotLiveUpdates = (
+  contractsAPI: ContractsAPI,
+  onUpdate: (update: SnapshotUpdate) => void,
+  snapshotUrl = process.env.DF_SNAPSHOT_URL
+): (() => void) | undefined => {
+  if (!snapshotUrl) return undefined;
+  if (typeof window === 'undefined') return undefined;
+
+  const enabled = parseOptionalBool(process.env.DF_SNAPSHOT_AUTO_REFRESH);
+  if (enabled === false) return undefined;
+  if (enabled === undefined && process.env.NODE_ENV === 'production') return undefined;
+
+  const pollMs = parseOptionalNumber(process.env.DF_SNAPSHOT_POLL_MS, 5000);
+  const minIntervalMs = parseOptionalNumber(process.env.DF_SNAPSHOT_MIN_INTERVAL_MS, 15000);
+
+  let lastSignature: string | undefined;
+  let lastAppliedAt = 0;
+  let inFlight = false;
+
+  const tick = async () => {
+    if (inFlight) return;
+    inFlight = true;
+    try {
+      const signature = await fetchSnapshotSignature(snapshotUrl);
+      if (!signature) return;
+      if (!lastSignature) {
+        lastSignature = signature;
+        return;
+      }
+      if (signature !== lastSignature && Date.now() - lastAppliedAt >= minIntervalMs) {
+        const update = await loadSnapshotUpdate(contractsAPI, snapshotUrl);
+        if (!update) return;
+        await onUpdate(update);
+        lastSignature = signature;
+        lastAppliedAt = Date.now();
+        console.info('Snapshot update applied.');
+      }
+    } finally {
+      inFlight = false;
+    }
+  };
+
+  const intervalId = window.setInterval(() => {
+    void tick();
+  }, pollMs);
+
+  void tick();
+
+  return () => {
+    window.clearInterval(intervalId);
   };
 };

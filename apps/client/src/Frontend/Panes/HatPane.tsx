@@ -46,15 +46,6 @@ export function HatPane({
   const planetId = useEmitterValue(uiManager.selectedPlanetId$, initialPlanetId);
   const planetWrapper = usePlanet(uiManager, planetId);
   const planet = planetWrapper.value;
-  const isAztec = true;
-
-  if (isAztec) {
-    return (
-      <CenterBackgroundSubtext width='100%' height='75px'>
-        Hats are not supported on the Aztec client.
-      </CenterBackgroundSubtext>
-    );
-  }
   const balanceEth = weiToEth(
     useEmitterValue(uiManager.getEthConnection().myBalance$, BigNumber.from('0'))
   );

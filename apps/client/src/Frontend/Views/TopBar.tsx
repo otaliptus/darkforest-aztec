@@ -1,8 +1,10 @@
 import { Monomitter } from '@darkforest_eth/events';
-import { EthAddress, TooltipName } from '@darkforest_eth/types';
+import { weiToEth } from '@darkforest_eth/network';
+import { EthAddress, ModalName, TooltipName } from '@darkforest_eth/types';
 import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { CaptureZonesGeneratedEvent } from '../../Backend/GameLogic/CaptureZoneGenerator';
+import { Hook } from '../../_types/global/GlobalTypes';
 import { AlignCenterHorizontally } from '../Components/CoreUI';
 import { AccountLabel } from '../Components/Labels/Labels';
 import { Gold, Red, Sub, Text, White } from '../Components/Text';
@@ -10,6 +12,7 @@ import { TooltipTrigger } from '../Panes/Tooltip';
 import { usePlayer, useUIManager } from '../Utils/AppHooks';
 import { DFZIndex } from '../Utils/constants';
 import { useEmitterSubscribe, useEmitterValue } from '../Utils/EmitterHooks';
+import { ModalToggleButton } from './ModalIcon';
 import { NetworkHealth } from './NetworkHealth';
 import { Paused } from './Paused';
 
@@ -165,10 +168,12 @@ function CaptureZones({
   );
 }
 
-export function TopBar() {
+export function TopBar({ twitterVerifyHook }: { twitterVerifyHook: Hook<boolean> }) {
   const uiManager = useUIManager();
   const player = usePlayer(uiManager);
   const account = player.value?.address;
+  const twitter = player.value?.twitter;
+  const balance = useEmitterValue(uiManager.getMyBalance$(), uiManager.getMyBalanceBn());
 
   let captureZones = null;
   if (uiManager.captureZonesEnabled) {
@@ -185,16 +190,36 @@ export function TopBar() {
       <AlignCenterHorizontally style={{ width: '100%', justifyContent: 'space-around' }}>
         <TooltipTrigger
           name={TooltipName.Empty}
-          extraContent={<Text>Your Aztec account address.</Text>}
+          extraContent={<Text>Your burner wallet address.</Text>}
         >
           <AccountLabel includeAddressIfHasTwitter={true} width={'50px'} />
         </TooltipTrigger>
         <TooltipTrigger
           name={TooltipName.Empty}
-          extraContent={<Text>Aztec test accounts do not expose an xDAI balance.</Text>}
+          extraContent={<Text>Your burner wallet balance.</Text>}
         >
-          <Sub>(balance n/a)</Sub>
+          <Sub>({weiToEth(balance).toFixed(2)} xDAI)</Sub>
         </TooltipTrigger>
+        {process.env.DF_WEBSERVER_URL && (
+          <>
+            <TooltipTrigger
+              name={TooltipName.Empty}
+              extraContent={<Text>Connect your burner wallet to your twitter account.</Text>}
+            >
+              <ModalToggleButton
+                size='small'
+                modal={ModalName.TwitterVerify}
+                hook={twitterVerifyHook}
+                style={
+                  {
+                    width: !twitter ? '100px' : undefined,
+                  } as CSSStyleDeclaration & React.CSSProperties
+                }
+                text={!twitter ? 'Connect' : undefined}
+              />
+            </TooltipTrigger>
+          </>
+        )}
         <BoardPlacement account={account} />
       </AlignCenterHorizontally>
       <AlignCenterHorizontally style={{ justifyContent: 'space-around', width: '100%' }}>

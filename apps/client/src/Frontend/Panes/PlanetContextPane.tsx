@@ -1,4 +1,4 @@
-import { ModalName, Planet } from '@darkforest_eth/types';
+import { ModalName, Planet, PlanetType } from '@darkforest_eth/types';
 import React, { useCallback, useEffect, useMemo } from 'react';
 import GameUIManager from '../../Backend/GameLogic/GameUIManager';
 import { Wrapper } from '../../Backend/Utils/Wrapper';
@@ -7,6 +7,7 @@ import { VerticalSplit } from '../Components/CoreUI';
 import { MineArtifactButton } from '../Components/MineArtifactButton';
 import {
   OpenBroadcastPaneButton,
+  OpenHatPaneButton,
   OpenManagePlanetArtifactsButton,
   OpenPlanetInfoButton,
   OpenUpgradeDetailsPaneButton,
@@ -21,6 +22,7 @@ import { ModalHandle, ModalPane } from '../Views/ModalPane';
 import { PlanetCard, PlanetCardTitle } from '../Views/PlanetCard';
 import { getNotifsForPlanet, PlanetNotifications } from '../Views/PlanetNotifications';
 import { SendResources } from '../Views/SendResources';
+import { WithdrawSilver } from '../Views/WithdrawSilver';
 
 function PlanetContextPaneContent({
   modal,
@@ -55,6 +57,16 @@ function PlanetContextPaneContent({
     upgradeRow = <OpenUpgradeDetailsPaneButton modal={modal} planetId={p?.locationId} />;
   }
 
+  let hatRow = null;
+  if (!p?.destroyed && owned) {
+    hatRow = <OpenHatPaneButton modal={modal} planetId={p?.locationId} />;
+  }
+
+  let withdrawRow = null;
+  if (!p?.destroyed && owned && p?.planetType === PlanetType.TRADING_POST) {
+    withdrawRow = <WithdrawSilver wrapper={planet} />;
+  }
+
   let notifRow = null;
   if (!p?.destroyed && notifs.length > 0) {
     notifRow = <PlanetNotifications planet={planet} notifs={notifs} />;
@@ -79,8 +91,10 @@ function PlanetContextPaneContent({
         </>
         <>
           <OpenManagePlanetArtifactsButton modal={modal} planetId={p?.locationId} />
+          {hatRow}
         </>
       </VerticalSplit>
+      {withdrawRow}
       {notifRow}
     </>
   );
