@@ -23,4 +23,5 @@ Make local dev play faster by shrinking the world and reducing planet density, p
 - `yarn workspace @darkforest-aztec/contracts deploy:local --write-env --overwrite-env`
 
 ## Status
-- Set higher home population constant and updated tests; ready to redeploy with tight map settings.
+- Archived (2026-01-08).
+

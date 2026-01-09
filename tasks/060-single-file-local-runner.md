@@ -23,3 +23,6 @@ Provide a single entrypoint script for local dev that can deploy, set tiny map d
 
 ## Non-Goals
 - Changing contract logic or Aztec node block production settings.
+
+## Status
+- Archived (2026-01-08).

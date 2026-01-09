@@ -26,14 +26,7 @@ Integrate the original Dark Forest v0.6 UI (look, feel, layout, and game canvas)
 - Manual local playthrough: init, reveal, move, upgrade, prospect/find, trade, activate/deactivate, spaceship.
 
 ## Status
-- **✅ Complete** (2026-01-08).
-- UI components merged from `client-og` into `apps/client`.
-- `yarn client:build` passes with 6 warnings (no errors).
-- Full end-to-end game test verified:
-  - Init player ✅
-  - Reveal ✅
-  - Home planet claimed ✅
-  - Galaxy map renders ✅
+- Archived (2026-01-08).
 
 ## Notes
 - Supersedes Ticket 031 (game-feel upgrade).

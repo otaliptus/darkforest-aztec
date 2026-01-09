@@ -14,3 +14,6 @@ Port the player initialization and location reveal flows from v0.6 into Aztec No
 
 ## Deliverables
 - Updated `packages/contracts` with init + reveal implementation and tests.
+
+## Status
+- Archived (2026-01-08).

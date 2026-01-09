@@ -13,6 +13,7 @@ RESET=0
 DEPLOY=0
 MINE_BLOCKS=0
 MINE_ONLY=0
+MINE_FOREGROUND=0
 RUN_CLIENT=0
 RUN_ALL=0
 SKIP_BUILD=0
@@ -34,6 +35,7 @@ Options:
   --reset            Stop/remove aztec local-network container(s) (no ~/.aztec deletion)
   --deploy           Redeploy DarkForest + NFT and write apps/client/.env.local
   --mine-blocks      Send a tx every interval to mine L2 blocks
+  --mine-foreground  Run mine-blocks in the foreground (implies mine-only)
   --mine-only        Mine blocks only (skip build/deploy/client)
   --run              Deploy + mine blocks + run client dev server
   --run-client       Start the client dev server (yarn client:dev)
@@ -68,6 +70,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --mine-blocks)
       MINE_BLOCKS=1
+      shift
+      ;;
+    --mine-foreground|--mine-blocks-foreground)
+      MINE_FOREGROUND=1
       shift
       ;;
     --mine-only)
@@ -183,6 +189,20 @@ if [[ "$RUN_SNAPSHOT_WATCH" -eq 1 ]]; then
   RUN_SNAPSHOT=1
 fi
 
+if [[ "$MINE_FOREGROUND" -eq 1 ]]; then
+  if [[ "$DEPLOY" -eq 1 || "$RUN_CLIENT" -eq 1 || "$RUN_ALL" -eq 1 || "$RUN_SNAPSHOT" -eq 1 || "$RUN_SNAPSHOT_WATCH" -eq 1 ]]; then
+    echo "--mine-foreground ignores deploy/snapshot/client flags and only mines blocks."
+  fi
+  MINE_ONLY=1
+  MINE_BLOCKS=1
+  DEPLOY=0
+  RUN_CLIENT=0
+  RUN_ALL=0
+  RUN_SNAPSHOT=0
+  RUN_SNAPSHOT_WATCH=0
+  SKIP_BUILD=1
+fi
+
 if ! [[ "$RADIUS" =~ ^[0-9]+$ ]] || [[ "$RADIUS" -le 0 ]]; then
   echo "Radius must be a positive integer (got: $RADIUS)." >&2
   exit 1
@@ -233,6 +253,19 @@ reset_local_network() {
 }
 
 start_mine_blocks() {
+  if ! command -v node >/dev/null 2>&1; then
+    echo "node is required for mine-blocks but was not found." >&2
+    exit 1
+  fi
+
+  if ! node --input-type=module -e "import foo from 'data:application/json,{}' with { type: 'json' }; console.log(foo)" >/dev/null 2>&1; then
+    local node_version
+    node_version=$(node -v 2>/dev/null || true)
+    echo "Node ${node_version:-unknown} does not support import attributes required by Aztec." >&2
+    echo "Install Node >= 20.10 (or 22.x) and re-run." >&2
+    exit 1
+  fi
+
   local env_path="$ROOT_DIR/apps/client/.env.local"
   if [[ ! -f "$env_path" ]]; then
     echo "Missing apps/client/.env.local. Run with --deploy (or create env) first." >&2
@@ -251,6 +284,15 @@ start_mine_blocks() {
   fi
 
   local log_path="$ROOT_DIR/.aztec-tick.log"
+  if [[ "$MINE_FOREGROUND" -eq 1 ]]; then
+    echo "Mine-blocks running in foreground (interval: ${TICK_INTERVAL}s)."
+    echo "Stop with: Ctrl+C"
+    pushd "$ROOT_DIR" >/dev/null
+    INTERVAL="$TICK_INTERVAL" node aztec-tick.mjs
+    popd >/dev/null
+    return 0
+  fi
+
   local pid
   pushd "$ROOT_DIR" >/dev/null
   INTERVAL="$TICK_INTERVAL" nohup node aztec-tick.mjs > "$log_path" 2>&1 &

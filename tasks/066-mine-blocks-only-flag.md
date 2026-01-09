@@ -19,4 +19,5 @@ Add an option to the local dev script to mine blocks only without rebuilding or 
 - Not required (script-only change).
 
 ## Status
-- Done (2026-01-07)
+- Archived (2026-01-08).
+

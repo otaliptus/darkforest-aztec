@@ -20,4 +20,5 @@ Audit every file under `tasks/` and report current status coverage (Done/Complet
 - None.
 
 ## Status
-- In progress.
+- Archived (2026-01-08).
+

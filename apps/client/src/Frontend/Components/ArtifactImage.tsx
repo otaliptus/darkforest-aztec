@@ -1,16 +1,16 @@
-import { ArtifactFileColor, artifactFileName, isSpaceShip } from '@darkforest_eth/gamelogic';
+import { ArtifactFileColor } from '@darkforest_eth/gamelogic';
 import { Artifact } from '@darkforest_eth/types';
-import React from 'react';
+import {
+  ARTIFACTS_THUMBS_URL,
+  ARTIFACTS_URL,
+  EMPTY_SPRITE,
+  SPRITES_HORIZONTALLY,
+  SPRITES_VERTICALLY,
+  spriteFromArtifact,
+} from '@darkforest_eth/renderer/dist/TextureManager';
+import React, { useMemo } from 'react';
 import styled, { css } from 'styled-components';
 import dfstyles from '../Styles/dfstyles';
-
-export const ARTIFACT_URL = 'https://d2wspbczt15cqu.cloudfront.net/v0.6.0-artifacts/';
-// const ARTIFACT_URL = '/public/img/artifacts/videos/';
-
-function getArtifactUrl(thumb: boolean, artifact: Artifact, color: ArtifactFileColor): string {
-  const fileName = artifactFileName(true, thumb, artifact, color);
-  return ARTIFACT_URL + fileName;
-}
 
 export function ArtifactImage({
   artifact,
@@ -23,13 +23,25 @@ export function ArtifactImage({
   thumb?: boolean;
   bgColor?: ArtifactFileColor;
 }) {
-  const url = getArtifactUrl(thumb || false, artifact, bgColor || ArtifactFileColor.BLUE);
-  const image = isSpaceShip(artifact.artifactType) ? (
-    <img width={size} height={size} src={url} />
-  ) : (
-    <video width={size} height={size} loop autoPlay key={artifact.id}>
-      <source src={url} type={'video/webm'} />
-    </video>
+  const sprite = useMemo(() => spriteFromArtifact(artifact), [artifact]);
+  const sheetUrl = thumb ? ARTIFACTS_THUMBS_URL : ARTIFACTS_URL;
+  const sheetWidth = SPRITES_HORIZONTALLY * size;
+  const sheetHeight = SPRITES_VERTICALLY * size;
+  const hasSprite = sprite !== EMPTY_SPRITE && sprite.x1 >= 0 && sprite.y1 >= 0;
+  const offsetX = hasSprite ? -sprite.x1 * sheetWidth : 0;
+  const offsetY = hasSprite ? -sprite.y1 * sheetHeight : 0;
+  const backgroundImage = hasSprite ? `url(${sheetUrl})` : 'none';
+
+  const image = (
+    <SpriteFallback
+      width={size}
+      height={size}
+      style={{
+        backgroundImage,
+        backgroundSize: `${sheetWidth}px ${sheetHeight}px`,
+        backgroundPosition: `${offsetX}px ${offsetY}px`,
+      }}
+    />
   );
 
   return (
@@ -49,5 +61,14 @@ const Container = styled.div`
     min-height: ${height}px;
     background-color: ${dfstyles.colors.artifactBackground};
     display: inline-block;
+  `}
+`;
+
+const SpriteFallback = styled.div`
+  image-rendering: crisp-edges;
+  background-repeat: no-repeat;
+  ${({ width, height }: { width: number; height: number }) => css`
+    width: ${width}px;
+    height: ${height}px;
   `}
 `;

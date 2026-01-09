@@ -22,7 +22,7 @@ Use `apps/client-og` UI as the base for the Aztec client, with a single enter-an
 - apps/client/src/Frontend/Pages/GameLandingPage.tsx
 
 ## Status
-- Completed.
+- Archived (2026-01-08).
 
 ## Tests
 - `yarn client:build` (warnings from aztec bb.js sourcemaps + asset size)

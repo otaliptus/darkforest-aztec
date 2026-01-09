@@ -15,3 +15,6 @@ Provide a fact-based report of what is implemented, what is missing, what is mis
 
 ## Deliverables
 - Report in assistant response.
+
+## Status
+- Archived (2026-01-08).

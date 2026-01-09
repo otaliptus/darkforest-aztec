@@ -15,3 +15,6 @@ Make the workspace easier to understand by grouping reference-only repos under a
 
 ## Deliverables
 - Updated docs and reorganized folders that clarify what is active vs reference-only.
+
+## Status
+- Archived (2026-01-08).

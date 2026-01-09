@@ -18,5 +18,5 @@ Port the v0.6 move and capture flows into Aztec Noir contracts using the private
 - Any required shared types/constants to support move/capture.
 
 ## Status
-- ✅ Implemented move/capture refresh (population + silver), added exp/refresh helpers, and updated move test assertions.
-- Tests: `yarn contracts:test:nr`
+- Archived (2026-01-08).
+

@@ -25,3 +25,6 @@ Reduce early-game energy/silver caps and growth for readable local play.
 ## Non-Goals
 - Rebalancing mid/late-game progression.
 - Changing core formulas for growth or combat.
+
+## Status
+- Archived (2026-01-08).

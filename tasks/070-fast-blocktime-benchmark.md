@@ -31,3 +31,6 @@ PROVER_ENABLED=true TICK_PROVER_ENABLED=false BLOCK_INTERVAL_MS=4000 \
 - resolve_tx_ms: 22,063 ms
 - tick_block: 2,365 ms (no-prover tick wallet)
 - total wall time (yarn): ~176.3 s
+
+## Status
+- Archived (2026-01-08).

@@ -23,7 +23,7 @@ Ensure `set_artifact_activation` supports ship artifacts minted by `give_space_s
 - `yarn workspace @darkforest-aztec/contracts test:e2e`
 
 ## Status
-- Done (2026-01-04).
+- Archived (2026-01-08).
 
 ## Notes
 - Activation now loads ship artifacts from the spaceship maps and materializes the artifact on first activation.

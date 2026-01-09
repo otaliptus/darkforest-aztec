@@ -15,3 +15,6 @@ Ensure deployment scripts keep `max_location_id` consistent with `planet_rarity`
 ## Deliverables
 - Updated deploy scripts with derived `max_location_id`.
 - Any inline comments documenting the relationship.
+
+## Status
+- Archived (2026-01-08).

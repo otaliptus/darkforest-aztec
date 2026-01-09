@@ -433,6 +433,7 @@ export class ContractsAPI extends EventEmitter {
         this.storageSlots,
         arrivalId
       );
+      if (arrivalState.arrivalBlock === 0) continue;
       arrivals.push(
         await mapArrival({
           arrivalId,
@@ -446,7 +447,7 @@ export class ContractsAPI extends EventEmitter {
   }
 
   public async getArrivalState(arrivalId: VoyageId): Promise<ArrivalState | undefined> {
-    const id = toBigInt(arrivalId);
+    const id = BigInt(arrivalId);
     const arrivalState = await readArrivalState(
       this.aztecConnection.getNode(),
       this.aztecConnection.getClient().darkforestAddress,
@@ -695,7 +696,7 @@ export class ContractsAPI extends EventEmitter {
     return this.aztecConnection.getAddress();
   }
 
-  public async resolveArrival(arrivalId: VoyageId): Promise<void> {
+  public async resolveArrival(arrivalId: VoyageId): Promise<string | undefined> {
     const logId = detailedLogger.start('contracts', 'resolve_arrival', { arrivalId });
     const id = BigInt(arrivalId);
     try {
@@ -741,6 +742,7 @@ export class ContractsAPI extends EventEmitter {
         confirmMs,
         totalMs: confirmedAt - sendStart,
       });
+      return txHash;
     } catch (error) {
       detailedLogger.error('contracts', 'resolve_arrival', logId, {
         arrivalId,
@@ -916,10 +918,15 @@ export class ContractsAPI extends EventEmitter {
         break;
       }
       case METHOD.MOVE: {
-        const [, , , , , , , , artifactId] = args as unknown[];
-        if (artifactId && artifactId !== 0) {
-          this.emit(ContractsAPIEvent.ArtifactUpdate, artifactId);
+        const moveIntent = intent as TxIntent & { artifact?: ArtifactId };
+        let artifactId = moveIntent.artifact;
+        if (!artifactId) {
+          const [, , , , , , , , rawArtifactId] = args as unknown[];
+          if (rawArtifactId && rawArtifactId !== 0 && rawArtifactId !== '0') {
+            artifactId = artifactIdFromDecStr(String(rawArtifactId));
+          }
         }
+        if (artifactId) this.emit(ContractsAPIEvent.ArtifactUpdate, artifactId);
         break;
       }
       case METHOD.FIND_ARTIFACT: {

@@ -21,4 +21,5 @@ Improve error reporting and logging across client and scripts for faster debuggi
 - `yarn workspace @darkforest-aztec/contracts test:e2e`
 
 ## Status
-- Pending.
+- Archived (2026-01-08).
+

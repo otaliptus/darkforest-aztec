@@ -52,6 +52,7 @@ import {
 } from '../../Frontend/Utils/SettingsHooks';
 import UIEmitter, { UIEmitterEvent } from '../../Frontend/Utils/UIEmitter';
 import { TerminalHandle } from '../../Frontend/Views/Terminal';
+import { TerminalTextStyle } from '../../Frontend/Utils/TerminalTypes';
 import { ContractConstants } from '../../_types/darkforest/api/ContractsAPITypes';
 import { HashConfig } from '../../_types/global/GlobalTypes';
 import { MiningPattern } from '../Miner/MiningPatterns';
@@ -516,6 +517,7 @@ class GameUIManager extends EventEmitter {
           []) {
           effectiveEnergy -= unconfirmedMove.intent.forces;
         }
+        effectiveEnergy = Math.max(0, effectiveEnergy);
         const effPercent = Math.min(this.getForcesSending(from.locationId), 98);
         let forces = Math.floor((effectiveEnergy * effPercent) / 100);
 
@@ -568,6 +570,21 @@ class GameUIManager extends EventEmitter {
             abandoning
           );
           tutorialManager.acceptInput(TutorialState.SendFleet);
+        } else {
+          const minEnergy = Math.ceil(
+            this.gameManager.getEnergyNeededForMove(
+              from.locationId,
+              to.locationId,
+              1,
+              this.abandoning
+            )
+          );
+          const available = Math.max(0, Math.floor(effectiveEnergy));
+          const reason =
+            available < minEnergy
+              ? `need >= ${minEnergy} energy to arrive with >0 (available ${available}, sent ${forces})`
+              : 'arrival energy is 0 (too far or insufficient range buffs)';
+          this.terminal.current?.println(`Move blocked: ${reason}`, TerminalTextStyle.Sub);
         }
 
         uiEmitter.emit(UIEmitterEvent.SendCompleted, from.locationId);
@@ -1122,6 +1139,10 @@ class GameUIManager extends EventEmitter {
 
   public getAllOwnedPlanets(): Planet[] {
     return this.gameManager.getAllOwnedPlanets();
+  }
+
+  public getAllPlanets(): Iterable<Planet> {
+    return this.gameManager.getAllPlanets();
   }
 
   public getAllVoyages(): QueuedArrival[] {

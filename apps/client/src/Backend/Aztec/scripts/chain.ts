@@ -318,7 +318,42 @@ export const readArtifactState = async (
         fieldKey(artifactId),
         12
     );
-    return decodeArtifact(fields);
+    const artifact = decodeArtifact(fields);
+    if (artifact.isInitialized) {
+        return artifact;
+    }
+
+    const shipType = await readPublicMapField(
+        node,
+        contractAddress,
+        requireSlot(storageSlots, "spaceships"),
+        fieldKey(artifactId)
+    );
+    if (shipType === 0n) {
+        return artifact;
+    }
+
+    const shipOwner = await readPublicMapField(
+        node,
+        contractAddress,
+        requireSlot(storageSlots, "spaceship_owners"),
+        fieldKey(artifactId)
+    );
+
+    return {
+        isInitialized: true,
+        id: artifactId,
+        planetDiscoveredOn: 0n,
+        rarity: 0,
+        planetBiome: 0,
+        discoverer: AztecAddress.fromBigInt(shipOwner),
+        artifactType: toU8(shipType),
+        activations: 0,
+        lastActivated: 0,
+        lastDeactivated: 0,
+        wormholeTo: 0n,
+        burned: false,
+    };
 };
 
 export const readArtifactLocation = async (

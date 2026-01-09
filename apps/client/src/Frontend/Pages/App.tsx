@@ -7,6 +7,7 @@ import { LandingPageBackground } from '../Renderers/LandingPageCanvas';
 import dfstyles from '../Styles/dfstyles';
 import { GameLandingPage } from './GameLandingPage';
 import { GifMaker } from './GifMaker';
+import LandingPage from './LandingPage';
 import { NotFoundPage } from './NotFoundPage';
 import { ShareArtifact } from './ShareArtifact';
 import { SharePlanet } from './SharePlanet';
@@ -28,7 +29,7 @@ function App() {
           <Switch>
             <Redirect path='/play' to={`/play/${defaultAddress}`} push={true} exact={true} />
             <Route path='/play/:contract' component={GameLandingPage} />
-            <Redirect path='/' to={`/play/${defaultAddress}`} push={true} exact={true} />
+            <Route path='/' component={LandingPage} exact={true} />
             <Redirect path='/events' to={`/play/${defaultAddress}`} push={true} exact={true} />
             <Redirect path='/lobby' to={`/play/${defaultAddress}`} push={true} exact={true} />
             <Redirect path='/lobby/:contract' to={`/play/${defaultAddress}`} push={true} />

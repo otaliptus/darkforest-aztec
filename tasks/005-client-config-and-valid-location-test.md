@@ -15,3 +15,6 @@ Update client-side contract calls to include perlin config parameters for privat
 ## Deliverables
 - Updated client scripts.
 - Added integration test in `packages/contracts`.
+
+## Status
+- Archived (2026-01-08).

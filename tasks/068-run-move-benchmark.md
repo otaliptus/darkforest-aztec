@@ -29,3 +29,6 @@ PROVER_ENABLED=true TX_TIMEOUT_MS=600000 BLOCK_TIMEOUT_MS=600000 ACCOUNT_INDEX=1
 - init_player: 24,261 ms
 - move_ms: 23,410 ms
 - total wall time (yarn): ~142.0 s
+
+## Status
+- Archived (2026-01-08).

@@ -15,3 +15,6 @@ Produce a repository inventory and an end-to-end implementation plan for the Dar
 
 ## Deliverables
 - Plan + validation checklist in assistant response.
+
+## Status
+- Archived (2026-01-08).

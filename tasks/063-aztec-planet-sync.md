@@ -17,3 +17,6 @@ Make Aztec clients automatically reflect external state changes (captures, arriv
 
 ## Files (expected)
 - `apps/client/src/Backend/GameLogic/GameManager.ts`
+
+## Status
+- Archived (2026-01-08).

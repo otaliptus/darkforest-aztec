@@ -28,3 +28,6 @@ Make local dev maps small and dense, with player spawns close enough for fast it
 ## Non-Goals
 - Changing the underlying move-distance/range formula.
 - Altering game balance for production networks.
+
+## Status
+- Archived (2026-01-08).

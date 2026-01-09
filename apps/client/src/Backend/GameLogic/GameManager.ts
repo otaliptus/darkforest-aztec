@@ -948,6 +948,13 @@ class GameManager extends EventEmitter {
       })
       .on(ContractsAPIEvent.TxErrored, async (tx: Transaction) => {
         gameManager.entityStore.clearUnconfirmedTxIntent(tx);
+        if (isUnconfirmedMoveTx(tx)) {
+          const refreshes = [gameManager.bulkHardRefreshPlanets([tx.intent.from, tx.intent.to])];
+          if (tx.intent.artifact) {
+            refreshes.push(gameManager.hardRefreshArtifact(tx.intent.artifact));
+          }
+          await Promise.all(refreshes);
+        }
         if (tx.hash) {
           gameManager.persistentChunkStore.onEthTxComplete(tx.hash);
         }
@@ -2796,11 +2803,26 @@ class GameManager extends EventEmitter {
 
       const oldPlanet = this.entityStore.getPlanetWithLocation(oldLocation);
 
-      if (
-        ((!bypassChecks && !this.account) || !oldPlanet || oldPlanet.owner !== this.account) &&
-        !isSpaceShip(this.getArtifactWithId(artifactMoved)?.artifactType)
-      ) {
-        throw new Error('attempted to move from a planet not owned by player');
+      const localArtifact = artifactMoved
+        ? this.entityStore.getArtifactById(artifactMoved)
+        : undefined;
+      let movedArtifact: Artifact | undefined = localArtifact;
+      if (artifactMoved && !bypassChecks && !movedArtifact) {
+        const chainArtifact = await this.contractsAPI.getArtifactById(artifactMoved);
+        if (chainArtifact) {
+          this.entityStore.replaceArtifactFromContractData(chainArtifact);
+          movedArtifact = chainArtifact;
+        }
+      }
+
+      const isShipMove =
+        !!artifactMoved &&
+        isSpaceShip((movedArtifact ?? localArtifact)?.artifactType ?? ArtifactType.Unknown);
+
+      if ((!bypassChecks && !this.account) || !oldPlanet || oldPlanet.owner !== this.account) {
+        if (!isShipMove) {
+          throw new Error('attempted to move from a planet not owned by player');
+        }
       }
 
       const getArgs = async (): Promise<unknown[]> => {
@@ -2837,17 +2859,119 @@ class GameManager extends EventEmitter {
       };
 
       if (artifactMoved) {
-        const artifact = this.entityStore.getArtifactById(artifactMoved);
+        let artifact = movedArtifact ?? this.entityStore.getArtifactById(artifactMoved);
 
         if (!bypassChecks) {
           if (!artifact) {
             throw new Error("couldn't find this artifact");
           }
+          if (isSpaceShip(artifact.artifactType)) {
+            const localShipOnPlanet = !!oldPlanet?.heldArtifactIds?.includes(artifactMoved);
+            const refreshShipState = async (): Promise<Artifact | undefined> => {
+              await Promise.all([
+                this.hardRefreshPlanet(from),
+                this.hardRefreshArtifact(artifactMoved),
+              ]);
+              const refreshed = await this.contractsAPI.getArtifactById(artifactMoved);
+              if (refreshed) {
+                this.entityStore.replaceArtifactFromContractData(refreshed);
+              }
+              return refreshed;
+            };
+            const resolveArrivalForPlanet = async (): Promise<void> => {
+              const arrivalsForPlanet = await this.contractsAPI.getArrivalsForPlanet(from);
+              const matchingArrival = arrivalsForPlanet.find(
+                (arrival) =>
+                  arrival.artifactId === artifactMoved && arrival.toPlanet === from
+              );
+              if (!matchingArrival) {
+                return;
+              }
+              const currentBlock = await this.contractsAPI.getCurrentBlockNumber();
+              if (currentBlock < matchingArrival.arrivalTime) {
+                throw new Error(
+                  `ship is currently in transit (arrives at block ${matchingArrival.arrivalTime}, now ${currentBlock})`
+                );
+              }
+              if (this.resolvingArrivals.has(matchingArrival.eventId)) {
+                return;
+              }
+              try {
+                await this.contractsAPI.resolveArrival(matchingArrival.eventId);
+                this.entityStore.clearArrival(from, matchingArrival.eventId);
+              } catch (err) {
+                // ignore resolution errors here and fall back to state refresh
+              } finally {
+                await refreshShipState();
+              }
+            };
+            const tryResolveShipArrival = async (): Promise<void> => {
+              if (!localShipOnPlanet) return;
+              const matchingArrival = this.entityStore
+                .getAllVoyages()
+                .find(
+                  (arrival) =>
+                    arrival.artifactId === artifactMoved && arrival.toPlanet === from
+                );
+              if (!matchingArrival) return;
+              const currentBlock = await this.contractsAPI.getCurrentBlockNumber();
+              if (currentBlock < matchingArrival.arrivalTime) {
+                throw new Error(
+                  `ship is currently in transit (arrives at block ${matchingArrival.arrivalTime}, now ${currentBlock})`
+                );
+              }
+              if (this.resolvingArrivals.has(matchingArrival.eventId)) {
+                return;
+              }
+              try {
+                await this.contractsAPI.resolveArrival(matchingArrival.eventId);
+                this.entityStore.clearArrival(from, matchingArrival.eventId);
+              } catch (err) {
+                // ignore resolution errors here and fall back to state refresh
+              } finally {
+                await refreshShipState();
+              }
+            };
+            let chainArtifact = await this.contractsAPI.getArtifactById(artifactMoved);
+            if (!chainArtifact) {
+              throw new Error("couldn't find this ship on-chain");
+            }
+            this.entityStore.replaceArtifactFromContractData(chainArtifact);
+            artifact = chainArtifact;
+            if ((!chainArtifact.onPlanetId || chainArtifact.onPlanetId !== from) && localShipOnPlanet) {
+              await tryResolveShipArrival();
+              const refreshed = await this.contractsAPI.getArtifactById(artifactMoved);
+              if (refreshed) {
+                this.entityStore.replaceArtifactFromContractData(refreshed);
+                chainArtifact = refreshed;
+                artifact = refreshed;
+              }
+              if (!chainArtifact.onPlanetId || chainArtifact.onPlanetId !== from) {
+                await resolveArrivalForPlanet();
+                const postResolve = await this.contractsAPI.getArtifactById(artifactMoved);
+                if (postResolve) {
+                  this.entityStore.replaceArtifactFromContractData(postResolve);
+                  chainArtifact = postResolve;
+                  artifact = postResolve;
+                }
+              }
+            }
+            if (!chainArtifact.onPlanetId) {
+              throw new Error('ship is currently in transit');
+            }
+            if (chainArtifact.onPlanetId !== from) {
+              throw new Error(`ship is not on this planet (on 0x${chainArtifact.onPlanetId})`);
+            }
+          }
           if (isActivated(artifact)) {
             throw new Error("can't move an activated artifact");
           }
           if (!oldPlanet?.heldArtifactIds?.includes(artifactMoved)) {
-            throw new Error("that artifact isn't on this planet!");
+            await this.hardRefreshPlanet(from);
+            const refreshedPlanet = this.entityStore.getPlanetWithId(from);
+            if (!refreshedPlanet?.heldArtifactIds?.includes(artifactMoved)) {
+              throw new Error("that artifact isn't on this planet!");
+            }
           }
         }
       }
@@ -3112,25 +3236,86 @@ class GameManager extends EventEmitter {
     this.resolvingArrivals.add(arrival.eventId);
     const logId = this.logActionStart('resolve_arrival', {
       arrivalId: arrival.eventId,
+      fromPlanet: arrival.fromPlanet,
       toPlanet: arrival.toPlanet,
     });
+    const shouldLog = VERBOSE_LOGGING || detailedLogger.isEnabled();
+    const formatLocation = (id?: LocationId) => (id ? `0x${id}` : 'unknown');
+    const formatAddress = (addr?: EthAddress) => addr ?? 'unknown';
+    const formatEnergy = (value?: number) => {
+      if (value === undefined || Number.isNaN(value)) return 'n/a';
+      return Math.round(value).toString();
+    };
+    const logResolveSummary = (
+      label: string,
+      meta: Record<string, unknown>,
+      style: TerminalTextStyle = TerminalTextStyle.Sub
+    ) => {
+      if (!shouldLog) return;
+      const messageParts = [
+        `[Arrival] ${label}`,
+        `id=${meta.arrivalId ?? 'n/a'}`,
+        `from=${meta.fromPlanet ?? 'unknown'}`,
+        `to=${meta.toPlanet ?? 'unknown'}`,
+        `arrivalBlock=${meta.arrivalBlock ?? 'n/a'}`,
+        `now=${meta.currentBlock ?? 'n/a'}`,
+        `owner=${meta.owner ?? 'unknown'}`,
+        `energy=${meta.energy ?? 'n/a'}`,
+        `artifacts=${meta.artifacts ?? 'n/a'}`,
+      ];
+      if (meta.txHash) messageParts.push(`tx=${meta.txHash}`);
+      if (meta.error) messageParts.push(`error=${meta.error}`);
+      const message = messageParts.join(' ');
+      console.info(message);
+      detailedLogger.log('game', 'resolve_arrival.summary', { label, message, ...meta });
+      this.terminal.current?.println(message, style);
+    };
     void (async () => {
       let arrivalBlock = 0;
       let currentBlock = 0;
       let toPlanet = arrival.toPlanet;
       let outcome = 'started';
+      let resolveMeta: Record<string, unknown> = {
+        arrivalId: arrival.eventId,
+        fromPlanet: formatLocation(arrival.fromPlanet),
+        toPlanet: formatLocation(arrival.toPlanet),
+        player: formatAddress(arrival.player),
+        energyArriving: arrival.energyArriving,
+        silverMoved: arrival.silverMoved,
+        artifactId: arrival.artifactId ? `0x${arrival.artifactId}` : undefined,
+      };
       try {
         const arrivalState = await this.contractsAPI.getArrivalState(arrival.eventId);
         if (!arrivalState || arrivalState.arrivalBlock === 0) {
           console.info('[Aztec] arrival already resolved or missing', {
             arrivalId: arrival.eventId,
           });
+          logResolveSummary('resolve.skip_missing', resolveMeta);
+          this.entityStore.clearArrival(arrival.toPlanet, arrival.eventId);
           outcome = 'missing';
           return;
         }
         arrivalBlock = arrivalState.arrivalBlock;
+        const chainFromPlanet = locationIdFromBigInt(arrivalState.fromPlanet);
         toPlanet = locationIdFromBigInt(arrivalState.toPlanet);
         currentBlock = await this.contractsAPI.getCurrentBlockNumber();
+        const toPlanetSnapshot = this.entityStore.getPlanetWithId(toPlanet, false);
+        resolveMeta = {
+          ...resolveMeta,
+          fromPlanet: formatLocation(chainFromPlanet),
+          toPlanet: formatLocation(toPlanet),
+          arrivalBlock,
+          currentBlock,
+          owner: toPlanetSnapshot?.owner ?? 'unknown',
+          energy: formatEnergy(toPlanetSnapshot?.energy),
+          artifacts: toPlanetSnapshot?.heldArtifactIds?.length ?? 0,
+          arrivalType: arrivalState.arrivalType,
+          departureBlock: arrivalState.departureBlock,
+          distance: arrivalState.distance.toString(),
+          popArriving: arrivalState.popArriving.toString(),
+          silverMovedOnChain: arrivalState.silverMoved.toString(),
+          carriedArtifactId: arrivalState.carriedArtifactId.toString(),
+        };
         if (currentBlock < arrivalBlock) {
           if (!this.arrivalResolveSkips.has(arrival.eventId)) {
             this.arrivalResolveSkips.set(arrival.eventId, arrivalBlock);
@@ -3145,22 +3330,23 @@ class GameManager extends EventEmitter {
               TerminalTextStyle.Sub
             );
           }
+          logResolveSummary('resolve.waiting', resolveMeta);
           outcome = 'not_ready';
           return;
         }
-        await this.contractsAPI.resolveArrival(arrival.eventId);
+        const txHash = await this.contractsAPI.resolveArrival(arrival.eventId);
+        logResolveSummary('resolve.sent', { ...resolveMeta, txHash });
         outcome = 'resolved';
       } catch (err) {
         outcome = 'error';
+        const errorMessage = (err as Error)?.message ?? String(err);
+        logResolveSummary('resolve.error', { ...resolveMeta, error: errorMessage }, TerminalTextStyle.Red);
         this.logActionError('resolve_arrival', logId, err, {
-          arrivalId: arrival.eventId,
-          arrivalBlock,
-          currentBlock,
-          toPlanet,
+          ...resolveMeta,
         });
         console.error('[Aztec] resolve arrival failed', {
           arrivalId: arrival.eventId,
-          error: (err as Error)?.message ?? err,
+          error: errorMessage,
           arrivalBlock,
           currentBlock,
           toPlanet,
@@ -3170,10 +3356,7 @@ class GameManager extends EventEmitter {
         this.arrivalResolveSkips.delete(arrival.eventId);
         await this.hardRefreshPlanet(toPlanet);
         this.logActionEnd('resolve_arrival', logId, {
-          arrivalId: arrival.eventId,
-          arrivalBlock,
-          currentBlock,
-          toPlanet,
+          ...resolveMeta,
           outcome,
         });
       }

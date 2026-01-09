@@ -13,3 +13,6 @@ Extend the block watcher to optionally submit a tiny tx when L2 blocks are stall
 
 ## Notes
 This is local‑dev only. Using admin_set_planet_owner(homePlanet, admin) is OK for ticking.
+
+## Status
+- Archived (2026-01-08).

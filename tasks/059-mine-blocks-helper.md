@@ -23,3 +23,6 @@ Make local block production reliable by sending a simple tx every tick (no L1 mi
 
 ## Non-Goals
 - Changing contract logic or block timing parameters in Aztec itself.
+
+## Status
+- Archived (2026-01-08).

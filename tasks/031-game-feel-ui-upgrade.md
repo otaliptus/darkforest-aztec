@@ -25,7 +25,7 @@ Deliver a game-like, playable UI feel by upgrading the existing `apps/client` la
 - Manual local run: init, reveal, move, upgrade, prospect/find, trade, activate/deactivate.
 
 ## Status
-- Superseded by Ticket 032 (OG UI integration).
+- Archived (2026-01-08).
 
 ## Notes
 - This ticket **overrides** the previous idea in `claude-UI-plans.md` to create a separate `client-og` app. We will upgrade the existing `apps/client` to achieve a playable, game-like experience instead.

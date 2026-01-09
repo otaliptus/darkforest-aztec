@@ -13,3 +13,6 @@ Provide a small terminal script to print L2 block tips from the local Aztec node
 
 ## Notes
 Use `createAztecNodeClient` + `waitForNode` from `@aztec/aztec.js/node`.
+
+## Status
+- Archived (2026-01-08).

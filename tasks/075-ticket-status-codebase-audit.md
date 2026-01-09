@@ -20,4 +20,5 @@ For every task in `tasks/`, read the related code/docs and determine its true st
 - None.
 
 ## Status
-- In progress.
+- Archived (2026-01-08).
+

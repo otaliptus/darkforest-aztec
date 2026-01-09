@@ -1104,6 +1104,10 @@ export class GameObjects {
     _.remove(planetArrivalIds, (id) => id === arrivalId);
   }
 
+  public clearArrival(planetId: LocationId, arrivalId: VoyageId): void {
+    this.removeArrival(planetId, arrivalId);
+  }
+
   private processArrivalsForPlanet(
     planetId: LocationId,
     arrivals: QueuedArrival[]

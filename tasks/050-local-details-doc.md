@@ -8,3 +8,6 @@ Document local dev troubleshooting notes (blocks not advancing, block watcher/ti
 - Includes: block advancement behavior on local Aztec, watcher/ticker usage and env vars, common errors and fixes, note about client polling spam.
 - Clear, concise, and actionable.
 
+
+## Status
+- Archived (2026-01-08).

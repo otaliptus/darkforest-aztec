@@ -68,16 +68,16 @@ export function HatPane({
         <div className='margin-top'>
           <Sub>Next Level Cost</Sub>
           <span>
-            {getHatCostEth(planet)} USD <Sub>/</Sub> {getHatCostEth(planet)} DAI
+            {getHatCostEth(planet)} AZTEC
           </span>
         </div>
         <div>
           <Sub>Current Balance</Sub>
-          <span>{balanceEth} xDAI</span>
+          <span>{balanceEth} AZTEC</span>
         </div>
 
         <EmSpacer height={1} />
-        <Link to={'https://blog.zkga.me/df-04-faq'}>Get More xDai</Link>
+        <Link to={'https://docs.aztec.network'}>Get more test funds</Link>
         <EmSpacer height={0.5} />
 
         <Btn

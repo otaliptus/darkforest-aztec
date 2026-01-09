@@ -15,3 +15,6 @@ Align the Aztec port naming so planet type 2 is explicitly called Foundry (not R
 
 ## Deliverables
 - Updated contract + types + docs consistent with Foundry naming.
+
+## Status
+- Archived (2026-01-08).

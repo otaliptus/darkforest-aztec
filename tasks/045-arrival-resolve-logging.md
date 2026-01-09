@@ -22,4 +22,5 @@ Stop premature arrival resolution attempts (app_logic_reverted) and add clearer 
 - Manual: trigger a move, verify no repeated resolve attempts before arrival block, and capture works once block is reached.
 
 ## Status
-- Done.
+- Archived (2026-01-08).
+

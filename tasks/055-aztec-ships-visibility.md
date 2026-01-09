@@ -27,3 +27,6 @@ Show ships in the Aztec client so artifact prospecting works and players see the
 ## Non-Goals
 - Reworking on-chain ship storage layout.
 - Changing ship rules or gameplay balance.
+
+## Status
+- Archived (2026-01-08).

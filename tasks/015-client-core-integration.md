@@ -30,3 +30,6 @@ Wire the React client to Aztec so it can connect to a local network, load contra
 ## Tests
 - `yarn client:build`
 - Manual local‑network smoke: connect wallet, call `init_player`, then `reveal_location` and confirm txs finalize.
+
+## Status
+- Archived (2026-01-08).

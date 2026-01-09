@@ -21,4 +21,5 @@ Make local dev games faster to load and easier to play by shrinking the world ra
 - Manual: redeploy with a small radius and confirm client connects + init/reveal succeeds.
 
 ## Status
-- Added local deploy overrides for world radius/planet rarity and documented small-map settings.
+- Archived (2026-01-08).
+

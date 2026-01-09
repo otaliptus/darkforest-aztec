@@ -15,3 +15,6 @@ Produce a concise but complete mapping of Dark Forest v0.6 circuits/contracts/cl
 
 ## Deliverables
 - Crosswalk document under `docs/`.
+
+## Status
+- Archived (2026-01-08).

@@ -29,3 +29,6 @@ PROVER_ENABLED=true TX_TIMEOUT_MS=600000 BLOCK_TIMEOUT_MS=600000 ACCOUNT_INDEX=2
 - resolve_wait_ms: 36,645 ms
 - resolve_tx_ms: 22,087 ms
 - total wall time (yarn): ~200.5 s
+
+## Status
+- Archived (2026-01-08).

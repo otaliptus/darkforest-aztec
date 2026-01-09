@@ -14,3 +14,6 @@ Make the local snapshot indexer easy to run so devs can avoid the heavy RPC spam
 - Hosted indexer or remote snapshot service.
 - Automatic background indexing.
 
+
+## Status
+- Archived (2026-01-08).

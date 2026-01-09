@@ -27,11 +27,7 @@ Introduce artifact data structures, biomebase validation, and `findArtifact` flo
 - Updated `packages/contracts` logic + tests for `find_artifact` + biomebase validation.
 
 ## Status
-- Added artifact/biome types + minimal `Artifact` structs in `packages/contracts/src/types.nr`.
-- Added `biomebase_key` to `GameConfig` and constructor; added artifact + planet-artifact storage maps.
-- Implemented `find_artifact`/`apply_find_artifact` with biomebase validation, v0.6 artifact selection/rarity rules, and artifact persistence.
-- Added find-artifact tests (success + three failure cases) in `packages/contracts/src/test/darkforest_stub.nr`.
-- Note: Aztec public context doesn’t expose blockhash; the artifact seed uses a deterministic MiMC hash of `prospected_block_number` as a stand‑in.
+- Archived (2026-01-08).
 
 ## Tests
 - `yarn workspace @darkforest-aztec/contracts clean`

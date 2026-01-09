@@ -14,3 +14,6 @@ Document missing/different features vs v0.6, and classify which differences are 
 
 ## Deliverables
 - New review document.
+
+## Status
+- Archived (2026-01-08).

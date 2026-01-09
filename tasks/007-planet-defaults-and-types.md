@@ -19,3 +19,6 @@ Port v0.6 planet classification and default stat initialization (level/type/spac
 ## Deliverables
 - Updated `packages/contracts` logic for planet classification + defaults.
 - New/updated tests under `packages/contracts/src/test/`.
+
+## Status
+- Archived (2026-01-08).

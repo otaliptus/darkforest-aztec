@@ -16,3 +16,6 @@ Make the Aztec client authoritative with on-chain arrivals and use real contract
 ## Deliverables
 - Code changes implementing arrival resolver + constant loading.
 - Notes on how to verify the flow manually.
+
+## Status
+- Archived (2026-01-08).

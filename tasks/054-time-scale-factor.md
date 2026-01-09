@@ -27,3 +27,6 @@ Make game pacing feel real-time on both fast local devnet and slow mainnet block
 ## Non-Goals
 - Changing the core travel formula or energy decay.
 - Adding new gameplay mechanics.
+
+## Status
+- Archived (2026-01-08).

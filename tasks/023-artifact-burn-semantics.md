@@ -22,7 +22,7 @@ Ensure artifacts destroyed by bloom filter or black domain are actually burned a
 - `yarn contracts:test:nr`
 
 ## Status
-- Completed.
+- Archived (2026-01-08).
 
 ## Notes
 - Added explicit burned flag on artifacts, enforced in trade/activation paths.

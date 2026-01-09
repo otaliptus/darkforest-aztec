@@ -24,10 +24,7 @@ Port the v0.6 planet upgrade flow (three branches, costs, caps) into the Aztec N
 - Updated `packages/contracts` logic + tests for upgrades.
 
 ## Status
-- Implemented upgrade branches, costs, caps, and multipliers in `packages/contracts/src/main.nr` with `upgrade_planet` → `apply_upgrade_planet`.
-- Added upgrade state fields to `Planet` in `packages/contracts/src/types.nr` and initialized in defaults.
-- Added tests for successful upgrades and invalid branch failure in `packages/contracts/src/test/darkforest_stub.nr`.
-- Added admin-only `admin_set_planet_silver` helper for tests to provision silver.
+- Archived (2026-01-08).
 
 ## Tests
 - `yarn workspace @darkforest-aztec/contracts compile`

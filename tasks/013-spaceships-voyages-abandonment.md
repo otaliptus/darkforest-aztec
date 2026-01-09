@@ -33,10 +33,7 @@ Port v0.6 spaceship mechanics, artifactâ€‘carrying moves, and abandonment/spaceâ
 - Updated contracts + tests in `packages/contracts`.
 
 ## Status
-- Added spaceship/artifact voyage/abandonment rules with planet/player fields and v0.6 behaviors.
-- Packed arrivals + arrival list storage to stay under public SSTORE and public dispatch size limits.
-- Adjusted spaceship handling to avoid unnecessary artifact owner/location writes.
-- Updated tests for packed arrivals and arrival timing; all ticket tests passing.
+- Archived (2026-01-08).
 
 ## Tests
 - `yarn workspace @darkforest-aztec/contracts compile`

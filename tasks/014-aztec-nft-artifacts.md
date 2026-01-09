@@ -26,7 +26,7 @@ Make artifacts actual Aztec‑native NFTs and synchronize ownership with deposit
 - `yarn contracts:test:nr`
 
 ## Status
-- Completed.
+- Archived (2026-01-08).
 
 ## Notes
 - NFT contract implemented in `packages/nft/src/main.nr` with mint/transfer/burn and minter gating.

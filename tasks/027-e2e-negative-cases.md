@@ -20,4 +20,5 @@ Expand the headless E2E test to cover failure cases and edge conditions without 
 - `yarn workspace @darkforest-aztec/contracts test:e2e`
 
 ## Status
-- Pending.
+- Archived (2026-01-08).
+

@@ -28,11 +28,7 @@ Deliver a detailed repository review (status, risks, priorities) and add a headl
 - `yarn workspace @darkforest-aztec/contracts test:e2e`
 
 ## Status
-- Done (2026-01-04).
-- E2E run completed on local network with tx-driven blocks (`SEQ_ENFORCE_TIME_TABLE=false`), `tick_block` fallback, and ~8.1 min runtime.
-- Command:
-  - `TX_TIMEOUT_MS=600000 BLOCK_TIMEOUT_MS=600000 AZTEC_NODE_URL=http://localhost:8080 AZTEC_NODE_ADMIN_URL=http://localhost:8880 L1_RPC_URL=http://localhost:8545 yarn workspace @darkforest-aztec/contracts test:e2e`
-- Note: `nodeAdmin_setConfig` is not reachable on `--local-network`; empty-block config must be set at node startup and was unstable with `minTxsPerBlock=0`.
+- Archived (2026-01-08).
 
 ## Notes
 - Use local node defaults (`http://localhost:8080`) and sponsored fees if available.

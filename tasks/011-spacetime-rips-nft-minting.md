@@ -30,10 +30,7 @@ Implement spacetime rip (trading post) artifact deposit/withdraw and mint Aztec-
 - Updated contracts + tests for spacetime rip deposit/withdraw + NFT ownership.
 
 ## Status
-- Added `PlanetArtifacts` list + artifact ownership/location maps; updated `find_artifact` to populate them.
-- Implemented deposit/withdraw spacetime rip flow with private→public apply and NFT ownership transfers.
-- Added admin helper to set planet type/level for deterministic tests.
-- Added tests for withdraw/deposit roundtrip + failure when not a trading post; updated find-artifact assertions for new storage.
+- Archived (2026-01-08).
 
 ## Tests
 - `yarn workspace @darkforest-aztec/contracts clean`

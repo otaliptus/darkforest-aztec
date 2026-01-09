@@ -13,3 +13,6 @@ Document reference repo index and update repository tree snapshot to reflect new
 
 ## Deliverables
 - Updated `reference/README.md` and refreshed `tree.txt`.
+
+## Status
+- Archived (2026-01-08).

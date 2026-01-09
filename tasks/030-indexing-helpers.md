@@ -21,4 +21,5 @@ Provide optional local indexing helpers to speed up client state hydration.
 - Manual run of the indexer script.
 
 ## Status
-- Pending.
+- Archived (2026-01-08).
+

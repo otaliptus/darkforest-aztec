@@ -19,7 +19,7 @@ Need super detailed logging so gameplay actions are dumped to a file for easier 
 Do not add unbounded loops in public contract functions. Client-only changes preferred.
 
 ## Status
-- Completed.
+- Archived (2026-01-08).
 
 ## Tests
 - `yarn client:build` (warnings from aztec bb.js sourcemaps + asset size)

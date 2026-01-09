@@ -25,3 +25,6 @@ Provide a minimal, low-risk path to load snapshots after refresh without a big d
 ## Non-Goals
 - Building a hosted indexer or persistent server.
 - Changing privacy model for production.
+
+## Status
+- Archived (2026-01-08).

@@ -19,8 +19,5 @@ Fix the E2E script's config reader to match on-chain `GameConfig` field order an
 - `PROVER_ENABLED=true TX_TIMEOUT_MS=600000 BLOCK_TIMEOUT_MS=600000 AZTEC_NODE_URL=http://localhost:8080 AZTEC_NODE_ADMIN_URL=http://localhost:8880 L1_RPC_URL=http://localhost:8545 yarn workspace @darkforest-aztec/contracts test:e2e`
 
 ## Status
-- Done (2026-01-07).
-- E2E run (proved) completed.
-- Command:
-  - `PROVER_ENABLED=true TX_TIMEOUT_MS=600000 BLOCK_TIMEOUT_MS=600000 AZTEC_NODE_URL=http://localhost:8080 AZTEC_NODE_ADMIN_URL=http://localhost:8880 L1_RPC_URL=http://localhost:8545 yarn workspace @darkforest-aztec/contracts test:e2e`
-- Runtime: ~3649s (from yarn output).
+- Archived (2026-01-08).
+

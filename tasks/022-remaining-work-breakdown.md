@@ -23,7 +23,7 @@ Create detailed task tickets for remaining P0/P1/P2 items not already tracked an
 - None (planning only).
 
 ## Status
-- Pending.
+- Archived (2026-01-08).
 
 ## Notes
 - Existing tickets already cover some items (014 NFT ownership, 019 client E2E verification, 020 performance + deploy docs).

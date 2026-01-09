@@ -32,7 +32,7 @@ export const enum ContractMethodName {
  * @hidden
  */
 //eslint-disable-next-line @projectsophon/typescript-enum/no-enum
-export const enum EthTxStatus {
+export enum EthTxStatus {
   Init = 'Init',
   Processing = 'Processing',
   Prioritized = 'Prioritized',

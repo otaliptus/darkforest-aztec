@@ -82,6 +82,7 @@ The Aztec client can emit high-detail gameplay logs to a local file for debuggin
   - `DF_DETAILED_LOGS=1` (enables detailed logging)
   - `DF_FILE_LOGS=1` (same as above, plus encourages file logging)
   - `DF_LOG_TO_CONSOLE=1` (mirror detailed logs to the browser console)
+  - `DF_VERBOSE_LOGS=1` (human-readable gameplay logs in the in-game terminal + console)
 
 If your browser does not support the File System Access API, use `Download recent logs` to export the in-memory buffer.
 

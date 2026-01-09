@@ -24,3 +24,6 @@ Make owned planets clearly visible on the grid (stronger than the current subtle
 ## Non-Goals
 - Reworking the whole renderer theme.
 - Changing planet textures or procedural assets.
+
+## Status
+- Archived (2026-01-08).

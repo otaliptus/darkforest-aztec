@@ -21,4 +21,5 @@ Improve client UX for trade and activation actions and surface NFT ownership cle
 - Manual local smoke: init, reveal, trade, activate.
 
 ## Status
-- Pending.
+- Archived (2026-01-08).
+

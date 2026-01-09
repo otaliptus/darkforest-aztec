@@ -1,9 +1,15 @@
 import { EMPTY_ARTIFACT_ID } from '@darkforest_eth/constants';
-import { ArtifactFileColor, artifactFileName, setForceAncient } from '@darkforest_eth/gamelogic';
-import { ArtifactRarity, ArtifactType, Biome } from '@darkforest_eth/types';
-import React, { useEffect } from 'react';
+import { ArtifactRarity, ArtifactType, Biome, RenderedArtifact } from '@darkforest_eth/types';
+import {
+  ARTIFACTS_THUMBS_URL,
+  ARTIFACTS_URL,
+  EMPTY_SPRITE,
+  SPRITES_HORIZONTALLY,
+  SPRITES_VERTICALLY,
+  spriteFromArtifact,
+} from '@darkforest_eth/renderer/dist/TextureManager';
+import React, { useMemo } from 'react';
 import styled from 'styled-components';
-import { ARTIFACT_URL } from '../Components/ArtifactImage';
 
 const Container = styled.div`
   width: fit-content;
@@ -43,36 +49,40 @@ function ArtifactPreviewer({
   ancient?: boolean;
   thumb: boolean;
 }) {
+  const artifact = useMemo(
+    () =>
+      ({
+        artifactType: type,
+        planetBiome: biome,
+        rarity,
+        id: EMPTY_ARTIFACT_ID,
+      }) as RenderedArtifact,
+    [type, biome, rarity]
+  );
+  const sprite = useMemo(() => spriteFromArtifact(artifact), [artifact]);
+  const sheetUrl = thumb ? ARTIFACTS_THUMBS_URL : ARTIFACTS_URL;
+  const size = 64;
+  const sheetWidth = SPRITES_HORIZONTALLY * size;
+  const sheetHeight = SPRITES_VERTICALLY * size;
+  const hasSprite = sprite !== EMPTY_SPRITE && sprite.x1 >= 0 && sprite.y1 >= 0;
+  const offsetX = hasSprite ? -sprite.x1 * sheetWidth : 0;
+  const offsetY = hasSprite ? -sprite.y1 * sheetHeight : 0;
+  const backgroundImage = hasSprite ? `url(${sheetUrl})` : 'none';
+
   return (
-    <video width={250} loop autoPlay key={type + '-' + biome + '-' + rarity + 'vid'}>
-      <source
-        src={
-          ARTIFACT_URL +
-          artifactFileName(
-            true,
-            thumb,
-            {
-              artifactType: type,
-              planetBiome: biome,
-              rarity,
-              id: EMPTY_ARTIFACT_ID,
-            },
-            ArtifactFileColor.BLUE,
-            { forceAncient: ancient === true, skipCaching: true }
-          )
-        }
-        type={'video/webm'}
-      />
-    </video>
+    <Sprite
+      title={ancient ? 'Ancient' : 'Artifact'}
+      style={{
+        backgroundImage,
+        backgroundSize: `${sheetWidth}px ${sheetHeight}px`,
+        backgroundPosition: `${offsetX}px ${offsetY}px`,
+      }}
+    />
   );
 }
 
 const THUMB = false;
 export function TestArtifactImages() {
-  useEffect(() => {
-    setForceAncient(false);
-  }, []);
-
   return (
     <Container>
       <h1>Artifacts</h1>
@@ -125,3 +135,10 @@ export function TestArtifactImages() {
     </Container>
   );
 }
+
+const Sprite = styled.div`
+  image-rendering: crisp-edges;
+  background-repeat: no-repeat;
+  width: 64px;
+  height: 64px;
+`;

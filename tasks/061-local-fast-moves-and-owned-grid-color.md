@@ -26,3 +26,6 @@ Make local travel times much shorter for tiny maps and ensure owned planets stan
 
 ## Non-Goals
 - Changing core v0.6 mechanics beyond local pacing adjustments.
+
+## Status
+- Archived (2026-01-08).

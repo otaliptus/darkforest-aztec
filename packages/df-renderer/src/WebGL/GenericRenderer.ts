@@ -101,6 +101,9 @@ export class GenericRenderer<
   /** A dictionary of attrib managers, keyed by attrib name. */
   public attribManagers: AttribManagers<T>;
 
+  /** Vertex array object for stable attribute bindings (WebGL2 only). */
+  private vao: WebGLVertexArrayObject | null;
+
   /**
    * Uniform data for this program. Typically not used after construction.
    * Kept for use in inherited classes.
@@ -134,6 +137,7 @@ export class GenericRenderer<
 
     this.manager = glManager;
     const { gl } = glManager;
+    this.vao = gl.createVertexArray ? gl.createVertexArray() : null;
 
     const { vertexShader: vert, fragmentShader: frag, uniforms, attribs } = programData;
 
@@ -145,6 +149,9 @@ export class GenericRenderer<
     this.attribData = attribs;
 
     gl.useProgram(program); // may be superfluous
+    if (this.vao) {
+      gl.bindVertexArray(this.vao);
+    }
 
     // construct uniform setters
     const uniformLocs: Partial<UniformLocs<T>> = {};
@@ -168,6 +175,9 @@ export class GenericRenderer<
       attribManagers[k] = new AttribManager(gl, program, props);
     }
     this.attribManagers = attribManagers as AttribManagers<T>;
+    if (this.vao) {
+      gl.bindVertexArray(null);
+    }
   }
 
   /**
@@ -188,6 +198,9 @@ export class GenericRenderer<
 
     const { gl } = this.manager;
     gl.useProgram(this.program);
+    if (this.vao) {
+      gl.bindVertexArray(this.vao);
+    }
 
     this.setUniforms();
 
@@ -197,6 +210,9 @@ export class GenericRenderer<
 
     // draw
     gl.drawArrays(drawMode, 0, this.verts);
+    if (this.vao) {
+      gl.bindVertexArray(null);
+    }
 
     this.verts = 0;
   }

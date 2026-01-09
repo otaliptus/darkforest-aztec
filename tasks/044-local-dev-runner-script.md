@@ -23,4 +23,5 @@ Create a single script to orchestrate local Dark Forest dev workflows (reset loc
 - Manual: run script with `--deploy --fast-blocks` and verify client connects + moves resolve faster.
 
 ## Status
-- Done.
+- Archived (2026-01-08).
+

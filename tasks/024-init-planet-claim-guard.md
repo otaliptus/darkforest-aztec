@@ -20,7 +20,7 @@ Prevent `init_player` from claiming an already-initialized planet (or explicitly
 - `yarn contracts:test:nr`
 
 ## Status
-- Completed.
+- Archived (2026-01-08).
 
 ## Notes
 - v0.6 `LibPlanet._initializePlanet` reverts if a planet is already initialized; Noir `apply_player_action` mirrors this via `assert(!existing_planet.is_initialized)` in action `0` (`init_player`).

@@ -35,3 +35,6 @@ Make all client-side time calculations and UI readouts block-based (not wall-clo
 ## Non-Goals
 - Changing the core on-chain travel formula.
 - Changing Aztec node block production behavior.
+
+## Status
+- Archived (2026-01-08).

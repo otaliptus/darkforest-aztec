@@ -12,3 +12,6 @@ Investigate and fix: (1) move tx reverts when energy set to full; (2) arrival ET
 ## Notes
 - Preserve contract pattern: private validate -> public apply.
 - Avoid unbounded loops in public functions.
+
+## Status
+- Archived (2026-01-08).

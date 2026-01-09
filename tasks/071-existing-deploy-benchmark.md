@@ -38,3 +38,6 @@ TX_TIMEOUT_MS=600000 BLOCK_TIMEOUT_MS=600000 ACCOUNT_INDEX=0 \
 ### Notes
 - The run logged an `Existing nullifier` warning during move, but the tx still succeeded and the benchmark completed.
 - Random account mode failed with insufficient fee payer balance (no sponsored fee payer configured).
+
+## Status
+- Archived (2026-01-08).

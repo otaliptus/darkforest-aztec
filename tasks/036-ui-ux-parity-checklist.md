@@ -14,3 +14,6 @@ Provide a pane-by-pane UI/UX compatibility and playability checklist for the Azt
 
 ## Deliverables
 - Checklist in assistant response.
+
+## Status
+- Archived (2026-01-08).

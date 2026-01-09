@@ -23,9 +23,7 @@ Add v0.6-style prospecting on ruins planets so the artifact flow can be layered 
 - Updated `packages/contracts` logic + tests for prospecting.
 
 ## Status
-- Added `PlanetArtifactState` map and `prospect_planet`/`apply_prospect_planet` flow in `packages/contracts/src/main.nr`.
-- Added admin-only `admin_set_planet_owner` helper to make the prospect test deterministic.
-- Added/updated tests for prospect success + failure in `packages/contracts/src/test/darkforest_stub.nr`.
+- Archived (2026-01-08).
 
 ## Tests
 - `yarn workspace @darkforest-aztec/contracts compile`

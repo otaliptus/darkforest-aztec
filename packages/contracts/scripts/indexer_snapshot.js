@@ -292,7 +292,42 @@ const readRevealedCoords = async (node, contractAddress, storageSlots, locationI
 const readArtifactState = async (node, contractAddress, storageSlots, artifactId) => {
   const slot = requireSlot(storageSlots, "artifacts");
   const fields = await readPublicMapFields(node, contractAddress, slot, fieldKey(artifactId), 12);
-  return decodeArtifact(fields);
+  const artifact = decodeArtifact(fields);
+  if (artifact.isInitialized) {
+    return artifact;
+  }
+
+  const shipType = await readPublicMapField(
+    node,
+    contractAddress,
+    requireSlot(storageSlots, "spaceships"),
+    fieldKey(artifactId)
+  );
+  if (shipType === 0n) {
+    return artifact;
+  }
+
+  const shipOwner = await readPublicMapField(
+    node,
+    contractAddress,
+    requireSlot(storageSlots, "spaceship_owners"),
+    fieldKey(artifactId)
+  );
+
+  return {
+    isInitialized: true,
+    id: artifactId,
+    planetDiscoveredOn: 0n,
+    rarity: 0,
+    planetBiome: 0,
+    discoverer: AztecAddress.fromBigInt(shipOwner),
+    artifactType: toU8(shipType),
+    activations: 0,
+    lastActivated: 0,
+    lastDeactivated: 0,
+    wormholeTo: 0n,
+    burned: false,
+  };
 };
 
 const readArtifactLocation = async (node, contractAddress, storageSlots, artifactId) =>
@@ -581,8 +616,9 @@ const main = async () => {
     }
 
     const arrivalIds = Array.from(arrivalIdSet, (value) => BigInt(value));
-    const arrivals = await mapWithConcurrency(arrivalIds, concurrency, async (arrivalId) => {
+    const arrivals = (await mapWithConcurrency(arrivalIds, concurrency, async (arrivalId) => {
       const arrivalState = await readArrivalState(node, contractAddr, storageSlots, arrivalId);
+      if (arrivalState.arrivalBlock === 0) return undefined;
       const departureTimestamp = await getBlockTimestamp(arrivalState.departureBlock);
       const arrivalTimestamp = await getBlockTimestamp(arrivalState.arrivalBlock);
       const player = toAddress(arrivalState.player);
@@ -591,7 +627,7 @@ const main = async () => {
         artifactIdSet.add(arrivalState.carriedArtifactId.toString());
       }
       return { arrivalId, arrivalState, departureTimestamp, arrivalTimestamp };
-    });
+    })).filter((entry) => !!entry);
 
     const extraPlanetIds = uniqueBigInts(
       arrivals

@@ -20,10 +20,5 @@ Get the DarkForest contract under Aztec's public bytecode packing limit so `azte
 - `yarn contracts:test:nr`
 
 ## Status
-- Root cause: public bytecode exceeded Aztec constant `MAX_PACKED_PUBLIC_BYTECODE_SIZE_IN_FIELDS` (3000 fields).
-- Adjustments:
-  - Removed unused `nft_burn` helper and `planet_artifacts_is_empty` assert from give‑ships path.
-  - Deduplicated admin checks in `apply_player_action`.
-  - Relaxed admin‑only artifact creation (action 9) by dropping redundant planet/existence asserts.
-- Size measurement: 2996 packed fields (public bytecode bytes 92842).
-- Tests: `yarn contracts:test:nr` (passes).
+- Archived (2026-01-08).
+

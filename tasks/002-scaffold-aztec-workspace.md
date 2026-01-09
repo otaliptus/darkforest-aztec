@@ -15,3 +15,6 @@ Create the initial Aztec workspace layout with contracts, shared types, and a mi
 
 ## Deliverables
 - Scaffolded workspace + smoke tests documented in README.
+
+## Status
+- Archived (2026-01-08).

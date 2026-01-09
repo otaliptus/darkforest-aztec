@@ -23,7 +23,7 @@ Align wormhole arrival handling with Dark Forest v0.6 expectations (combat/no-co
 - `yarn workspace @darkforest-aztec/contracts test:e2e` (if E2E updated)
 
 ## Status
-- Completed.
+- Archived (2026-01-08).
 
 ## Notes
 - v0.6 reference: `reference/darkforest-v0.6/eth/contracts/libraries/LibLazyUpdate.sol` lines 115-168 (wormhole arrival branch at 125-129) skips energy transfer when arrival type is Wormhole and target is not owned by the initiator.

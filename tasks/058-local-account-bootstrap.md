@@ -24,3 +24,6 @@ Allow the local deploy script to create multiple dev accounts and print their pr
 ## Non-Goals
 - Production-grade key management.
 - Funding logic beyond local/sponsored fees.
+
+## Status
+- Archived (2026-01-08).

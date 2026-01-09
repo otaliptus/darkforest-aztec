@@ -20,4 +20,5 @@ Add a lightweight script to benchmark a single move transaction (proof + inclusi
 - `PROVER_ENABLED=true AZTEC_NODE_URL=http://localhost:8080 AZTEC_NODE_ADMIN_URL=http://localhost:8880 L1_RPC_URL=http://localhost:8545 yarn workspace @darkforest-aztec/contracts bench:move`
 
 ## Status
-- Done (2026-01-07)
+- Archived (2026-01-08).
+

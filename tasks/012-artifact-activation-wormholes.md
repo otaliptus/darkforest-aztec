@@ -43,11 +43,7 @@ Port v0.6 artifact activation/deactivation (non‑spaceship artifacts), includin
 - Updated contracts + tests in `packages/contracts`.
 
 ## Status
-- Added activation fields on `Artifact` plus activation helpers (active checks, upgrades, buffs).
-- Implemented activate/deactivate flows with bloom/black-domain burns and wormhole/photoid move effects + arrival type handling.
-- Tracked destroyed planets in a dedicated `planet_destroyed` map instead of a `Planet.is_destroyed` field to stay within public SSTORE limits.
-- Reduced writes in `apply_move` (skip intermediate planet writes; inline photoid deactivation) to avoid SSTORE limit when photoid fires.
-- Added tests for wormhole travel, photoid auto‑deactivate + temp upgrade, bloom cap burn, black domain destroy, cooldown failure.
+- Archived (2026-01-08).
 
 ## Tests
 - `yarn workspace @darkforest-aztec/contracts compile` (warnings: unused globals)

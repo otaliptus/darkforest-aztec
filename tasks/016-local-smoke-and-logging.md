@@ -26,3 +26,6 @@ Add client-side logging to aid debugging and provide a repeatable local-network 
 ## Notes
 - Deploy script should default to node URL `http://localhost:8080`.
 - Use test config constants from `packages/contracts/src/test/utils.nr`.
+
+## Status
+- Archived (2026-01-08).

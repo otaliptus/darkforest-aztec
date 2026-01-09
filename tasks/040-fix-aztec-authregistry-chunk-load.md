@@ -19,4 +19,5 @@ Prevent runtime failures when the client loads Aztec protocol contract artifacts
 - `yarn client:dev` and confirm connection works.
 
 ## Status
-- Switched client to bundled Aztec entrypoints to avoid lazy JSON chunk loads; dev server restarted.
+- Archived (2026-01-08).
+

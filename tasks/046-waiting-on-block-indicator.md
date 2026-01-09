@@ -20,4 +20,5 @@ Show a clear "waiting on block N" signal when arrivals are not yet eligible to r
 - Manual: trigger a move and confirm the waiting message appears only once until the block is reached.
 
 ## Status
-- Done.
+- Archived (2026-01-08).
+
