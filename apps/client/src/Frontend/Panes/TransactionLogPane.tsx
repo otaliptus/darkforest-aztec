@@ -17,7 +17,7 @@ import {
   isUnconfirmedWithdrawArtifactTx,
   isUnconfirmedWithdrawSilverTx,
 } from '@darkforest_eth/serde';
-import { EthTxStatus, ModalName, Planet, TooltipName, Transaction } from '@darkforest_eth/types';
+import { ModalName, Planet, TooltipName, Transaction } from '@darkforest_eth/types';
 import { IconType } from '@darkforest_eth/ui';
 import { isEmpty, reverse, startCase, values } from 'lodash';
 import React, { useCallback } from 'react';
@@ -52,9 +52,19 @@ const TableContainer = styled.div`
   overflow-y: scroll;
 `;
 
+const TX_STATUS = {
+  Init: 'Init',
+  Processing: 'Processing',
+  Prioritized: 'Prioritized',
+  Submit: 'Submit',
+  Confirm: 'Confirm',
+  Fail: 'Fail',
+  Cancel: 'Cancel',
+} as const;
+
 function TransactionState({ tx }: { tx: Transaction }) {
   let element;
-  if (tx.state === EthTxStatus.Init) {
+  if (tx.state === TX_STATUS.Init) {
     element = (
       <Sub style={{ overflowX: 'hidden', display: 'block' }}>
         <TooltipTrigger name={TooltipName.Empty} extraContent='Queued'>
@@ -62,26 +72,26 @@ function TransactionState({ tx }: { tx: Transaction }) {
         </TooltipTrigger>
       </Sub>
     );
-  } else if (tx.state === EthTxStatus.Prioritized) {
+  } else if (tx.state === TX_STATUS.Prioritized) {
     element = (
       <TooltipTrigger name={TooltipName.Empty} extraContent='Prioritized'>
         <Loader type='Circles' color={dfstyles.colors.dfyellow} height={23} width={23} />
       </TooltipTrigger>
     );
-  } else if ([EthTxStatus.Submit, EthTxStatus.Processing].includes(tx.state)) {
+  } else if ([TX_STATUS.Submit, TX_STATUS.Processing].includes(tx.state)) {
     element = (
       <TooltipTrigger name={TooltipName.Empty} extraContent='Submitting'>
         <Loader type='Circles' color={dfstyles.colors.dfblue} height={23} width={23} />
       </TooltipTrigger>
     );
-  } else if (tx.state === EthTxStatus.Confirm) {
+  } else if (tx.state === TX_STATUS.Confirm) {
     element = (
       <TooltipTrigger name={TooltipName.Empty} extraContent='Confirmed!'>
         {' '}
         <Icon type={IconType.Check} />
       </TooltipTrigger>
     );
-  } else if (tx.state === EthTxStatus.Cancel) {
+  } else if (tx.state === TX_STATUS.Cancel) {
     element = (
       <TooltipTrigger name={TooltipName.Empty} extraContent='Cancelled'>
         <Icon type={IconType.X} />
@@ -139,7 +149,7 @@ const TransactionActions = ({
 }) => {
   let actions;
 
-  if (tx.state === EthTxStatus.Fail) {
+  if (tx.state === TX_STATUS.Fail) {
     actions = (
       <TooltipTrigger name={TooltipName.RetryTransaction}>
         <ActionButton onClick={() => retryTransaction(tx)}>
@@ -147,7 +157,7 @@ const TransactionActions = ({
         </ActionButton>
       </TooltipTrigger>
     );
-  } else if (tx.state === EthTxStatus.Init) {
+  } else if (tx.state === TX_STATUS.Init) {
     actions = (
       <div
         style={{
@@ -172,7 +182,7 @@ const TransactionActions = ({
         </TooltipTrigger>
       </div>
     );
-  } else if (tx.state === EthTxStatus.Prioritized) {
+  } else if (tx.state === TX_STATUS.Prioritized) {
     actions = (
       <TooltipTrigger name={TooltipName.CancelTransaction}>
         <ActionButton onClick={() => cancelTransaction(tx)}>
@@ -246,7 +256,7 @@ function QueuedTransactionsTable({ transactions }: { transactions: Wrapper<Trans
 
   const queuedTransctions = useCallback(() => {
     return values(transactions.value).filter((tx) =>
-      [EthTxStatus.Init, EthTxStatus.Prioritized].includes(tx.state)
+      [TX_STATUS.Init, TX_STATUS.Prioritized].includes(tx.state)
     );
   }, [transactions]);
 
