@@ -121,6 +121,7 @@ import {
   TowardsCenterPattern,
   TowardsCenterPatternV2,
 } from '../Miner/MiningPatterns';
+import { stopEthConnection } from '../Network/Blockchain';
 import { eventLogger, EventType } from '../Network/EventLogger';
 import { SerializedPlugin } from '../Plugins/SerializedPlugin';
 import PersistentChunkStore from '../Storage/PersistentChunkStore';
@@ -582,6 +583,7 @@ class GameManager extends EventEmitter {
     }
     this.contractsAPI.destroy();
     this.persistentChunkStore.destroy();
+    void stopEthConnection();
     clearInterval(this.playerInterval);
     clearInterval(this.diagnosticsInterval);
     clearInterval(this.scoreboardInterval);

@@ -116,13 +116,13 @@ export const updatePlanetToTime = (
 
 export const applyUpgrade = (planet: Planet, upgrade: Upgrade, unApply = false) => {
   if (unApply) {
-    planet.speed /= upgrade.energyCapMultiplier / 100;
+    planet.energyCap /= upgrade.energyCapMultiplier / 100;
     planet.energyGrowth /= upgrade.energyGroMultiplier / 100;
     planet.range /= upgrade.rangeMultiplier / 100;
     planet.speed /= upgrade.speedMultiplier / 100;
     planet.defense /= upgrade.defMultiplier / 100;
   } else {
-    planet.speed *= upgrade.energyCapMultiplier / 100;
+    planet.energyCap *= upgrade.energyCapMultiplier / 100;
     planet.energyGrowth *= upgrade.energyGroMultiplier / 100;
     planet.range *= upgrade.rangeMultiplier / 100;
     planet.speed *= upgrade.speedMultiplier / 100;

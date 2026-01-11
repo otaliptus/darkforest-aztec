@@ -278,6 +278,7 @@ fn expected_artifact_type_and_bonus(seed: Field, biome: u8) -> (u8, u8) {
         } else {
             artifact_type = ARTIFACT_TYPE_WORMHOLE;
         }
+        // v0.6 parity: rarest bucket forces Photoid Cannon, overriding biome-specific picks.
         artifact_type = ARTIFACT_TYPE_PHOTOID_CANNON;
     }
 
@@ -1043,6 +1044,150 @@ unconstrained fn test_move_creates_arrival() {
         );
         let touched1 = context.storage_read(touched_slot1);
         assert_eq(touched1, to_location_id);
+    });
+}
+
+#[test]
+unconstrained fn test_move_known_creates_arrival() {
+    let (mut env, contract_address, _) = utils::setup();
+    let player = env.create_light_account();
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).init_player(
+            INIT_X,
+            INIT_Y,
+            INIT_RADIUS,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
+        )
+    );
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).reveal_location(
+            MOVE_X_2,
+            MOVE_Y_2,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+        )
+    );
+
+    let from_location_id = expected_location_id(INIT_X, INIT_Y);
+    let to_location_id = expected_location_id(MOVE_X_2, MOVE_Y_2);
+    let mut pre_population: u64 = 0;
+    let mut pre_pop_cap: u64 = 0;
+    let mut pre_pop_growth: u64 = 0;
+    let mut pre_last_updated: u64 = 0;
+    let mut pre_planet_type: u64 = 0;
+    let mut pre_pausers: u64 = 0;
+    let pre_population_ref = &mut pre_population;
+    let pre_pop_cap_ref = &mut pre_pop_cap;
+    let pre_pop_growth_ref = &mut pre_pop_growth;
+    let pre_last_updated_ref = &mut pre_last_updated;
+    let pre_planet_type_ref = &mut pre_planet_type;
+    let pre_pausers_ref = &mut pre_pausers;
+
+    env.public_context_at(contract_address, |context| {
+        let planet_slot =
+            derive_storage_slot_in_map(DarkForest::storage_layout().planets.slot, from_location_id);
+        *pre_population_ref = context.storage_read(planet_slot + 3);
+        *pre_pop_cap_ref = context.storage_read(planet_slot + 4);
+        *pre_pop_growth_ref = context.storage_read(planet_slot + 5);
+        *pre_last_updated_ref = context.storage_read(planet_slot + 12);
+        *pre_planet_type_ref = context.storage_read(planet_slot + 14);
+        let pausers_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().planet_pausers.slot,
+            from_location_id,
+        );
+        *pre_pausers_ref = context.storage_read(pausers_slot);
+    });
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).move_known(
+            INIT_X,
+            INIT_Y,
+            MOVE_X_2,
+            MOVE_Y_2,
+            utils::WORLD_RADIUS,
+            MOVE_DIST_MAX,
+            MOVE_POP_MOVED,
+            0,
+            0,
+            false,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+            utils::spacetype_config_hash(),
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+        )
+    );
+
+    env.public_context_at(contract_address, |context| {
+        let next_arrival_id =
+            context.storage_read(DarkForest::storage_layout().next_arrival_id.slot);
+        assert_eq(next_arrival_id, 2);
+
+        let arrival_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().arrivals.slot,
+            1,
+        );
+        let stored_player = context.storage_read(arrival_slot);
+        let stored_from = context.storage_read(arrival_slot + 1);
+        let stored_to = context.storage_read(arrival_slot + 2);
+        let pop_silver = context.storage_read(arrival_slot + 3);
+        let stored_pop_arriving = unpack_u64_high(pop_silver);
+        assert_eq(stored_player, player);
+        assert_eq(stored_from, from_location_id);
+        assert_eq(stored_to, to_location_id);
+        assert(stored_pop_arriving > 0);
+
+        let planet_slot =
+            derive_storage_slot_in_map(DarkForest::storage_layout().planets.slot, from_location_id);
+        let stored_population = context.storage_read(planet_slot + 3);
+        let post_last_updated = context.storage_read(planet_slot + 12);
+        let time_elapsed = (post_last_updated as u128) - (pre_last_updated as u128);
+        let refreshed_population = expected_population_after_time(
+            pre_population,
+            pre_pop_cap,
+            pre_pop_growth,
+            time_elapsed,
+            pre_planet_type as u8,
+            pre_pausers as u8,
+        );
+        let expected_remaining = if refreshed_population > MOVE_POP_MOVED {
+            refreshed_population - MOVE_POP_MOVED
+        } else {
+            0
+        };
+        assert(stored_population < pre_population);
+        assert_eq(stored_population, expected_remaining);
+
+        let arrival_list_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().planet_arrivals.slot,
+            to_location_id,
+        );
+        let packed = context.storage_read(arrival_list_slot);
+        let stored_arrival_id = unpack_u64_low(packed);
+        assert_eq(stored_arrival_id, 1);
     });
 }
 

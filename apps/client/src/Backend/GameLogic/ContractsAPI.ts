@@ -13,6 +13,7 @@ import type {
   RevealedCoords,
   Transaction,
   TxIntent,
+  UnconfirmedMove,
   VoyageId,
 } from '@darkforest_eth/types';
 import { EventEmitter } from 'events';
@@ -27,6 +28,7 @@ import {
   readArrivalState,
   readPlanetArtifactState,
   readPlanetArtifacts,
+  readPlanetInitialized,
   readRevealedCoordsCount,
   readRevealedCoordsRange,
   readTouchedPlanetIdsCount,
@@ -965,7 +967,16 @@ export class ContractsAPI extends EventEmitter {
         const y1Field = toFieldBigInt(y1);
         const x2Field = toFieldBigInt(x2);
         const y2Field = toFieldBigInt(y2);
-        return client.move(
+        const moveIntent = intent as UnconfirmedMove;
+        const toLocationId = toBigInt(moveIntent.to);
+        const isInitialized = await readPlanetInitialized(
+          this.aztecConnection.getNode(),
+          this.aztecConnection.getClient().darkforestAddress,
+          this.storageSlots,
+          toLocationId
+        );
+        const moveFn = isInitialized ? client.moveKnown : client.move;
+        return moveFn(
           x1Field,
           y1Field,
           x2Field,

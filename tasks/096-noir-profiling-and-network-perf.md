@@ -138,5 +138,69 @@ find_artifact:
 - mimc_sponge_2_220: 9.61% (perlin flags/seed)
 - mimc_sponge_2_220: 8.09% (location_id)
 
+### 2026-01-11 rerun (profiling refresh)
+Commands:
+```
+# Opcodes (reuse existing /tmp/df-prof artifacts)
+VERSION=$(cat ~/.aztec/default_version) && for fn in __aztec_nr_internals__init_player __aztec_nr_internals__move __aztec_nr_internals__reveal_location __aztec_nr_internals__find_artifact; do out=${fn#__aztec_nr_internals__}; docker run --rm --user $(id -u):$(id -g) -v /tmp:/tmp -v $HOME:$HOME -e HOME=$HOME --workdir="$PWD" --entrypoint=/usr/src/noir/noir-repo/target/release/noir-profiler aztecprotocol/aztec:$VERSION opcodes --artifact-path /tmp/df-prof/artifacts/${fn}.json --output /tmp/df-prof2/opcodes/${out}; done
+
+# Gates (fails: bb missing)
+VERSION=$(cat ~/.aztec/default_version) && for fn in __aztec_nr_internals__init_player __aztec_nr_internals__move __aztec_nr_internals__reveal_location __aztec_nr_internals__find_artifact; do out=${fn#__aztec_nr_internals__}; docker run --rm --user $(id -u):$(id -g) -v /tmp:/tmp -v $HOME:$HOME -e HOME=$HOME --workdir="$PWD" --entrypoint=/usr/src/noir/noir-repo/target/release/noir-profiler aztecprotocol/aztec:$VERSION gates --artifact-path /tmp/df-prof/artifacts/${fn}.json --backend-path bb --output /tmp/df-prof2/gates/${out}; done
+```
+
+Results:
+- Opcodes counts match prior run (init_player 31,637; move 31,997; reveal_location 29,295; find_artifact 29,297).
+- `noir-profiler gates` failed: `Error querying backend for gates: No such file or directory` (bb missing).
+
+### 2026-01-11 gates profiling attempts
+Commands:
+```
+# Install linux bb via bbup in Aztec container
+VERSION=$(cat ~/.aztec/default_version) && docker run --rm --user $(id -u):$(id -g) \
+  -v /tmp:/tmp -v $HOME:$HOME -e HOME=$HOME -e BB_PATH=/tmp/bb-linux \
+  --workdir="$PWD" --entrypoint=/bin/sh aztecprotocol/aztec:$VERSION -c "/Users/talip/.bb/bbup -nv 1.0.0-beta.15"
+
+# Try gates with bb (nightly)
+VERSION=$(cat ~/.aztec/default_version) && docker run --rm --user $(id -u):$(id -g) \
+  -v /tmp:/tmp -v $HOME:$HOME -e HOME=$HOME --workdir="$PWD" \
+  --entrypoint=/usr/src/noir/noir-repo/target/release/noir-profiler aztecprotocol/aztec:$VERSION gates \
+  --artifact-path /tmp/df-prof/artifacts/__aztec_nr_internals__move.json \
+  --backend-path /tmp/bb-linux/bb --output /tmp/df-prof2/gates/move
+
+# Install devnet bb to match Aztec version
+VERSION=$(cat ~/.aztec/default_version) && docker run --rm --user $(id -u):$(id -g) \
+  -v /tmp:/tmp -v $HOME:$HOME -e HOME=$HOME -e BB_PATH=/tmp/bb-linux-devnet \
+  --workdir="$PWD" --entrypoint=/bin/sh aztecprotocol/aztec:$VERSION -c "/Users/talip/.bb/bbup -v 3.0.0-devnet.20251212"
+
+# Try gates with devnet bb
+VERSION=$(cat ~/.aztec/default_version) && docker run --rm --user $(id -u):$(id -g) \
+  -v /tmp:/tmp -v $HOME:$HOME -e HOME=$HOME --workdir="$PWD" \
+  --entrypoint=/usr/src/noir/noir-repo/target/release/noir-profiler aztecprotocol/aztec:$VERSION gates \
+  --artifact-path /tmp/df-prof/artifacts/__aztec_nr_internals__move.json \
+  --backend-path /tmp/bb-linux-devnet/bb --output /tmp/df-prof2/gates/move
+
+# Decode ACIR bytecode and run bb gates directly (still fails)
+python3 - <<'PY'
+import base64, json, os
+src='/tmp/df-prof/artifacts/__aztec_nr_internals__move.json'
+out_dir='/tmp/df-prof2/bytecode'
+os.makedirs(out_dir, exist_ok=True)
+with open(src) as f:
+    data=json.load(f)
+raw=base64.b64decode(data['bytecode'])
+with open(os.path.join(out_dir,'move.acir.gz'), 'wb') as f:
+    f.write(raw)
+PY
+
+VERSION=$(cat ~/.aztec/default_version) && docker run --rm --user $(id -u):$(id -g) \
+  -v /tmp:/tmp -v $HOME:$HOME -e HOME=$HOME --workdir="$PWD" --entrypoint=/bin/sh \
+  aztecprotocol/aztec:$VERSION -c "/tmp/bb-linux-devnet/bb gates -b /tmp/df-prof2/bytecode/move.acir.gz --include_gates_per_opcode"
+```
+
+Results:
+- `noir-profiler gates` with `bb` (nightly) failed: `missing field gates_per_opcode`.
+- `noir-profiler gates` with devnet `bb` failed: `EOF while parsing a value`.
+- Direct `bb gates` fails: `UltraCircuitBuilder ... does not support CallData/ReturnData block constraints` (Aztec app needs MegaCircuitBuilder).
+
 ## Status
-- In progress (2026-01-09)
+- In progress (2026-01-11)

@@ -11,6 +11,30 @@ export async function loadDiamondContract() {
   throw new Error('Ethereum contracts are not supported in the Aztec client.');
 }
 
+let cachedConnection: AztecConnection | undefined;
+let cachedConnectionPromise: Promise<AztecConnection> | undefined;
+
 export function getEthConnection(): Promise<AztecConnection> {
-  return AztecConnectionImpl.connect(CLIENT_CONFIG, detailedLogger.getAztecLogFn());
+  if (cachedConnection) return Promise.resolve(cachedConnection);
+  if (cachedConnectionPromise) return cachedConnectionPromise;
+  cachedConnectionPromise = AztecConnectionImpl.connect(
+    CLIENT_CONFIG,
+    detailedLogger.getAztecLogFn()
+  )
+    .then((connection) => {
+      cachedConnection = connection;
+      return connection;
+    })
+    .catch((error) => {
+      cachedConnectionPromise = undefined;
+      throw error;
+    });
+  return cachedConnectionPromise;
+}
+
+export async function stopEthConnection(): Promise<void> {
+  if (!cachedConnection) return;
+  await cachedConnection.stop();
+  cachedConnection = undefined;
+  cachedConnectionPromise = undefined;
 }

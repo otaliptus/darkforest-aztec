@@ -190,6 +190,22 @@ export const readPlanetState = async (
     return decodePlanet(fields);
 };
 
+export const readPlanetInitialized = async (
+    node: AztecNode,
+    contractAddress: AztecAddress,
+    storageSlots: StorageSlots,
+    locationId: bigint
+) => {
+    const slot = requireSlot(storageSlots, "planets");
+    const value = await readPublicMapField(
+        node,
+        contractAddress,
+        slot,
+        fieldKey(locationId)
+    );
+    return toBool(value);
+};
+
 export const readPlanetArtifactState = async (
     node: AztecNode,
     contractAddress: AztecAddress,

@@ -47,9 +47,9 @@ pub contract DarkForest {
     };
 
     global MAX_COORD_ABS: u128 = 2147483648;
-    global MAX_PLANET_ARRIVALS: u8 = 12;
     global MAX_ARRIVALS_PER_BUCKET: u8 = 6;
     global MAX_PLANET_ARTIFACTS: u8 = 5;
+    global MOVE_KNOWN_FLAG: u64 = 0x8000000000000000;
     global ARRIVAL_TYPE_NORMAL: u8 = 1;
     global ARRIVAL_TYPE_PHOTOID: u8 = 2;
     global ARRIVAL_TYPE_WORMHOLE: u8 = 3;
@@ -69,8 +69,6 @@ pub contract DarkForest {
     global PLANET_TYPE_PLANET: u8 = 0;
     global PLANET_TYPE_SILVER_MINE: u8 = 1;
     global PLANET_TYPE_FOUNDRY: u8 = 2;
-    // Legacy alias kept for parity with earlier naming.
-    global PLANET_TYPE_RUINS: u8 = 2;
     global PLANET_TYPE_TRADING_POST: u8 = 3;
     global PLANET_TYPE_SILVER_BANK: u8 = 4;
 
@@ -2242,6 +2240,85 @@ pub contract DarkForest {
         );
     }
 
+    #[external("private")]
+    fn move_known(
+        x1: Field,
+        y1: Field,
+        x2: Field,
+        y2: Field,
+        radius: u64,
+        dist_max: u64,
+        pop_moved: u64,
+        silver_moved: u64,
+        moved_artifact_id: Field,
+        abandoning: bool,
+        planethash_key: Field,
+        spacetype_key: Field,
+        perlin_length_scale: u64,
+        perlin_mirror_x: bool,
+        perlin_mirror_y: bool,
+        expected_config_hash: Field,
+        max_location_id: Field,
+        world_radius: u64,
+    ) {
+        let player = self.context.msg_sender().unwrap();
+
+        let x1_abs = field_abs_u128(x1);
+        let y1_abs = field_abs_u128(y1);
+        let x2_abs = field_abs_u128(x2);
+        let y2_abs = field_abs_u128(y2);
+        assert(x1_abs <= MAX_COORD_ABS);
+        assert(y1_abs <= MAX_COORD_ABS);
+        assert(x2_abs <= MAX_COORD_ABS);
+        assert(y2_abs <= MAX_COORD_ABS);
+
+        let r_u = radius as u128;
+        let dist_from_origin_sq = x2_abs * x2_abs + y2_abs * y2_abs;
+        let r_sq = r_u * r_u;
+        assert(dist_from_origin_sq < r_sq);
+
+        let diff_x = signed_sub(field_to_signed(x1), field_to_signed(x2));
+        let diff_y = signed_sub(field_to_signed(y1), field_to_signed(y2));
+        let dist_sq = diff_x.mag * diff_x.mag + diff_y.mag * diff_y.mag;
+        assert(dist_max < MOVE_KNOWN_FLAG);
+        let dist_max_u = dist_max as u128;
+        assert(dist_sq <= dist_max_u * dist_max_u);
+
+        let cfg_hash = config_hash(
+            planethash_key,
+            spacetype_key,
+            perlin_length_scale,
+            perlin_mirror_x,
+            perlin_mirror_y,
+        );
+
+        let from_location_id = mimc_sponge_2_220(x1, y1, planethash_key);
+        let to_location_id = mimc_sponge_2_220(x2, y2, planethash_key);
+        assert(cfg_hash == expected_config_hash);
+        assert(radius <= world_radius);
+        assert(bn254::lt(to_location_id, max_location_id));
+
+        let dist_max_flagged = dist_max + MOVE_KNOWN_FLAG;
+        let move_config: u128 =
+            ((dist_max_flagged as u128) << 64) | (radius as u128);
+        let move_resources: u128 =
+            ((silver_moved as u128) << 64) | (pop_moved as u128);
+
+        self.enqueue(
+            DarkForest::at(self.context.this_address()).apply_move(
+                player,
+                from_location_id,
+                to_location_id,
+                0,
+                move_config,
+                move_resources,
+                moved_artifact_id,
+                cfg_hash,
+                abandoning,
+            )
+        );
+    }
+
     #[external("public")]
     #[only_self]
     fn apply_move(
@@ -2261,7 +2338,13 @@ pub contract DarkForest {
             self.internal.execute_arrival(arrival_id);
         } else {
         let config = self.storage.config.read();
-        let dist_max = (move_config >> 64) as u64;
+        let dist_max_raw = (move_config >> 64) as u64;
+        let require_to_initialized = dist_max_raw >= MOVE_KNOWN_FLAG;
+        let dist_max = if require_to_initialized {
+            dist_max_raw - MOVE_KNOWN_FLAG
+        } else {
+            dist_max_raw
+        };
         let mut pop_moved = move_resources as u64;
         let mut silver_moved = (move_resources >> 64) as u64;
 
@@ -2303,6 +2386,7 @@ pub contract DarkForest {
 
         let mut to_planet = self.storage.planets.at(to_location_id).read();
         if !to_planet.is_initialized {
+            assert(!require_to_initialized);
             to_planet = self.internal.default_planet(
                 AztecAddress::zero(),
                 to_location_id,

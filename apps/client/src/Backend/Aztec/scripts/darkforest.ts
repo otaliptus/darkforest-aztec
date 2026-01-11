@@ -75,6 +75,18 @@ export type DarkForestClient = {
         movedArtifactId: bigint,
         abandoning: boolean
     ) => Promise<SentTx>;
+    moveKnown: (
+        x1: bigint,
+        y1: bigint,
+        x2: bigint,
+        y2: bigint,
+        radius: bigint,
+        distMax: bigint,
+        popMoved: bigint,
+        silverMoved: bigint,
+        movedArtifactId: bigint,
+        abandoning: boolean
+    ) => Promise<SentTx>;
     upgradePlanet: (locationId: bigint, branch: number) => Promise<SentTx>;
     prospectPlanet: (locationId: bigint) => Promise<SentTx>;
     findArtifact: (x: bigint, y: bigint, biomebase: bigint) => Promise<SentTx>;
@@ -230,7 +242,15 @@ async function resolveSponsoredFpc(
     addressOverride: string | undefined,
     log?: ClientLogFn
 ) {
-    const sponsoredFpcArtifact = await loadSponsoredFpcArtifact();
+    let sponsoredFpcArtifact: ReturnType<typeof loadContractArtifact>;
+    try {
+        sponsoredFpcArtifact = await loadSponsoredFpcArtifact();
+    } catch (err) {
+        logStep(log, "SponsoredFPC artifact unavailable; sponsored fees disabled.", {
+            error: err instanceof Error ? err.message : String(err),
+        });
+        return undefined;
+    }
     if (addressOverride) {
         const address = AztecAddress.fromString(addressOverride);
         const instance = await node.getContract(address);
@@ -386,6 +406,40 @@ export async function connectDarkForest(
         ) =>
             darkforest.methods
                 .move(
+                    x1,
+                    y1,
+                    x2,
+                    y2,
+                    radius,
+                    distMax,
+                    popMoved,
+                    silverMoved,
+                    movedArtifactId,
+                    abandoning,
+                    perlinConfig.planethashKey,
+                    perlinConfig.spacetypeKey,
+                    perlinConfig.perlinLengthScale,
+                    perlinConfig.perlinMirrorX,
+                    perlinConfig.perlinMirrorY,
+                    gameConfig.configHashSpacetype,
+                    gameConfig.maxLocationId,
+                    gameConfig.worldRadius
+                )
+                .send(sendOptions),
+        moveKnown: (
+            x1,
+            y1,
+            x2,
+            y2,
+            radius,
+            distMax,
+            popMoved,
+            silverMoved,
+            movedArtifactId,
+            abandoning
+        ) =>
+            darkforest.methods
+                .move_known(
                     x1,
                     y1,
                     x2,
