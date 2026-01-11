@@ -123,7 +123,7 @@ const normalizeError = (error: unknown) => {
 };
 
 class DetailedLogger {
-  private enabled = toBool(getEnv('DF_DETAILED_LOGS'), false);
+  private enabled = toBool(getEnv('DF_DETAILED_LOGS') ?? getEnv('DF_FILE_LOGS'), false);
   private logToConsole = toBool(getEnv('DF_LOG_TO_CONSOLE'), VERBOSE_LOGGING);
   private fileHandle?: FileSystemFileHandle;
   private fileName?: string;

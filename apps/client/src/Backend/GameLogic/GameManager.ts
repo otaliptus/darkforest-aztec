@@ -207,6 +207,7 @@ class GameManager extends EventEmitter {
   private readonly contractsAPI: ContractsAPI;
   private readonly resolvingArrivals: Set<VoyageId>;
   private readonly arrivalResolveSkips: Map<VoyageId, number>;
+  private readonly arrivalResolveInflightSkips: Map<VoyageId, string>;
 
   /**
    * An object that syncs any newly added or deleted chunks to the player's IndexedDB.
@@ -461,6 +462,7 @@ class GameManager extends EventEmitter {
     this.contractsAPI = contractsAPI;
     this.resolvingArrivals = new Set();
     this.arrivalResolveSkips = new Map();
+    this.arrivalResolveInflightSkips = new Map();
 
     const revealedLocations = new Map<LocationId, RevealedLocation>();
     for (const [locationId, coords] of revealedCoords) {
@@ -3235,12 +3237,6 @@ class GameManager extends EventEmitter {
 
   private queueResolveArrival(arrival: QueuedArrival): void {
     if (this.resolvingArrivals.has(arrival.eventId)) return;
-    this.resolvingArrivals.add(arrival.eventId);
-    const logId = this.logActionStart('resolve_arrival', {
-      arrivalId: arrival.eventId,
-      fromPlanet: arrival.fromPlanet,
-      toPlanet: arrival.toPlanet,
-    });
     const shouldLog = VERBOSE_LOGGING || detailedLogger.isEnabled();
     const formatLocation = (id?: LocationId) => (id ? `0x${id}` : 'unknown');
     const formatAddress = (addr?: EthAddress) => addr ?? 'unknown';
@@ -3265,6 +3261,18 @@ class GameManager extends EventEmitter {
         `energy=${meta.energy ?? 'n/a'}`,
         `artifacts=${meta.artifacts ?? 'n/a'}`,
       ];
+      const inflightCount = meta.inflightCount as number | undefined;
+      if (typeof inflightCount === 'number') {
+        messageParts.push(`inflight=${inflightCount}`);
+      }
+      const inflightTxs = meta.inflightTxs as string[] | undefined;
+      if (inflightTxs && inflightTxs.length > 0) {
+        messageParts.push(`inflightTxs=${inflightTxs.join(',')}`);
+      }
+      const recheck = meta.recheck as string | undefined;
+      if (recheck) {
+        messageParts.push(`recheck=${recheck}`);
+      }
       if (meta.txHash) messageParts.push(`tx=${meta.txHash}`);
       if (meta.error) messageParts.push(`error=${meta.error}`);
       const message = messageParts.join(' ');
@@ -3272,6 +3280,35 @@ class GameManager extends EventEmitter {
       detailedLogger.log('game', 'resolve_arrival.summary', { label, message, ...meta });
       this.terminal.current?.println(message, style);
     };
+    const inflightMoves = this.getUnconfirmedMoves().filter(
+      (tx) => tx.intent.from === arrival.toPlanet || tx.intent.to === arrival.toPlanet
+    );
+    if (inflightMoves.length > 0) {
+      const inflightTxs = inflightMoves
+        .map((tx) => `${tx.id}:${formatLocation(tx.intent.from)}->${formatLocation(tx.intent.to)}`)
+        .sort();
+      const inflightKey = inflightTxs.join('|');
+      const previousKey = this.arrivalResolveInflightSkips.get(arrival.eventId);
+      if (previousKey !== inflightKey) {
+        logResolveSummary('resolve.skip_inflight', {
+          arrivalId: arrival.eventId,
+          fromPlanet: formatLocation(arrival.fromPlanet),
+          toPlanet: formatLocation(arrival.toPlanet),
+          currentBlock: this.getCurrentBlockNumber(),
+          inflightCount: inflightMoves.length,
+          inflightTxs,
+        });
+      }
+      this.arrivalResolveInflightSkips.set(arrival.eventId, inflightKey);
+      return;
+    }
+    this.arrivalResolveInflightSkips.delete(arrival.eventId);
+    this.resolvingArrivals.add(arrival.eventId);
+    const logId = this.logActionStart('resolve_arrival', {
+      arrivalId: arrival.eventId,
+      fromPlanet: arrival.fromPlanet,
+      toPlanet: arrival.toPlanet,
+    });
     void (async () => {
       let arrivalBlock = 0;
       let currentBlock = 0;
@@ -3337,14 +3374,49 @@ class GameManager extends EventEmitter {
           return;
         }
         const txHash = await this.contractsAPI.resolveArrival(arrival.eventId);
+        this.entityStore.clearArrival(toPlanet, arrival.eventId);
         logResolveSummary('resolve.sent', { ...resolveMeta, txHash });
         outcome = 'resolved';
       } catch (err) {
-        outcome = 'error';
         const errorMessage = (err as Error)?.message ?? String(err);
-        logResolveSummary('resolve.error', { ...resolveMeta, error: errorMessage }, TerminalTextStyle.Red);
+        let recheckStatus: 'missing' | 'present' | 'unknown' = 'unknown';
+        let recheckArrivalBlock: number | undefined;
+        try {
+          const recheckState = await this.contractsAPI.getArrivalState(arrival.eventId);
+          if (recheckState && recheckState.arrivalBlock === 0) {
+            recheckStatus = 'missing';
+          } else if (recheckState) {
+            recheckStatus = 'present';
+            recheckArrivalBlock = recheckState.arrivalBlock;
+          }
+        } catch {
+          recheckStatus = 'unknown';
+        }
+        if (recheckStatus === 'missing') {
+          outcome = 'missing_after_error';
+          this.entityStore.clearArrival(toPlanet, arrival.eventId);
+          logResolveSummary(
+            'resolve.missing_after_error',
+            { ...resolveMeta, error: errorMessage, recheck: recheckStatus },
+            TerminalTextStyle.Sub
+          );
+        } else {
+          outcome = 'error';
+          logResolveSummary(
+            'resolve.error',
+            {
+              ...resolveMeta,
+              error: errorMessage,
+              recheck: recheckStatus,
+              recheckArrivalBlock,
+            },
+            TerminalTextStyle.Red
+          );
+        }
         this.logActionError('resolve_arrival', logId, err, {
           ...resolveMeta,
+          recheck: recheckStatus,
+          recheckArrivalBlock,
         });
         console.error('[Aztec] resolve arrival failed', {
           arrivalId: arrival.eventId,
@@ -3352,10 +3424,13 @@ class GameManager extends EventEmitter {
           arrivalBlock,
           currentBlock,
           toPlanet,
+          recheck: recheckStatus,
+          recheckArrivalBlock,
         });
       } finally {
         this.resolvingArrivals.delete(arrival.eventId);
         this.arrivalResolveSkips.delete(arrival.eventId);
+        this.arrivalResolveInflightSkips.delete(arrival.eventId);
         await this.hardRefreshPlanet(toPlanet);
         this.logActionEnd('resolve_arrival', logId, {
           ...resolveMeta,

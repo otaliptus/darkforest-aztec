@@ -26,6 +26,25 @@ export const ALL_AUTO_GAS_SETTINGS = [
   AutoGasSetting.Fast,
 ];
 
+const env = process.env;
+
+const getEnv = (primary: string, fallback?: string) => {
+  const direct = env[primary];
+  if (direct !== undefined && direct !== '') return direct;
+  const legacy = env[`VITE_${primary}`];
+  if (legacy !== undefined && legacy !== '') return legacy;
+  return fallback;
+};
+
+const toBool = (value: string | undefined, fallback: boolean) => {
+  if (value === undefined) return fallback;
+  return value === 'true' || value === '1';
+};
+
+const defaultDetailedLogs = toBool(getEnv('DF_DETAILED_LOGS') ?? getEnv('DF_FILE_LOGS'), false)
+  ? 'true'
+  : 'false';
+
 function onlyInProduction(): string {
   return process.env.NODE_ENV === 'production' ? 'true' : 'false';
 }
@@ -70,6 +89,7 @@ const defaultSettings: Record<Setting, string> = {
   [Setting.RendererColorSpace]: '#0B0F34',
   [Setting.RendererColorDeepSpace]: '#0B061F',
   [Setting.RendererColorDeadSpace]: '#11291b',
+  [Setting.DetailedActionLogs]: defaultDetailedLogs,
 };
 
 interface SettingStorageConfig {

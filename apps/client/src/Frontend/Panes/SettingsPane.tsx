@@ -5,7 +5,7 @@ import styled from 'styled-components';
 import TutorialManager from '../../Backend/GameLogic/TutorialManager';
 import { Btn } from '../Components/Btn';
 import { Section, SectionHeader, Spacer } from '../Components/CoreUI';
-import { DarkForestTextInput, TextInput } from '../Components/Input';
+import { Checkbox, DarkForestCheckbox, DarkForestTextInput, TextInput } from '../Components/Input';
 import { Slider } from '../Components/Slider';
 import { Green, Red } from '../Components/Text';
 import Viewport, { getDefaultScroll } from '../Game/Viewport';
@@ -16,8 +16,10 @@ import {
   ColorSetting,
   MultiSelectSetting,
   NumberSetting,
+  useBooleanSetting,
 } from '../Utils/SettingsHooks';
 import { ModalPane } from '../Views/ModalPane';
+import { detailedLogger } from '../../Backend/Utils/DetailedLogger';
 
 const SCROLL_MIN = 0.0001 * 10000;
 const SCROLL_MAX = 0.01 * 10000;
@@ -166,6 +168,13 @@ export function SettingsPane({
     if (!isNaN(value)) setScrollSpeed(value);
   };
 
+  const [detailedLoggingEnabled, setDetailedLoggingEnabled] = useBooleanSetting(
+    uiManager,
+    Setting.DetailedActionLogs
+  );
+  const [logStatus, setLogStatus] = useState(detailedLogger.getStatus());
+  const [logNotice, setLogNotice] = useState<string>('');
+
   useEffect(() => {
     const scroll = localStorage.getItem('scrollSpeed');
     if (scroll) {
@@ -177,6 +186,36 @@ export function SettingsPane({
     if (!Viewport.instance) return;
     Viewport.instance.setMouseSensitivty(scrollSpeed / 10000);
   }, [scrollSpeed]);
+
+  useEffect(() => {
+    detailedLogger.setEnabled(detailedLoggingEnabled);
+  }, [detailedLoggingEnabled]);
+
+  useEffect(() => {
+    return detailedLogger.onStatus(setLogStatus);
+  }, []);
+
+  const onPickLogFile = async () => {
+    const ok = await detailedLogger.pickLogFile();
+    const status = detailedLogger.getStatus();
+    setLogStatus(status);
+    if (!ok && status.lastError) {
+      setLogNotice(status.lastError);
+    } else if (ok) {
+      setLogNotice(`Logging to ${status.fileName ?? 'selected file'}`);
+    }
+  };
+
+  const onDownloadLogs = () => {
+    detailedLogger.downloadRecentLogs();
+    setLogNotice('Downloaded recent logs.');
+  };
+
+  const onFlushLogs = async () => {
+    await detailedLogger.flush();
+    setLogStatus(detailedLogger.getStatus());
+    setLogNotice('Flushed buffered logs.');
+  };
 
   return (
     <ModalPane id={ModalName.Settings} title='Settings' visible={visible} onClose={onClose}>
@@ -317,6 +356,55 @@ export function SettingsPane({
             setting={Setting.OptOutMetrics}
             settingDescription='metrics opt out'
           />
+        </Section>
+
+        <Section>
+          <SectionHeader>Detailed Action Logs</SectionHeader>
+          Toggle high-detail logs for gameplay actions. Logs are written as NDJSON and can be
+          tailed while the game is running.
+          <Spacer height={8} />
+          <Row>
+            <span>Enable detailed logs</span>
+            <Checkbox
+              checked={detailedLoggingEnabled}
+              onChange={(e: Event & React.ChangeEvent<DarkForestCheckbox>) =>
+                setDetailedLoggingEnabled(e.target.checked)
+              }
+            />
+          </Row>
+          <Spacer height={8} />
+          <Row>
+            <span>File logging</span>
+            <Btn size='small' onClick={onPickLogFile}>
+              Pick Log File
+            </Btn>
+          </Row>
+          <Spacer height={8} />
+          <Row>
+            <span>Flush buffered logs</span>
+            <Btn size='small' onClick={onFlushLogs}>
+              Flush
+            </Btn>
+          </Row>
+          <Spacer height={8} />
+          <Row>
+            <span>Download recent logs</span>
+            <Btn size='small' onClick={onDownloadLogs}>
+              Download
+            </Btn>
+          </Row>
+          <Spacer height={8} />
+          <div>
+            Status: {logStatus.enabled ? 'enabled' : 'disabled'} ·{' '}
+            {logStatus.fileReady ? `file: ${logStatus.fileName ?? 'selected'}` : 'no file selected'}
+            {logStatus.lastError ? ` · error: ${logStatus.lastError}` : ''}
+          </div>
+          {logNotice ? (
+            <>
+              <Spacer height={8} />
+              <Green>{logNotice}</Green>
+            </>
+          ) : null}
         </Section>
 
         <Section>

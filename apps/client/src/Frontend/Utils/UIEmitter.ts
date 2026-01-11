@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { detailedLogger } from '../../Backend/Utils/DetailedLogger';
 
 export const enum UIEmitterEvent {
   GamePlanetSelected = 'GamePlanetSelected',
@@ -35,6 +36,15 @@ export const enum UIEmitterEvent {
 
 class UIEmitter extends EventEmitter {
   static instance: UIEmitter;
+  private readonly noisyEvents = new Set<string>([
+    UIEmitterEvent.CanvasMouseMove,
+    UIEmitterEvent.WorldMouseMove,
+    UIEmitterEvent.CanvasScroll,
+    UIEmitterEvent.CanvasMouseDown,
+    UIEmitterEvent.CanvasMouseUp,
+    UIEmitterEvent.WorldMouseDown,
+    UIEmitterEvent.WorldMouseUp,
+  ]);
 
   private constructor() {
     super();
@@ -52,6 +62,14 @@ class UIEmitter extends EventEmitter {
     const uiEmitter = new UIEmitter();
 
     return uiEmitter;
+  }
+
+  emit(event: UIEmitterEvent | string, ...args: unknown[]): boolean {
+    const eventName = String(event);
+    if (!this.noisyEvents.has(eventName)) {
+      detailedLogger.log('ui', eventName, { args }, 'debug');
+    }
+    return super.emit(event as string, ...args);
   }
 }
 

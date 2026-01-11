@@ -15,7 +15,7 @@ import { Slider } from '../Components/Slider';
 import { LongDash, Subber } from '../Components/Text';
 import { TooltipTrigger } from '../Panes/Tooltip';
 import dfstyles from '../Styles/dfstyles';
-import { useAccount, usePlanetInactiveArtifacts, useUIManager } from '../Utils/AppHooks';
+import { useAccount, useHoverPlanet, usePlanetInactiveArtifacts, useUIManager } from '../Utils/AppHooks';
 import { useEmitterValue } from '../Utils/EmitterHooks';
 import { useOnUp } from '../Utils/KeyEmitters';
 import { TOGGLE_ABANDON, TOGGLE_SEND } from '../Utils/ShortcutConstants';
@@ -74,6 +74,14 @@ const ResourceRowDetails = styled.div`
   display: inline-flex;
   align-items: center;
   gap: 4px;
+`;
+
+const TravelInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: ${dfstyles.colors.subtext};
+  font-size: 0.85em;
 `;
 
 function ResourceBar({
@@ -218,11 +226,39 @@ export function SendResources({
 
   const isAbandoning = useEmitterValue(uiManager.isAbandoning$, false);
   const isSendingForces = useEmitterValue(uiManager.isSending$, false);
+  const hoverPlanet = useHoverPlanet(uiManager).value;
+  const ethConnection = uiManager.getEthConnection();
+  const currentBlockNumber = useEmitterValue(
+    ethConnection.blockNumber$,
+    ethConnection.getCurrentBlockNumber()
+  );
   const energySending = uiManager.getForcesSending(locationId);
   const silverSending = uiManager.getSilverSending(locationId);
   const artifactSending = uiManager.getArtifactSending(locationId);
 
   const disableSliders = isSendingShip || isAbandoning;
+
+  const showTravelInfo = Boolean(isSendingForces || isSendingShip || isAbandoning);
+  let travelLine: string | undefined;
+  let travelSubLine: string | undefined;
+  if (showTravelInfo && p.value) {
+    if (!hoverPlanet || hoverPlanet.locationId === p.value.locationId) {
+      travelLine = 'Hover a target planet to see ETA.';
+    } else {
+      try {
+        const rawBlocks = uiManager
+          .getGameManager()
+          .getTimeForMove(p.value.locationId, hoverPlanet.locationId, isAbandoning && !isSendingShip);
+        const travelBlocks = Math.max(1, Math.floor(rawBlocks));
+        travelLine = `ETA: ${travelBlocks} blocks`;
+        if (currentBlockNumber > 0) {
+          travelSubLine = `Arrives at block ${currentBlockNumber + travelBlocks}`;
+        }
+      } catch (err) {
+        travelLine = 'ETA unavailable';
+      }
+    }
+  }
 
   const updateEnergySending = useCallback(
     (energyPercent) => {
@@ -356,6 +392,12 @@ export function SendResources({
             />
           )}
         </>
+      )}
+      {showTravelInfo && travelLine && (
+        <TravelInfo>
+          <span>{travelLine}</span>
+          {travelSubLine ? <span>{travelSubLine}</span> : null}
+        </TravelInfo>
       )}
       {p.value && artifacts.length > 0 && (
         <SelectArtifactRow
