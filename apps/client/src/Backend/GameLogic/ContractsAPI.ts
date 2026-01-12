@@ -36,6 +36,7 @@ import {
 } from '../Aztec/scripts/chain';
 import type { StorageSlots } from '../Aztec/scripts/storage';
 import {
+  FIELD_MODULUS,
   locationIdFromCoords,
   mimcSponge2_220,
   multiScalePerlin,
@@ -76,6 +77,11 @@ const toFieldBigInt = (value: number | bigint) => toField(BigInt(value));
 const INDEX_PAGE_SIZE = 200;
 const UNKNOWN_HASH = 'unknown';
 const READ_CONCURRENCY = 8;
+const planetRarityFromMaxLocationId = (maxLocationId: bigint) => {
+  if (maxLocationId <= 0n) return undefined;
+  const computed = FIELD_MODULUS / maxLocationId;
+  return computed < 1n ? 1n : computed;
+};
 const mapWithConcurrency = async <T, R>(
   items: T[],
   limit: number,
@@ -234,6 +240,22 @@ export class ContractsAPI extends EventEmitter {
 
     const cfg = this.onChainConfig;
     const upgrades = buildUpgrades();
+    const derivedRarity = planetRarityFromMaxLocationId(cfg.maxLocationId);
+    const effectivePlanetRarity =
+      derivedRarity && Number.isFinite(Number(derivedRarity))
+        ? Number(derivedRarity)
+        : Number(cfg.planetRarity);
+    if (
+      derivedRarity !== undefined &&
+      derivedRarity !== cfg.planetRarity &&
+      Number(cfg.planetRarity) !== effectivePlanetRarity
+    ) {
+      console.warn('[DF] planet_rarity mismatch; using max_location_id-derived rarity', {
+        planetRarity: cfg.planetRarity.toString(),
+        maxLocationId: cfg.maxLocationId.toString(),
+        effectivePlanetRarity,
+      });
+    }
 
     const constants: ContractConstants = {
       ADMIN_CAN_ADD_PLANETS: false,
@@ -262,7 +284,7 @@ export class ContractsAPI extends EventEmitter {
       BIOME_THRESHOLD_2: 17,
       SILVER_SCORE_VALUE: 100,
       PLANET_LEVEL_THRESHOLDS: PLANET_LEVEL_THRESHOLDS as ContractConstants['PLANET_LEVEL_THRESHOLDS'],
-      PLANET_RARITY: Number(cfg.planetRarity),
+      PLANET_RARITY: effectivePlanetRarity,
       PLANET_TRANSFER_ENABLED: false,
       PLANET_TYPE_WEIGHTS: PLANET_TYPE_WEIGHTS as ContractConstants['PLANET_TYPE_WEIGHTS'],
       ARTIFACT_POINT_VALUES: ARTIFACT_POINT_VALUES as ContractConstants['ARTIFACT_POINT_VALUES'],
