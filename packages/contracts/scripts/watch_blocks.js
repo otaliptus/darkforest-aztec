@@ -204,7 +204,7 @@ const ensureTicker = async (node) => {
     const player = decodePlayer(fields);
     if (!player.isInitialized) {
       throw new Error(
-        "Admin account is not initialized in DarkForest (player not found)."
+        "Tick account is not initialized in DarkForest (player not found)."
       );
     }
     locationId = player.homePlanet;
@@ -230,6 +230,7 @@ const main = async () => {
 
   let lastBlock = undefined;
   let lastTickAt = 0;
+  let warnedTickDisabled = false;
 
   while (true) {
     try {
@@ -269,21 +270,11 @@ const main = async () => {
         const now = Date.now();
         if (lastBlock !== undefined && latestNum === lastBlock) {
           if (now - lastTickAt >= TICK_EVERY_MS) {
-            try {
-              const sent = await ticker.darkforest.methods
-                .admin_set_planet_owner(
-                  ticker.locationId,
-                  ticker.account.address
-                )
-                .send({ from: ticker.account.address, fee: ticker.fee });
-              await sent.wait({ timeout: TICK_TIMEOUT_MS });
-              console.log(`[${nowIso()}] tick tx confirmed`);
-            } catch (err) {
-              const msg =
-                err && typeof err === "object" && "message" in err
-                  ? err.message
-                  : String(err);
-              console.error(`[${nowIso()}] tick tx failed: ${msg}`);
+            if (!warnedTickDisabled) {
+              console.warn(
+                "[watch_blocks] tick tx disabled (admin actions removed); use the Ticker contract directly if needed."
+              );
+              warnedTickDisabled = true;
             }
             lastTickAt = now;
           }

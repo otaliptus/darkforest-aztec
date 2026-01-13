@@ -55,6 +55,7 @@ const DEFAULT_CONFIG = {
 const DEFAULT_INIT = { x: 990n, y: 0n, radius: 1000n };
 const DEFAULT_INIT_2 = { x: 0n, y: 990n, radius: 1000n };
 
+
 const PLANET_TYPE_PLANET = 0;
 const PLANET_TYPE_SILVER_MINE = 1;
 const PLANET_TYPE_RUINS = 2;
@@ -326,7 +327,7 @@ const ensureAccounts = async (wallet, node, txTimeoutMs, fee) => {
         if (!account0 || !account1) {
             throw new Error("Need at least two test accounts.");
         }
-        const admin = await wallet.createSchnorrAccount(
+        const player1 = await wallet.createSchnorrAccount(
             account0.secret,
             account0.salt,
             account0.signingKey
@@ -356,9 +357,9 @@ const ensureAccounts = async (wallet, node, txTimeoutMs, fee) => {
                 throw err;
             }
         };
-        await deployIfMissing("admin", admin, false);
+        await deployIfMissing("player1", player1, false);
         await deployIfMissing("player2", player2, true);
-        return { admin, player2 };
+        return { player1, player2 };
     };
     const accounts = await getInitialTestAccountsData();
     return deployAccounts(accounts[0], accounts[1]);
@@ -1005,9 +1006,9 @@ async function main() {
     const fee = sponsoredAddress
         ? { paymentMethod: new SponsoredFeePaymentMethod(sponsoredAddress) }
         : undefined;
-    const { admin, player2 } = await ensureAccounts(wallet, node, txTimeoutMs, fee);
+    const { player1, player2 } = await ensureAccounts(wallet, node, txTimeoutMs, fee);
     log("info", "e2e.accounts", {
-        admin: admin.address.toString(),
+        player1: player1.address.toString(),
         player2: player2.address.toString(),
     });
     const mineEmptyBlock = createEmptyBlockMiner(l1RpcUrl);
@@ -1024,20 +1025,19 @@ async function main() {
 
     if (deploy) {
         console.log("Deploying NFT + DarkForest...");
-        const nftDeploy = Contract.deploy(wallet, nftArtifact, [admin.address]);
-        nft = await nftDeploy.send({ from: admin.address, fee }).deployed();
+        const nftDeploy = Contract.deploy(wallet, nftArtifact, [player1.address]);
+        nft = await nftDeploy.send({ from: player1.address, fee }).deployed();
 
         const config = DEFAULT_CONFIG;
         const dfDeploy = Contract.deploy(wallet, darkforestArtifact, [
-            admin.address,
             config,
             nft.address,
         ]);
-        darkforest = await dfDeploy.send({ from: admin.address, fee }).deployed();
+        darkforest = await dfDeploy.send({ from: player1.address, fee }).deployed();
 
         await nft.methods
             .set_minter(darkforest.address)
-            .send({ from: admin.address, fee })
+            .send({ from: player1.address, fee })
             .wait({ timeout: txTimeoutMs });
         log("info", "e2e.deploy", {
             darkforest: darkforest.address.toString(),
@@ -1074,14 +1074,12 @@ async function main() {
         config.perlinMirrorY
     );
     assert(spacetypeHashCheck === config.configHashSpacetype, "config hash mismatch");
-    const burnLocationId = config.maxLocationId;
-
     console.log("Running end-to-end flow...");
 
     await sendTx(
-        "init_player (admin)",
+        "init_player (player1)",
         darkforest.methods.init_player(...buildInitArgs(DEFAULT_INIT.x, DEFAULT_INIT.y, DEFAULT_INIT.radius, config)),
-        admin.address,
+        player1.address,
         fee,
         txTimeoutMs
     );
@@ -1097,7 +1095,7 @@ async function main() {
     await expectFail(
         "init_player repeat should fail",
         darkforest.methods.init_player(...buildInitArgs(DEFAULT_INIT.x, DEFAULT_INIT.y, DEFAULT_INIT.radius, config)),
-        admin.address,
+        player1.address,
         fee,
         txTimeoutMs
     );
@@ -1105,20 +1103,20 @@ async function main() {
     await expectFail(
         "reveal_location out of bounds should fail",
         darkforest.methods.reveal_location(...buildRevealArgs(MAX_COORD_ABS + 1n, 0n, config)),
-        admin.address,
+        player1.address,
         fee,
         txTimeoutMs
     );
 
-    const adminState = await readPlayerState(node, darkforest.address, dfSlots, admin.address);
+    const player1State = await readPlayerState(node, darkforest.address, dfSlots, player1.address);
     const player2State = await readPlayerState(node, darkforest.address, dfSlots, player2.address);
-    assert(adminState.isInitialized, "admin should be initialized");
+    assert(player1State.isInitialized, "player1 should be initialized");
     assert(player2State.isInitialized, "player2 should be initialized");
 
-    const home1Id = adminState.homePlanet;
+    const home1Id = player1State.homePlanet;
     const home2Id = player2State.homePlanet;
     const home1 = await readPlanetState(node, darkforest.address, dfSlots, home1Id);
-    assert(home1.owner.equals(admin.address), "home1 owner mismatch");
+    assert(home1.owner.equals(player1.address), "home1 owner mismatch");
     const tickBlock = async () => {
         if (mineEmptyBlocks) {
             const before = await getBlockNumber(node);
@@ -1137,26 +1135,26 @@ async function main() {
         }
 
         emptyBlockMisses = 0;
-        await sendTx(
-            "tick_block",
-            darkforest.methods.admin_set_planet_owner(home2Id, player2.address),
-            admin.address,
-            fee,
-            txTimeoutMs
-        );
+        log("warn", "e2e.tick", {
+            message: "tick tx disabled; rely on empty blocks or sequencer cadence.",
+        });
     };
 
-    const moveTarget = { x: DEFAULT_INIT.x + 3n, y: DEFAULT_INIT.y + 3n };
-    const moveTargetId = locationIdFromCoords(moveTarget.x, moveTarget.y, config.planethashKey);
-    const moveDistMax = calcDistMax({ x: DEFAULT_INIT.x, y: DEFAULT_INIT.y }, moveTarget);
+    const targetPlanet = findPlanetOfType(
+        DEFAULT_INIT,
+        config,
+        PLANET_TYPE_PLANET,
+        searchMaxDist
+    );
+    const moveDistMax = calcDistMax({ x: DEFAULT_INIT.x, y: DEFAULT_INIT.y }, targetPlanet);
 
     await expectFail(
         "move with insufficient population should fail",
         darkforest.methods.move(
             DEFAULT_INIT.x,
             DEFAULT_INIT.y,
-            moveTarget.x,
-            moveTarget.y,
+            targetPlanet.x,
+            targetPlanet.y,
             config.worldRadius,
             BigInt(moveDistMax),
             home1.population + 1n,
@@ -1172,118 +1170,39 @@ async function main() {
             config.maxLocationId,
             config.worldRadius
         ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const ruins = findPlanetOfType(DEFAULT_INIT, config, PLANET_TYPE_RUINS, searchMaxDist);
-    const tradingPost = findPlanetOfType(DEFAULT_INIT, config, PLANET_TYPE_TRADING_POST, searchMaxDist);
-
-    await sendTx(
-        "reveal_location (ruins)",
-        darkforest.methods.reveal_location(...buildRevealArgs(ruins.x, ruins.y, config)),
-        admin.address,
+        player1.address,
         fee,
         txTimeoutMs
     );
 
     await sendTx(
-        "reveal_location (trading post)",
-        darkforest.methods.reveal_location(...buildRevealArgs(tradingPost.x, tradingPost.y, config)),
-        admin.address,
+        "reveal_location (target)",
+        darkforest.methods.reveal_location(...buildRevealArgs(targetPlanet.x, targetPlanet.y, config)),
+        player1.address,
         fee,
         txTimeoutMs
     );
 
-    const revealedRuins = await readRevealed(node, darkforest.address, dfSlots, ruins.locationId);
-    assert(revealedRuins.locationId === ruins.locationId, "ruins reveal missing");
-
-    const extraPlanets = [
-        { label: "wormholeA", x: DEFAULT_INIT.x + 1n, y: DEFAULT_INIT.y },
-        { label: "wormholeB", x: DEFAULT_INIT.x + 2n, y: DEFAULT_INIT.y },
-        { label: "photoid", x: DEFAULT_INIT.x, y: DEFAULT_INIT.y + 1n },
-        { label: "shield", x: DEFAULT_INIT.x, y: DEFAULT_INIT.y + 2n },
-        { label: "bloom", x: DEFAULT_INIT.x + 1n, y: DEFAULT_INIT.y + 1n },
-        { label: "black", x: DEFAULT_INIT.x + 2n, y: DEFAULT_INIT.y + 1n },
-        { label: "shipMove", x: DEFAULT_INIT.x + 1n, y: DEFAULT_INIT.y + 2n },
-        { label: "shipActivate", x: DEFAULT_INIT.x + 2n, y: DEFAULT_INIT.y + 2n },
-    ];
-
-    const planetCoords = {};
-    for (const planet of extraPlanets) {
-        await sendTx(
-            `reveal_location (${planet.label})`,
-            darkforest.methods.reveal_location(...buildRevealArgs(planet.x, planet.y, config)),
-            admin.address,
-            fee,
-            txTimeoutMs
-        );
-        planetCoords[planet.label] = {
-            ...planet,
-            locationId: locationIdFromCoords(planet.x, planet.y, config.planethashKey),
-        };
-    }
-
-    await sendTx(
-        "admin_set_planet_owner (ruins)",
-        darkforest.methods.admin_set_planet_owner(ruins.locationId, admin.address),
-        admin.address,
-        fee,
-        txTimeoutMs
+    const revealedTarget = await readRevealed(
+        node,
+        darkforest.address,
+        dfSlots,
+        targetPlanet.locationId
     );
+    assert(revealedTarget.locationId === targetPlanet.locationId, "target reveal missing");
 
-    await sendTx(
-        "admin_set_planet_owner (trading post)",
-        darkforest.methods.admin_set_planet_owner(tradingPost.locationId, admin.address),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    await sendTx(
-        "admin_set_planet_type_and_level (trading post)",
-        darkforest.methods.admin_set_planet_type_and_level(tradingPost.locationId, PLANET_TYPE_TRADING_POST, 5),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    for (const planet of ["wormholeA", "wormholeB", "photoid", "shield", "bloom", "black", "shipMove"]) {
-        await sendTx(
-            `admin_set_planet_owner (${planet})`,
-            darkforest.methods.admin_set_planet_owner(planetCoords[planet].locationId, admin.address),
-            admin.address,
-            fee,
-            txTimeoutMs
-        );
-        await sendTx(
-            `admin_set_planet_type_and_level (${planet})`,
-            darkforest.methods.admin_set_planet_type_and_level(planetCoords[planet].locationId, PLANET_TYPE_PLANET, 2),
-            admin.address,
-            fee,
-            txTimeoutMs
-        );
-    }
-
-    await sendTx(
-        "admin_set_planet_type_and_level (shipActivate target)",
-        darkforest.methods.admin_set_planet_type_and_level(planetCoords.shipActivate.locationId, PLANET_TYPE_PLANET, 1),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
+    const movePopulation = home1.population / 2n;
+    assert(movePopulation > 0n, "move population too low");
     await sendTx(
         "move (home -> target)",
         darkforest.methods.move(
             DEFAULT_INIT.x,
             DEFAULT_INIT.y,
-            moveTarget.x,
-            moveTarget.y,
+            targetPlanet.x,
+            targetPlanet.y,
             config.worldRadius,
             BigInt(moveDistMax),
-            10000n,
+            movePopulation,
             0n,
             0n,
             false,
@@ -1296,7 +1215,7 @@ async function main() {
             config.maxLocationId,
             config.worldRadius
         ),
-        admin.address,
+        player1.address,
         fee,
         txTimeoutMs
     );
@@ -1305,712 +1224,19 @@ async function main() {
         node,
         darkforest,
         dfSlots,
-        moveTargetId,
-        admin.address,
+        targetPlanet.locationId,
+        player1.address,
         fee,
         blockTimeoutMs,
         tickBlock
     );
-    const movedPlanet = await readPlanetState(node, darkforest.address, dfSlots, moveTargetId);
-    assert(movedPlanet.owner.equals(admin.address), "move target owner mismatch");
-
-    await sendTx(
-        "admin_set_planet_silver (upgrade prep)",
-        darkforest.methods.admin_set_planet_silver(home1Id, 1_000_000n),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-    await sendTx(
-        "admin_set_planet_type_and_level (upgrade prep)",
-        darkforest.methods.admin_set_planet_type_and_level(home1Id, PLANET_TYPE_PLANET, 2),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const preUpgrade = await readPlanetState(node, darkforest.address, dfSlots, home1Id);
-    await sendTx(
-        "upgrade_planet (defense)",
-        darkforest.methods.upgrade_planet(home1Id, 0),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-    const postUpgrade = await readPlanetState(node, darkforest.address, dfSlots, home1Id);
-    assert(postUpgrade.upgradeState0 === preUpgrade.upgradeState0 + 1, "upgrade did not apply");
-
-    await sendTx(
-        "prospect_planet (ruins)",
-        darkforest.methods.prospect_planet(ruins.locationId),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const artifactState = await readPlanetArtifactState(node, darkforest.address, dfSlots, ruins.locationId);
-    assert(artifactState.prospectedBlockNumber > 0, "prospect did not set block");
-
-    const biomebase = multiScalePerlin(
-        ruins.x,
-        ruins.y,
-        config.biomebaseKey,
-        config.perlinLengthScale,
-        config.perlinMirrorX,
-        config.perlinMirrorY
-    );
-
-    await sendTx(
-        "find_artifact (ruins)",
-        darkforest.methods.find_artifact(...buildFindArtifactArgs(ruins.x, ruins.y, biomebase, config)),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const ruinsArtifacts = await readPlanetArtifacts(node, darkforest.address, dfSlots, ruins.locationId);
-    const foundArtifactId = ruinsArtifacts.ids.find((id) => id !== 0n);
-    assert(foundArtifactId, "find_artifact did not add artifact");
-
-    const foundArtifact = await readArtifactState(node, darkforest.address, dfSlots, foundArtifactId);
-    assert(foundArtifact.isInitialized, "artifact not initialized");
-
-    const foundOwner = await readNftOwner(node, nft.address, nftSlots, foundArtifactId);
-    assert(foundOwner.equals(darkforest.address), "artifact NFT owner mismatch");
-
-    const tradingArtifactId = mimcSponge2_220(tradingPost.locationId, 11111n, config.planethashKey);
-    await sendTx(
-        "admin_create_artifact_on_planet (trading post)",
-        darkforest.methods.admin_create_artifact_on_planet(
-            tradingPost.locationId,
-            tradingArtifactId,
-            ARTIFACT_TYPE_MONOLITH,
-            ARTIFACT_RARITY_COMMON,
-            expectedBiome(biomebase),
-            darkforest.address
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    await expectFail(
-        "trade_artifact withdraw by non-owner should fail",
-        darkforest.methods.trade_artifact(tradingPost.locationId, tradingArtifactId, true),
-        player2.address,
-        fee,
-        txTimeoutMs
-    );
-
-    await sendTx(
-        "trade_artifact withdraw",
-        darkforest.methods.trade_artifact(tradingPost.locationId, tradingArtifactId, true),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const afterWithdrawLocation = await readArtifactLocation(
+    const movedPlanet = await readPlanetState(
         node,
         darkforest.address,
         dfSlots,
-        tradingArtifactId
+        targetPlanet.locationId
     );
-    assert(afterWithdrawLocation === 0n, "artifact should be in wallet after withdraw");
-
-    await sendTx(
-        "trade_artifact deposit",
-        darkforest.methods.trade_artifact(tradingPost.locationId, tradingArtifactId, false),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const afterDepositLocation = await readArtifactLocation(
-        node,
-        darkforest.address,
-        dfSlots,
-        tradingArtifactId
-    );
-    assert(afterDepositLocation === tradingPost.locationId, "artifact should be on trading post");
-    const afterDepositOwner = await readNftOwner(
-        node,
-        nft.address,
-        nftSlots,
-        tradingArtifactId
-    );
-    assert(afterDepositOwner.equals(darkforest.address), "deposit NFT owner mismatch");
-
-    const wormholeStash = planetCoords.wormholeA;
-    const wormholeArtifactId = mimcSponge2_220(home1Id, 22222n, config.planethashKey);
-    await sendTx(
-        "admin_create_artifact_on_planet (wormhole)",
-        darkforest.methods.admin_create_artifact_on_planet(
-            home1Id,
-            wormholeArtifactId,
-            ARTIFACT_TYPE_WORMHOLE,
-            ARTIFACT_RARITY_RARE,
-            expectedBiome(biomebase),
-            darkforest.address
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    await sendTx(
-        "activate wormhole",
-        darkforest.methods.set_artifact_activation(
-            home1Id,
-            wormholeArtifactId,
-            planetCoords.wormholeB.locationId,
-            true
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const wormholeArtifact = await readArtifactState(node, darkforest.address, dfSlots, wormholeArtifactId);
-    assert(wormholeArtifact.wormholeTo === planetCoords.wormholeB.locationId, "wormhole target mismatch");
-    assert(
-        wormholeArtifact.lastActivated > wormholeArtifact.lastDeactivated,
-        "wormhole should be active"
-    );
-
-    const wormholeFrom = await readPlanetState(node, darkforest.address, dfSlots, home1Id);
-    const wormholeTo = await readPlanetState(
-        node,
-        darkforest.address,
-        dfSlots,
-        planetCoords.wormholeB.locationId
-    );
-    assert(wormholeFrom.owner.equals(admin.address), "wormhole from owner mismatch");
-    assert(wormholeTo.owner.equals(admin.address), "wormhole to owner mismatch");
-    const wormholePopMoved = wormholeFrom.population / 2n;
-    assert(wormholePopMoved > 0n, "wormhole from population too low");
-
-    const wormholeDist = calcDistMax(DEFAULT_INIT, planetCoords.wormholeB);
-    await sendTx(
-        "move via wormhole",
-        darkforest.methods.move(
-            DEFAULT_INIT.x,
-            DEFAULT_INIT.y,
-            planetCoords.wormholeB.x,
-            planetCoords.wormholeB.y,
-            config.worldRadius,
-            BigInt(wormholeDist),
-            wormholePopMoved,
-            0n,
-            0n,
-            false,
-            config.planethashKey,
-            config.spacetypeKey,
-            config.perlinLengthScale,
-            config.perlinMirrorX,
-            config.perlinMirrorY,
-            config.configHashSpacetype,
-            config.maxLocationId,
-            config.worldRadius
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const wormholeArrival = await readPlanetArrivals(
-        node,
-        darkforest.address,
-        dfSlots,
-        planetCoords.wormholeB.locationId
-    );
-    const wormholeArrivalId = wormholeArrival.ids.find((id) => id !== 0n);
-    const wormholeArrivalState = await readArrivalState(
-        node,
-        darkforest.address,
-        dfSlots,
-        wormholeArrivalId
-    );
-    assert(wormholeArrivalState.arrivalType === ARRIVAL_TYPE_WORMHOLE, "wormhole arrival type mismatch");
-    await resolveArrival(
-        node,
-        darkforest,
-        dfSlots,
-        planetCoords.wormholeB.locationId,
-        admin.address,
-        fee,
-        blockTimeoutMs,
-        tickBlock
-    );
-
-    await sendTx(
-        "deactivate wormhole",
-        darkforest.methods.set_artifact_activation(
-            home1Id,
-            wormholeArtifactId,
-            0n,
-            false
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-    const wormholeAfterDeactivate = await readArtifactState(
-        node,
-        darkforest.address,
-        dfSlots,
-        wormholeArtifactId
-    );
-    assert(
-        wormholeAfterDeactivate.lastDeactivated >= wormholeAfterDeactivate.lastActivated,
-        "wormhole should be inactive after deactivation"
-    );
-
-    await expectFail(
-        "activate wormhole during cooldown should fail",
-        darkforest.methods.set_artifact_activation(
-            home1Id,
-            wormholeArtifactId,
-            planetCoords.wormholeB.locationId,
-            true
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const wormholeCarryFrom = await readPlanetState(node, darkforest.address, dfSlots, home1Id);
-    const wormholeCarryPop = wormholeCarryFrom.population / 2n;
-    assert(wormholeCarryPop > 0n, "wormhole carry population too low");
-    const wormholeCarryDist = calcDistMax(DEFAULT_INIT, wormholeStash);
-    await sendTx(
-        "move wormhole artifact off home",
-        darkforest.methods.move(
-            DEFAULT_INIT.x,
-            DEFAULT_INIT.y,
-            wormholeStash.x,
-            wormholeStash.y,
-            config.worldRadius,
-            BigInt(wormholeCarryDist),
-            wormholeCarryPop,
-            0n,
-            wormholeArtifactId,
-            false,
-            config.planethashKey,
-            config.spacetypeKey,
-            config.perlinLengthScale,
-            config.perlinMirrorX,
-            config.perlinMirrorY,
-            config.configHashSpacetype,
-            config.maxLocationId,
-            config.worldRadius
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-    await resolveArrival(
-        node,
-        darkforest,
-        dfSlots,
-        wormholeStash.locationId,
-        admin.address,
-        fee,
-        blockTimeoutMs,
-        tickBlock
-    );
-    const wormholeLocation = await readArtifactLocation(
-        node,
-        darkforest.address,
-        dfSlots,
-        wormholeArtifactId
-    );
-    assert(wormholeLocation === wormholeStash.locationId, "wormhole should be moved off home");
-
-    const photoidArtifactId = mimcSponge2_220(home1Id, 33333n, config.planethashKey);
-    await sendTx(
-        "admin_create_artifact_on_planet (photoid)",
-        darkforest.methods.admin_create_artifact_on_planet(
-            home1Id,
-            photoidArtifactId,
-            ARTIFACT_TYPE_PHOTOID_CANNON,
-            ARTIFACT_RARITY_COMMON,
-            expectedBiome(biomebase),
-            darkforest.address
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    await sendTx(
-        "activate photoid",
-        darkforest.methods.set_artifact_activation(
-            home1Id,
-            photoidArtifactId,
-            0n,
-            true
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const startBlock = await getBlockNumber(node);
-    await waitForBlock(
-        node,
-        startBlock + PHOTOID_ACTIVATION_DELAY_BLOCKS,
-        blockTimeoutMs,
-        tickBlock
-    );
-
-    const photoidTarget = planetCoords.shipMove;
-    const photoidDist = calcDistMax(DEFAULT_INIT, photoidTarget);
-    const photoidFrom = await readPlanetState(node, darkforest.address, dfSlots, home1Id);
-    const photoidPopMoved = photoidFrom.population / 2n;
-    assert(photoidPopMoved > 0n, "photoid from population too low");
-    await sendTx(
-        "move with photoid",
-        darkforest.methods.move(
-            DEFAULT_INIT.x,
-            DEFAULT_INIT.y,
-            photoidTarget.x,
-            photoidTarget.y,
-            config.worldRadius,
-            BigInt(photoidDist),
-            photoidPopMoved,
-            0n,
-            0n,
-            false,
-            config.planethashKey,
-            config.spacetypeKey,
-            config.perlinLengthScale,
-            config.perlinMirrorX,
-            config.perlinMirrorY,
-            config.configHashSpacetype,
-            config.maxLocationId,
-            config.worldRadius
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const photoidArrivals = await readPlanetArrivals(node, darkforest.address, dfSlots, photoidTarget.locationId);
-    const photoidArrivalId = photoidArrivals.ids.find((id) => id !== 0n);
-    const photoidArrival = await readArrivalState(node, darkforest.address, dfSlots, photoidArrivalId);
-    assert(photoidArrival.arrivalType === ARRIVAL_TYPE_PHOTOID, "photoid arrival type mismatch");
-    await resolveArrival(
-        node,
-        darkforest,
-        dfSlots,
-        photoidTarget.locationId,
-        admin.address,
-        fee,
-        blockTimeoutMs,
-        tickBlock
-    );
-
-    const photoidLocation = await readArtifactLocation(
-        node,
-        darkforest.address,
-        dfSlots,
-        photoidArtifactId
-    );
-    assert(
-        photoidLocation === burnLocationId,
-        "photoid artifact should be burned after firing"
-    );
-    const photoidOwner = await readNftOwner(node, nft.address, nftSlots, photoidArtifactId);
-    assert(
-        photoidOwner.equals(darkforest.address),
-        "photoid NFT owner should be contract after burn"
-    );
-
-    const shieldArtifactId = mimcSponge2_220(planetCoords.shield.locationId, 44444n, config.planethashKey);
-    await sendTx(
-        "admin_create_artifact_on_planet (shield)",
-        darkforest.methods.admin_create_artifact_on_planet(
-            planetCoords.shield.locationId,
-            shieldArtifactId,
-            ARTIFACT_TYPE_PLANETARY_SHIELD,
-            ARTIFACT_RARITY_COMMON,
-            expectedBiome(biomebase),
-            darkforest.address
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    await sendTx(
-        "activate shield",
-        darkforest.methods.set_artifact_activation(
-            planetCoords.shield.locationId,
-            shieldArtifactId,
-            0n,
-            true
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    await sendTx(
-        "deactivate shield",
-        darkforest.methods.set_artifact_activation(
-            planetCoords.shield.locationId,
-            shieldArtifactId,
-            0n,
-            false
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const shieldLocation = await readArtifactLocation(
-        node,
-        darkforest.address,
-        dfSlots,
-        shieldArtifactId
-    );
-    assert(shieldLocation === burnLocationId, "shield should be burned on deactivate");
-    const shieldOwner = await readNftOwner(node, nft.address, nftSlots, shieldArtifactId);
-    assert(
-        shieldOwner.equals(darkforest.address),
-        "shield NFT owner should be contract after burn"
-    );
-
-    const bloomArtifactId = mimcSponge2_220(planetCoords.bloom.locationId, 55555n, config.planethashKey);
-    await sendTx(
-        "admin_create_artifact_on_planet (bloom)",
-        darkforest.methods.admin_create_artifact_on_planet(
-            planetCoords.bloom.locationId,
-            bloomArtifactId,
-            ARTIFACT_TYPE_BLOOM_FILTER,
-            ARTIFACT_RARITY_COMMON,
-            expectedBiome(biomebase),
-            darkforest.address
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    await sendTx(
-        "activate bloom filter",
-        darkforest.methods.set_artifact_activation(
-            planetCoords.bloom.locationId,
-            bloomArtifactId,
-            0n,
-            true
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const bloomPlanet = await readPlanetState(node, darkforest.address, dfSlots, planetCoords.bloom.locationId);
-    assert(bloomPlanet.population === bloomPlanet.populationCap, "bloom filter did not max population");
-    assert(bloomPlanet.silver === bloomPlanet.silverCap, "bloom filter did not max silver");
-
-    const blackArtifactId = mimcSponge2_220(planetCoords.black.locationId, 66666n, config.planethashKey);
-    await sendTx(
-        "admin_create_artifact_on_planet (black domain)",
-        darkforest.methods.admin_create_artifact_on_planet(
-            planetCoords.black.locationId,
-            blackArtifactId,
-            ARTIFACT_TYPE_BLACK_DOMAIN,
-            ARTIFACT_RARITY_COMMON,
-            expectedBiome(biomebase),
-            darkforest.address
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    await sendTx(
-        "activate black domain",
-        darkforest.methods.set_artifact_activation(
-            planetCoords.black.locationId,
-            blackArtifactId,
-            0n,
-            true
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const destroyedFlag = await readPlanetDestroyed(
-        node,
-        darkforest.address,
-        dfSlots,
-        planetCoords.black.locationId
-    );
-    assert(destroyedFlag === 1n, "black domain did not destroy planet");
-
-    await sendTx(
-        "give_space_ships",
-        darkforest.methods.give_space_ships(home1Id),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const claimedShips = await readPlayerClaimedShips(node, darkforest.address, dfSlots, admin.address);
-    assert(claimedShips === 1n, "player should have claimed ships");
-
-    const mothershipId = shipArtifactId(home1Id, ARTIFACT_TYPE_SHIP_MOTHERSHIP, config.planethashKey);
-    const crescentId = shipArtifactId(home1Id, ARTIFACT_TYPE_SHIP_CRESCENT, config.planethashKey);
-
-    const mothershipType = await readSpaceshipType(node, darkforest.address, dfSlots, mothershipId);
-    assert(mothershipType === BigInt(ARTIFACT_TYPE_SHIP_MOTHERSHIP), "mothership missing");
-
-    const shipMoveDist = calcDistMax(DEFAULT_INIT, planetCoords.shipMove);
-    await sendTx(
-        "move mothership",
-        darkforest.methods.move(
-            DEFAULT_INIT.x,
-            DEFAULT_INIT.y,
-            planetCoords.shipMove.x,
-            planetCoords.shipMove.y,
-            config.worldRadius,
-            BigInt(shipMoveDist),
-            0n,
-            0n,
-            mothershipId,
-            false,
-            config.planethashKey,
-            config.spacetypeKey,
-            config.perlinLengthScale,
-            config.perlinMirrorX,
-            config.perlinMirrorY,
-            config.configHashSpacetype,
-            config.maxLocationId,
-            config.worldRadius
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    await resolveArrival(
-        node,
-        darkforest,
-        dfSlots,
-        planetCoords.shipMove.locationId,
-        admin.address,
-        fee,
-        blockTimeoutMs,
-        tickBlock
-    );
-    const mothershipLocation = await readArtifactLocation(
-        node,
-        darkforest.address,
-        dfSlots,
-        mothershipId
-    );
-    assert(mothershipLocation === planetCoords.shipMove.locationId, "mothership location mismatch");
-
-    const crescentDist = calcDistMax(DEFAULT_INIT, planetCoords.shipActivate);
-    await sendTx(
-        "move crescent ship",
-        darkforest.methods.move(
-            DEFAULT_INIT.x,
-            DEFAULT_INIT.y,
-            planetCoords.shipActivate.x,
-            planetCoords.shipActivate.y,
-            config.worldRadius,
-            BigInt(crescentDist),
-            0n,
-            0n,
-            crescentId,
-            false,
-            config.planethashKey,
-            config.spacetypeKey,
-            config.perlinLengthScale,
-            config.perlinMirrorX,
-            config.perlinMirrorY,
-            config.configHashSpacetype,
-            config.maxLocationId,
-            config.worldRadius
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    await resolveArrival(
-        node,
-        darkforest,
-        dfSlots,
-        planetCoords.shipActivate.locationId,
-        admin.address,
-        fee,
-        blockTimeoutMs,
-        tickBlock
-    );
-
-    await sendTx(
-        "admin_set_planet_owner (shipActivate reset)",
-        darkforest.methods.admin_set_planet_owner(
-            planetCoords.shipActivate.locationId,
-            ZERO_ADDRESS
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-    await sendTx(
-        "admin_set_planet_type_and_level (shipActivate reset)",
-        darkforest.methods.admin_set_planet_type_and_level(
-            planetCoords.shipActivate.locationId,
-            PLANET_TYPE_PLANET,
-            1
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-    const shipActivatePre = await readPlanetState(
-        node,
-        darkforest.address,
-        dfSlots,
-        planetCoords.shipActivate.locationId
-    );
-    assert(shipActivatePre.owner.equals(ZERO_ADDRESS), "shipActivate should be unowned");
-    assert(shipActivatePre.planetLevel >= 1, "shipActivate level too low");
-    assert(shipActivatePre.planetType === PLANET_TYPE_PLANET, "shipActivate type mismatch");
-
-    await sendTx(
-        "activate crescent ship",
-        darkforest.methods.set_artifact_activation(
-            planetCoords.shipActivate.locationId,
-            crescentId,
-            0n,
-            true
-        ),
-        admin.address,
-        fee,
-        txTimeoutMs
-    );
-
-    const shipActivatedPlanet = await readPlanetState(
-        node,
-        darkforest.address,
-        dfSlots,
-        planetCoords.shipActivate.locationId
-    );
-    assert(
-        shipActivatedPlanet.planetType === PLANET_TYPE_SILVER_MINE,
-        "crescent activation did not set silver mine"
-    );
-
-    const crescentOwner = await readSpaceshipOwner(node, darkforest.address, dfSlots, crescentId);
-    assert(crescentOwner.equals(admin.address), "crescent owner mismatch");
+    assert(movedPlanet.owner.equals(player1.address), "move target owner mismatch");
 
     console.log("E2E flow complete.");
 }

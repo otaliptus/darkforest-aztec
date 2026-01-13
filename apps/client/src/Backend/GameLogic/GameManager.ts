@@ -3910,10 +3910,6 @@ class GameManager extends EventEmitter {
     return this.ethConnection.getAddress();
   }
 
-  public isAdmin(): boolean {
-    return this.getAddress() === this.contractConstants.adminAddress;
-  }
-
   /**
    * Right now the only buffs supported in this way are
    * speed/range buffs from Abandoning a planet.

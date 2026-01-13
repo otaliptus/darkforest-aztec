@@ -261,7 +261,7 @@ async function main() {
 
     const wallet = await TestWallet.create(node, { proverEnabled: false });
     const account = await ensureAccount(wallet);
-    console.log(`Using admin account ${account.address.toString()}`);
+    console.log(`Using deployer account ${account.address.toString()}`);
 
     const darkforestArtifact = loadArtifact("target/darkforest_contract-DarkForest.json");
     const nftArtifact = loadArtifact("../nft/target/darkforest_nft-NFT.json");
@@ -279,7 +279,6 @@ async function main() {
 
     console.log("Deploying DarkForest...");
     const dfDeploy = Contract.deploy(wallet, darkforestArtifact, [
-        account.address,
         config,
         nft.address,
     ]);

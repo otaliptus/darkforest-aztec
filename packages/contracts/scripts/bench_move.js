@@ -613,7 +613,6 @@ async function main() {
 
         const config = DEFAULT_CONFIG;
         const dfDeploy = Contract.deploy(wallet, darkforestArtifact, [
-            admin.address,
             config,
             nft.address,
         ]);
@@ -829,12 +828,8 @@ async function main() {
             }
 
             emptyBlockMisses = 0;
-            await sendTxTimed(
-                "tick_block",
-                tickContext.contract.methods.admin_set_planet_owner(homeId, tickContext.from),
-                tickContext.from,
-                tickContext.fee,
-                txTimeoutMs
+            console.warn(
+                "[bench_move] tick tx disabled (admin actions removed); rely on empty blocks or sequencer cadence."
             );
         };
 

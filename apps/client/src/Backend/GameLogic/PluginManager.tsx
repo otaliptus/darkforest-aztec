@@ -88,14 +88,13 @@ export class PluginManager {
    * Load all plugins from this disk into `pluginLibrary`. Insert the default
    * plugins into the player's library if the default plugins have never been
    * added before. Effectively idempotent after the first time you call it.
-   * @param isAdmin Is an admin loading the plugins.
    * @param overwriteEmbeddedPlugins Reload all embedded plugins even if a local copy is found.
    * Useful for plugin development.
    */
-  public async load(isAdmin: boolean, overwriteEmbeddedPlugins: boolean): Promise<void> {
+  public async load(overwriteEmbeddedPlugins: boolean = false): Promise<void> {
     this.pluginLibrary = await this.gameManager.loadPlugins();
 
-    this.onNewEmbeddedPlugins(getEmbeddedPlugins(isAdmin), overwriteEmbeddedPlugins);
+    this.onNewEmbeddedPlugins(getEmbeddedPlugins(), overwriteEmbeddedPlugins);
 
     this.notifyPluginLibraryUpdated();
   }

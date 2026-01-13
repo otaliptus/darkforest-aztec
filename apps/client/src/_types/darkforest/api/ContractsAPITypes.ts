@@ -167,7 +167,6 @@ export type PlanetTypeWeightsBySpaceType = [
 ];
 
 export interface ContractConstants {
-  ADMIN_CAN_ADD_PLANETS: boolean;
   WORLD_RADIUS_LOCKED: boolean;
   WORLD_RADIUS_MIN: number;
 
@@ -281,7 +280,6 @@ export interface ContractConstants {
 
   upgrades: UpgradeBranches;
 
-  adminAddress: EthAddress;
 
   // Capture Zones
   GAME_START_BLOCK: number;

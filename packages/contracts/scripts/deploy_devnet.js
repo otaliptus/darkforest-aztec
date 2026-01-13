@@ -457,7 +457,6 @@ async function main() {
 
   console.log("Deploying DarkForest...");
   const dfDeploy = Contract.deploy(wallet, darkforestArtifact, [
-    account.address,
     config,
     nft.address,
   ]);

@@ -79,7 +79,6 @@ export function PluginLibraryPane({
   const contractAddress = gameUIManager.getContractAddress();
   const account = gameUIManager.getAccount();
   const config = { contractAddress, account };
-  const isAdmin = gameUIManager.isAdmin();
   const [editorIsOpen, setEditorIsOpen] = useState(false);
   const [warningIsOpen, setWarningIsOpen] = useState(false);
   const [clicksUntilHasPlugins, setClicksUntilHasPlugins] = useState(8);
@@ -150,8 +149,8 @@ export function PluginLibraryPane({
    * the plugins from disk.
    */
   useEffect(() => {
-    pluginManager.load(isAdmin);
-  }, [pluginManager, isAdmin]);
+    pluginManager.load();
+  }, [pluginManager]);
 
   function addPluginClicked(): void {
     openEditorForPlugin(undefined);

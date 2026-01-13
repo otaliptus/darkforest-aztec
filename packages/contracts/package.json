@@ -8,7 +8,7 @@
         "set-feature-flags": "node scripts/set_feature_flags.js",
         "bytecode:size": "node scripts/print_public_bytecode_size.js",
         "compile": "node scripts/set_feature_flags.js && aztec compile",
-        "compile:prod": "DF_ENABLE_ADMIN_ACTIONS=0 node scripts/set_feature_flags.js && aztec compile",
+        "compile:prod": "node scripts/set_feature_flags.js && aztec compile",
         "codegen": "aztec codegen target --outdir src/artifacts",
         "deploy:local": "node scripts/deploy_local.js",
         "test": "yarn test:nr",

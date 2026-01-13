@@ -9,7 +9,7 @@ import { LoadingSpinner } from '../../Components/LoadingSpinner';
 import { Modal } from '../../Components/Modal';
 import { Row } from '../../Components/Row';
 import { TextPreview } from '../../Components/TextPreview';
-import { AdminPermissionsPane } from './AdminPermissionsPane';
+import { AccessPermissionsPane } from './AccessPermissionsPane';
 import { ArtifactSettingsPane } from './ArtifactSettingsPane';
 import { CaptureZonesPane } from './CaptureZonesPane';
 import { GameSettingsPane } from './GameSettingsPane';
@@ -95,10 +95,10 @@ const panes: ReadonlyArray<PaneConfig> = [
     Pane: (props: LobbiesPaneProps) => <ArtifactSettingsPane {...props} />,
   },
   {
-    title: 'Admin permissions',
+    title: 'Access controls',
     shortcut: `9`,
-    path: '/settings/admin',
-    Pane: (props: LobbiesPaneProps) => <AdminPermissionsPane {...props} />,
+    path: '/settings/access',
+    Pane: (props: LobbiesPaneProps) => <AccessPermissionsPane {...props} />,
   },
   {
     title: 'Advanced: Snarks',

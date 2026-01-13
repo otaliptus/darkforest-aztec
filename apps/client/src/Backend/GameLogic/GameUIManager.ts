@@ -704,10 +704,6 @@ class GameUIManager extends EventEmitter {
     return this.gameManager.getAccount();
   }
 
-  public isAdmin(): boolean {
-    return this.gameManager.isAdmin();
-  }
-
   public getTwitter(address: EthAddress | undefined): string | undefined {
     return this.gameManager.getTwitter(address);
   }

@@ -22,16 +22,10 @@ function cleanFilename(filename: string) {
     .replace(/\.[jt]sx?$/, '');
 }
 
-export function getEmbeddedPlugins(isAdmin: boolean) {
+export function getEmbeddedPlugins() {
   return pluginsContext
     .keys()
-    .filter((filename) => {
-      if (isAdmin) {
-        return true;
-      } else {
-        return !filename.startsWith('./Admin-Controls');
-      }
-    })
+    .filter((filename) => !filename.startsWith('./Admin-Controls'))
     .map((filename) => {
       return {
         id: filename as PluginId,

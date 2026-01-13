@@ -14,19 +14,17 @@ use crate::utils::{
     signed_to_field,
     signed_zero,
 };
+use dep::std::field::bn254;
 
 global DENOMINATOR: u128 = 1125899906842624000;
 global MAX_PERLIN_VALUE: u128 = 32;
 
 fn random_u4(x: Field, y: Field, scale: Field, key: Field) -> u8 {
     let out = mimc_sponge_3_4(x, y, scale, key);
-    let bits: [u1; 254] = out.to_le_bits();
-    let mut value: u8 = 0;
-    if bits[0] == 1 { value += 1; }
-    if bits[1] == 1 { value += 2; }
-    if bits[2] == 1 { value += 4; }
-    if bits[3] == 1 { value += 8; }
-    value
+    // Use a 128-bit limb decomposition to avoid a full 254-bit bit-decomposition.
+    let (lo, _) = bn254::decompose(out);
+    let lo_u128: u128 = lo as u128;
+    (lo_u128 & 15) as u8
 }
 
 fn random_gradient_at(x: Signed, y: Signed, scale: u128, key: Field) -> [Signed; 2] {
@@ -221,4 +219,25 @@ pub fn multi_scale_perlin(
 
     assert(!result.neg);
     result.mag as u64
+}
+
+#[test]
+fn test_random_u4_matches_bits() {
+    let xs: [Field; 5] = [1, 123, 0 - 1, 999999, 42];
+    let ys: [Field; 5] = [2, 456, 0 - 2, 888888, 0];
+    let scales: [Field; 5] = [3, 789, 1024, 16384, 1];
+    let keys: [Field; 5] = [4, 42, 98765, 555, 7];
+
+    for i in 0..5 {
+        let out = mimc_sponge_3_4(xs[i], ys[i], scales[i], keys[i]);
+        let bits: [u1; 254] = out.to_le_bits();
+        let mut expected: u8 = 0;
+        if bits[0] == 1 { expected += 1; }
+        if bits[1] == 1 { expected += 2; }
+        if bits[2] == 1 { expected += 4; }
+        if bits[3] == 1 { expected += 8; }
+
+        let got = random_u4(xs[i], ys[i], scales[i], keys[i]);
+        assert(got == expected);
+    }
 }

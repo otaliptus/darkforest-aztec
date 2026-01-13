@@ -1,6 +1,5 @@
 mod mimc;
 mod perlin;
-mod feature_flags;
 mod test;
 mod types;
 mod utils;
@@ -16,14 +15,13 @@ pub contract DarkForest {
         },
         protocol_types::{
             address::AztecAddress,
-            traits::{Deserialize, ToField},
+            traits::ToField,
         },
         state_vars::{Map, PublicMutable},
     };
     use dep::darkforest_nft::NFT;
     use dep::std::field::bn254;
     use crate::{
-        feature_flags::ADMIN_ACTIONS_ENABLED,
         mimc::mimc_sponge_2_220,
         perlin::multi_scale_perlin,
         types::{
@@ -279,7 +277,6 @@ pub contract DarkForest {
 
     #[storage]
     struct Storage<Context> {
-        admin: PublicMutable<AztecAddress, Context>,
         nft_contract: PublicMutable<AztecAddress, Context>,
         config: PublicMutable<GameConfig, Context>,
         config_hash_spacetype: PublicMutable<Field, Context>,
@@ -316,11 +313,9 @@ pub contract DarkForest {
     #[external("public")]
     #[initializer]
     fn constructor(
-        admin: AztecAddress,
         config: GameConfig,
         nft_contract: AztecAddress,
     ) {
-        self.storage.admin.write(admin);
         assert(!nft_contract.eq(AztecAddress::zero()));
         self.storage.nft_contract.write(nft_contract);
         self.storage.next_arrival_id.write(1);
@@ -1434,15 +1429,12 @@ pub contract DarkForest {
             let existing = self.storage.revealed.at(location_id).read();
             assert(existing.location_id == 0);
 
-            let admin = self.storage.admin.read();
-            if !player.eq(admin) {
-                if config.location_reveal_cooldown > 0 {
-                    let player_state = self.storage.players.at(player).read();
-                    assert(
-                        current_block - player_state.last_reveal_block
-                            > config.location_reveal_cooldown
-                    );
-                }
+            if config.location_reveal_cooldown > 0 {
+                let player_state = self.storage.players.at(player).read();
+                assert(
+                    current_block - player_state.last_reveal_block
+                        > config.location_reveal_cooldown
+                );
             }
 
             let existing_planet = self.storage.planets.at(location_id).read();
@@ -1730,50 +1722,6 @@ pub contract DarkForest {
             }
         } else if action == 13 {
             let _ = self.internal.execute_deactivate_artifact(player, location_id);
-        } else if ADMIN_ACTIONS_ENABLED {
-            let stored_admin = self.storage.admin.read();
-            assert(player.eq(stored_admin));
-            if action == 6 {
-                let mut planet = self.storage.planets.at(location_id).read();
-                planet.silver =
-                    if perlin > planet.silver_cap { planet.silver_cap } else { perlin };
-                self.storage.planets.at(location_id).write(planet);
-            } else if action == 7 {
-                let owner = AztecAddress::deserialize([y]);
-                let mut planet = self.storage.planets.at(location_id).read();
-                planet.owner = owner;
-                self.storage.planets.at(location_id).write(planet);
-            } else if action == 8 {
-                let mut planet = self.storage.planets.at(location_id).read();
-                planet.planet_type = perlin as u8;
-                planet.planet_level = radius as u8;
-                self.storage.planets.at(location_id).write(planet);
-            } else if action == 9 {
-                let artifact_id = x;
-                let owner = AztecAddress::deserialize([y]);
-                let value0 = perlin;
-                let value1 = radius;
-                let value2 = config_hash as u64;
-
-                let mut planet_artifacts = self.storage.planet_artifacts.at(location_id).read();
-                planet_artifacts = self.internal.planet_artifacts_add(planet_artifacts, artifact_id);
-
-                let artifact = Artifact::new(
-                    artifact_id,
-                    location_id,
-                    value1 as u8,
-                    value2 as u8,
-                    owner,
-                    value0 as u8,
-                );
-
-                self.storage.artifacts.at(artifact_id).write(artifact);
-                self.storage.planet_artifacts.at(location_id).write(planet_artifacts);
-                self.storage.artifact_locations.at(artifact_id).write(location_id);
-                self.internal.nft_mint(owner, artifact_id);
-            } else {
-                assert(false);
-            }
         } else {
             assert(false);
         }
@@ -1913,85 +1861,6 @@ pub contract DarkForest {
         }
 
         self.storage.planets.at(location_id).write(planet);
-    }
-
-    #[external("private")]
-    fn admin_set_planet_silver(location_id: Field, silver: u64) {
-        let admin = self.context.msg_sender().unwrap();
-        self.enqueue(
-            DarkForest::at(self.context.this_address()).apply_player_action(
-                admin,
-                location_id,
-                0,
-                0,
-                silver,
-                0,
-                0,
-                6,
-            )
-        );
-    }
-
-    #[external("private")]
-    fn admin_set_planet_owner(location_id: Field, owner: AztecAddress) {
-        let admin = self.context.msg_sender().unwrap();
-        self.enqueue(
-            DarkForest::at(self.context.this_address()).apply_player_action(
-                admin,
-                location_id,
-                0,
-                owner.to_field(),
-                0,
-                0,
-                0,
-                7,
-            )
-        );
-    }
-
-    #[external("private")]
-    fn admin_set_planet_type_and_level(
-        location_id: Field,
-        planet_type: u8,
-        planet_level: u8,
-    ) {
-        let admin = self.context.msg_sender().unwrap();
-        self.enqueue(
-            DarkForest::at(self.context.this_address()).apply_player_action(
-                admin,
-                location_id,
-                0,
-                0,
-                planet_type as u64,
-                planet_level as u64,
-                0,
-                8,
-            )
-        );
-    }
-
-    #[external("private")]
-    fn admin_create_artifact_on_planet(
-        location_id: Field,
-        artifact_id: Field,
-        artifact_type: u8,
-        rarity: u8,
-        biome: u8,
-        owner: AztecAddress,
-    ) {
-        let admin = self.context.msg_sender().unwrap();
-        self.enqueue(
-            DarkForest::at(self.context.this_address()).apply_player_action(
-                admin,
-                location_id,
-                artifact_id,
-                owner.to_field(),
-                artifact_type as u64,
-                rarity as u64,
-                biome as Field,
-                9,
-            )
-        );
     }
 
     #[external("private")]

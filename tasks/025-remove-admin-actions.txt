@@ -1,0 +1,19 @@
+Title: Remove all admin-only gameplay and contract paths
+
+Context
+- User request: “nuke all admin stuff in the contract and tests and gameplay.”
+- Goal is to remove admin-only actions and exposure, not to change core gameplay logic.
+
+Acceptance Criteria
+- Contracts: admin-only actions (action types 6–9) are removed or hard-disabled; no public/private paths allow admin behavior.
+- Feature flags: any admin action flags are removed or forced off; no scripts re-enable them.
+- Client/gameplay: any admin UI or client-side flows are removed or hidden; no admin RPC usage remains.
+- Tests: admin-only tests are removed or updated so the test suite does not depend on admin actions.
+- Build/test: relevant tests run and pass (or known unrelated failures are clearly identified).
+
+Out of Scope
+- Non-admin gameplay changes.
+- Changes to grant scope or parity decisions.
+
+Notes
+- Keep changes minimal and avoid touching .md files.

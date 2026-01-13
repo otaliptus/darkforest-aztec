@@ -1,4 +1,3 @@
-import { EMPTY_ADDRESS } from '@darkforest_eth/constants';
 import type {
   Artifact,
   ArtifactId,
@@ -258,7 +257,6 @@ export class ContractsAPI extends EventEmitter {
     }
 
     const constants: ContractConstants = {
-      ADMIN_CAN_ADD_PLANETS: false,
       WORLD_RADIUS_LOCKED: false,
       WORLD_RADIUS_MIN: 0,
 
@@ -308,8 +306,6 @@ export class ContractsAPI extends EventEmitter {
 
       planetCumulativeRarities: PLANET_LEVEL_THRESHOLDS,
       upgrades,
-      adminAddress: EMPTY_ADDRESS as EthAddress,
-
       GAME_START_BLOCK: 0,
       CAPTURE_ZONES_ENABLED: false,
       CAPTURE_ZONE_CHANGE_BLOCK_INTERVAL: 0,

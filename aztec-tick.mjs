@@ -26,33 +26,23 @@ const envFromFile = Object.fromEntries(
 );
 
 const AZTEC_NODE_URL = process.env.AZTEC_NODE_URL || envFromFile.VITE_AZTEC_NODE_URL || 'http://localhost:8080';
-const DF_ADDRESS =
-  process.env.DARKFOREST_ADDRESS ||
-  process.env.VITE_DARKFOREST_ADDRESS ||
-  envFromFile.VITE_DARKFOREST_ADDRESS;
 const TICKER_ADDRESS =
   process.env.TICKER_ADDRESS ||
   process.env.VITE_TICKER_ADDRESS ||
   envFromFile.VITE_TICKER_ADDRESS;
 
 const INTERVAL = Number(process.env.INTERVAL ?? '0.5'); // seconds
-const TICK_LOCATION_ID = BigInt(process.env.TICK_LOCATION_ID ?? '1');
 
-if (!DF_ADDRESS && !TICKER_ADDRESS) {
+if (!TICKER_ADDRESS) {
   console.error(
-    'Missing DARKFOREST_ADDRESS and TICKER_ADDRESS. Ensure apps/client/.env.local has VITE_DARKFOREST_ADDRESS or VITE_TICKER_ADDRESS.'
+    'Missing TICKER_ADDRESS. Admin-based ticking is removed; set VITE_TICKER_ADDRESS in apps/client/.env.local.'
   );
   process.exit(1);
 }
 
 console.log(`Aztec node: ${AZTEC_NODE_URL}`);
-if (DF_ADDRESS) {
-  console.log(`DarkForest: ${DF_ADDRESS}`);
-}
 if (TICKER_ADDRESS) {
   console.log(`Ticker: ${TICKER_ADDRESS}`);
-} else {
-  console.log(`Tick location: 0x${TICK_LOCATION_ID.toString(16)}`);
 }
 
 const node = createAztecNodeClient(AZTEC_NODE_URL);
@@ -60,34 +50,13 @@ await waitForNode(node);
 
 const wallet = await TestWallet.create(node, { proverEnabled: false });
 const accounts = await getInitialTestAccountsData();
-const adminData = accounts[0];
-if (!adminData) throw new Error('No initial test accounts available.');
-const admin = await wallet.createSchnorrAccount(
-  adminData.secret,
-  adminData.salt,
-  adminData.signingKey
+const tickAccountData = accounts[0];
+if (!tickAccountData) throw new Error('No initial test accounts available.');
+const tickAccount = await wallet.createSchnorrAccount(
+  tickAccountData.secret,
+  tickAccountData.salt,
+  tickAccountData.signingKey
 );
-
-let darkforest;
-if (DF_ADDRESS && !TICKER_ADDRESS) {
-  const artifactPath = path.join(
-    ROOT,
-    'packages',
-    'contracts',
-    'target',
-    'darkforest_contract-DarkForest.json'
-  );
-  if (!fs.existsSync(artifactPath)) {
-    console.error('Missing DarkForest artifact. Run: yarn contracts:compile');
-    process.exit(1);
-  }
-  const artifact = loadContractArtifact(JSON.parse(fs.readFileSync(artifactPath, 'utf8')));
-  const dfAddress = AztecAddress.fromString(DF_ADDRESS);
-  const onChain = await node.getContract(dfAddress);
-  if (!onChain) throw new Error('DarkForest contract not found on-chain.');
-  await wallet.registerContract(onChain, artifact);
-  darkforest = await Contract.at(dfAddress, artifact, wallet);
-}
 
 let ticker;
 if (TICKER_ADDRESS) {
@@ -112,15 +81,11 @@ if (TICKER_ADDRESS) {
   ticker = await Contract.at(tickerAddress, tickerArtifact, wallet);
 }
 
-console.log(`Admin: ${admin.address.toString()}`);
+console.log(`Tick account: ${tickAccount.address.toString()}`);
 
 while (true) {
   try {
-    const sent = ticker
-      ? await ticker.methods.tick().send({ from: admin.address })
-      : await darkforest.methods
-          .admin_set_planet_owner(TICK_LOCATION_ID, admin.address)
-          .send({ from: admin.address });
+    const sent = await ticker.methods.tick().send({ from: tickAccount.address });
     await sent.wait();
     const l2 = await node.getBlockNumber();
     console.log(`Tick tx mined. L2 block: ${l2}`);

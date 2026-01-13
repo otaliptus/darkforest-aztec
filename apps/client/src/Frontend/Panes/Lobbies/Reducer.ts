@@ -33,7 +33,6 @@ export function toInitializers(obj: LobbyConfigState) {
 // Actions aren't 1-to-1 with Initializers because we sometimes need to update into arrays
 export type LobbyConfigAction =
   | { type: 'START_PAUSED'; value: Initializers['START_PAUSED'] | undefined }
-  | { type: 'ADMIN_CAN_ADD_PLANETS'; value: Initializers['ADMIN_CAN_ADD_PLANETS'] | undefined }
   | {
       type: 'TOKEN_MINT_END_TIMESTAMP';
       value: Initializers['TOKEN_MINT_END_TIMESTAMP'] | undefined;
@@ -132,10 +131,6 @@ export function lobbyConfigReducer(state: LobbyConfigState, action: LobbyAction)
   let update;
   switch (action.type) {
     case 'START_PAUSED': {
-      update = ofBoolean(action, state);
-      break;
-    }
-    case 'ADMIN_CAN_ADD_PLANETS': {
       update = ofBoolean(action, state);
       break;
     }
@@ -336,16 +331,6 @@ export function lobbyConfigInit(startingConfig: LobbyInitializers) {
   for (const key of Object.keys(startingConfig) as [keyof LobbyInitializers]) {
     switch (key) {
       case 'START_PAUSED': {
-        const defaultValue = startingConfig[key];
-        state[key] = {
-          currentValue: defaultValue,
-          displayValue: defaultValue,
-          defaultValue,
-          warning: undefined,
-        };
-        break;
-      }
-      case 'ADMIN_CAN_ADD_PLANETS': {
         const defaultValue = startingConfig[key];
         state[key] = {
           currentValue: defaultValue,

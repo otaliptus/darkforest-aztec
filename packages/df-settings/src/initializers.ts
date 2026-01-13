@@ -28,7 +28,6 @@ export type Initializers = ReturnType<typeof decodeInitializers>;
 export const decodeInitializers = decoders.guard(
   decoders.exact({
     START_PAUSED: withDefault(decoders.boolean, false),
-    ADMIN_CAN_ADD_PLANETS: withDefault(decoders.boolean, false),
     TOKEN_MINT_END_TIMESTAMP: withDefault(dateInSeconds, oneYearFromNow()),
     WORLD_RADIUS_LOCKED: withDefault(decoders.boolean, false),
     WORLD_RADIUS_MIN: withDefault(decoders.number, 6000),

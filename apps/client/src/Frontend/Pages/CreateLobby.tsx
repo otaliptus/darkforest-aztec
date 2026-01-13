@@ -89,7 +89,6 @@ export function CreateLobby({ match }: RouteComponentProps<{ contract: string }>
             WHITELIST_ENABLED: false,
             // TODO: Figure out if we should expose this from contract
             START_PAUSED: false,
-            ADMIN_CAN_ADD_PLANETS: config.ADMIN_CAN_ADD_PLANETS,
             WORLD_RADIUS_LOCKED: config.WORLD_RADIUS_LOCKED,
             WORLD_RADIUS_MIN: config.WORLD_RADIUS_MIN,
             DISABLE_ZK_CHECKS: config.DISABLE_ZK_CHECKS,

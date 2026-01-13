@@ -111,13 +111,13 @@ pub fn biome_config_hash() -> Field {
     )
 }
 
-pub unconstrained fn setup() -> (TestEnvironment, AztecAddress, AztecAddress) {
+pub unconstrained fn setup() -> (TestEnvironment, AztecAddress) {
     setup_with_params(DEFAULT_REVEAL_COOLDOWN, PLANET_RARITY, MAX_LOCATION_ID)
 }
 
 pub unconstrained fn setup_with_cooldown(
     location_reveal_cooldown: u32
-) -> (TestEnvironment, AztecAddress, AztecAddress) {
+) -> (TestEnvironment, AztecAddress) {
     setup_with_params(location_reveal_cooldown, PLANET_RARITY, MAX_LOCATION_ID)
 }
 
@@ -125,9 +125,9 @@ pub unconstrained fn setup_with_params(
     location_reveal_cooldown: u32,
     planet_rarity: u64,
     max_location_id: Field
-) -> (TestEnvironment, AztecAddress, AztecAddress) {
+) -> (TestEnvironment, AztecAddress) {
     let mut env = TestEnvironment::new();
-    let admin = env.create_light_account();
+    let deployer = env.create_light_account();
 
     let config = GameConfig::new(
         PLANETHASH_KEY,
@@ -146,22 +146,22 @@ pub unconstrained fn setup_with_params(
         max_location_id,
     );
     let nft_initializer_call_interface =
-        NFT::interface().constructor(admin);
+        NFT::interface().constructor(deployer);
     let nft_contract_address =
         env.deploy("../nft/NFT").with_public_initializer(
-            admin,
+            deployer,
             nft_initializer_call_interface,
         );
 
     let initializer_call_interface =
-        DarkForest::interface().constructor(admin, config, nft_contract_address);
+        DarkForest::interface().constructor(config, nft_contract_address);
     let contract_address =
-        env.deploy("DarkForest").with_public_initializer(admin, initializer_call_interface);
+        env.deploy("DarkForest").with_public_initializer(deployer, initializer_call_interface);
 
     env.call_public(
-        admin,
+        deployer,
         NFT::at(nft_contract_address).set_minter(contract_address),
     );
 
-    (env, contract_address, admin)
+    (env, contract_address)
 }

@@ -468,14 +468,11 @@ export function GameLandingPage({ match, location }: RouteComponentProps<{ contr
           loadDiamondContract
         );
         const isWhitelisted = await whitelist.isWhitelisted(playerAddress);
-        // TODO(#2329): isWhitelisted should just check the contractOwner
-        const adminAddress = address(await whitelist.adminAddress());
 
         terminal.current?.println('');
         terminal.current?.print('Checking if whitelisted... ');
 
-        // TODO(#2329): isWhitelisted should just check the contractOwner
-        if (isWhitelisted || playerAddress === adminAddress) {
+        if (isWhitelisted) {
           terminal.current?.println('Player whitelisted.');
           terminal.current?.println('');
           terminal.current?.println(`Welcome, player ${playerAddress}.`);

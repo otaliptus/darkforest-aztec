@@ -30,7 +30,7 @@ Options:
   --reset            Stop/remove aztec local-network container(s) (no ~/.aztec deletion)
   --deploy           Redeploy DarkForest + NFT and write apps/client/.env.local
   --mine-foreground <s> Wait <s> seconds, then mine a block repeatedly (foreground only).
-                      Uses Ticker if VITE_TICKER_ADDRESS is set; otherwise uses admin_set_planet_owner.
+                      Requires VITE_TICKER_ADDRESS; admin-based ticking is removed.
   --run-client       Start the client dev server (yarn client:dev)
   --snapshot         Build snapshot.json + enable DF_SNAPSHOT_URL for the client
   --snapshot-watch   Keep snapshot.json updated in the background
