@@ -19,12 +19,17 @@ use dep::std::field::bn254;
 global DENOMINATOR: u128 = 1125899906842624000;
 global MAX_PERLIN_VALUE: u128 = 32;
 
+fn mod_16_from_field(value: Field) -> u8 {
+    // Use a 128-bit limb decomposition to avoid a full 254-bit bit-decomposition.
+    // Since value = lo + hi * 2^128 in canonical form, value mod 16 == lo mod 16.
+    let (lo, _) = bn254::decompose(value);
+    let lo_u128: u128 = lo as u128;
+    (lo_u128 % 16) as u8
+}
+
 fn random_u4(x: Field, y: Field, scale: Field, key: Field) -> u8 {
     let out = hash_3_4(x, y, scale, key);
-    // Use a 128-bit limb decomposition to avoid a full 254-bit bit-decomposition.
-    let (lo, _) = bn254::decompose(out);
-    let lo_u128: u128 = lo as u128;
-    (lo_u128 & 15) as u8
+    mod_16_from_field(out)
 }
 
 fn random_gradient_at(x: Signed, y: Signed, scale: u128, key: Field) -> [Signed; 2] {
@@ -223,12 +228,32 @@ pub fn multi_scale_perlin(
 
 #[test]
 fn test_random_u4_matches_bits() {
-    let xs: [Field; 5] = [1, 123, 0 - 1, 999999, 42];
-    let ys: [Field; 5] = [2, 456, 0 - 2, 888888, 0];
-    let scales: [Field; 5] = [3, 789, 1024, 16384, 1];
-    let keys: [Field; 5] = [4, 42, 98765, 555, 7];
+    let xs: [Field; 20] = [
+        1, 123, 0 - 1, 999999, 42,
+        7, 13, 0 - 13, 314159, 271828,
+        900, 88, 0 - 88, 456789, 0,
+        1024, 2048, 0 - 2048, 7777777, 5,
+    ];
+    let ys: [Field; 20] = [
+        2, 456, 0 - 2, 888888, 0,
+        8, 21, 0 - 21, 271828, 314159,
+        1, 89, 0 - 89, 987654, 42,
+        2048, 1024, 0 - 1024, 1234567, 9,
+    ];
+    let scales: [Field; 20] = [
+        3, 789, 1024, 16384, 1,
+        2, 512, 2048, 4096, 8192,
+        16, 32, 64, 128, 256,
+        1024, 2048, 4096, 8192, 16384,
+    ];
+    let keys: [Field; 20] = [
+        4, 42, 98765, 555, 7,
+        9, 11, 13, 17, 19,
+        23, 29, 31, 37, 41,
+        43, 47, 53, 59, 61,
+    ];
 
-    for i in 0..5 {
+    for i in 0..20 {
         let out = hash_3_4(xs[i], ys[i], scales[i], keys[i]);
         let bits: [u1; 254] = out.to_le_bits();
         let mut expected: u8 = 0;
