@@ -40,6 +40,7 @@ import {
   ArtifactId,
   ArtifactRarity,
   ArtifactType,
+  ArrivalType,
   CaptureZone,
   Chunk,
   ClaimedCoords,
@@ -145,6 +146,8 @@ export enum GameManagerEvent {
 
 const AZTEC_PLANET_SYNC_INTERVAL_BLOCKS = 2;
 const ARRIVAL_PROVING_BUFFER_BLOCKS = 2;
+const PENDING_ARRIVAL_PREFIX = 'pending:';
+const WORMHOLE_SPEED_MODIFIERS = [1, 2, 4, 8, 16, 32];
 
 type TxTimings = {
   createdAt: number;
@@ -209,6 +212,7 @@ class GameManager extends EventEmitter {
   private readonly resolvingArrivals: Set<VoyageId>;
   private readonly arrivalResolveSkips: Map<VoyageId, number>;
   private readonly arrivalResolveInflightSkips: Map<VoyageId, string>;
+  private readonly pendingArrivalsByTx: Map<number, { arrivalId: VoyageId; toPlanet: LocationId }>;
 
   /**
    * An object that syncs any newly added or deleted chunks to the player's IndexedDB.
@@ -467,6 +471,7 @@ class GameManager extends EventEmitter {
     this.resolvingArrivals = new Set();
     this.arrivalResolveSkips = new Map();
     this.arrivalResolveInflightSkips = new Map();
+    this.pendingArrivalsByTx = new Map();
 
     const revealedLocations = new Map<LocationId, RevealedLocation>();
     for (const [locationId, coords] of revealedCoords) {
@@ -576,6 +581,138 @@ class GameManager extends EventEmitter {
 
   public getCurrentBlockNumber(): number {
     return this.ethConnection.getCurrentBlockNumber();
+  }
+
+  private isPendingArrivalId(arrivalId: VoyageId): boolean {
+    return String(arrivalId).startsWith(PENDING_ARRIVAL_PREFIX);
+  }
+
+  private getWormholeSpeedModifier(fromPlanet: Planet, toPlanet: Planet): number {
+    const fromActive = this.getActiveArtifact(fromPlanet);
+    if (
+      fromActive &&
+      fromActive.artifactType === ArtifactType.Wormhole &&
+      fromActive.wormholeTo === toPlanet.locationId
+    ) {
+      const rarity = Math.min(
+        Math.max(Number(fromActive.rarity), 0),
+        WORMHOLE_SPEED_MODIFIERS.length - 1
+      );
+      return WORMHOLE_SPEED_MODIFIERS[rarity] ?? 1;
+    }
+
+    const toActive = this.getActiveArtifact(toPlanet);
+    if (
+      toActive &&
+      toActive.artifactType === ArtifactType.Wormhole &&
+      toActive.wormholeTo === fromPlanet.locationId
+    ) {
+      const rarity = Math.min(
+        Math.max(Number(toActive.rarity), 0),
+        WORMHOLE_SPEED_MODIFIERS.length - 1
+      );
+      return WORMHOLE_SPEED_MODIFIERS[rarity] ?? 1;
+    }
+
+    return 1;
+  }
+
+  private addPendingArrivalForMove(tx: Transaction<UnconfirmedMove>): void {
+    if (this.pendingArrivalsByTx.has(tx.id)) return;
+
+    const fromLocation = this.entityStore.getLocationOfPlanet(tx.intent.from);
+    const toLocation = this.entityStore.getLocationOfPlanet(tx.intent.to);
+    const fromPlanet = this.entityStore.getPlanetWithId(tx.intent.from);
+    const toPlanet = this.entityStore.getPlanetWithId(tx.intent.to, false);
+    if (!fromLocation || !toLocation || !fromPlanet || !toPlanet) return;
+    if (!isLocatable(fromPlanet) || !isLocatable(toPlanet)) return;
+
+    const currentBlock = this.getCurrentBlockNumber();
+    if (!Number.isFinite(currentBlock) || currentBlock <= 0) return;
+
+    const dx = toLocation.coords.x - fromLocation.coords.x;
+    const dy = toLocation.coords.y - fromLocation.coords.y;
+    const distMax = Math.ceil(Math.sqrt(dx ** 2 + dy ** 2));
+    if (!Number.isFinite(distMax) || distMax <= 0) return;
+
+    const wormholeModifier = this.getWormholeSpeedModifier(fromPlanet, toPlanet);
+    const effectiveDist =
+      wormholeModifier > 1 ? Math.floor(distMax / wormholeModifier) : distMax;
+
+    const timeFactor = Math.max(1, this.contractConstants.TIME_FACTOR_HUNDREDTHS || 100);
+    const speed = fromPlanet.speed * this.getSpeedBuff(tx.intent.abandoning);
+    let travelTime = Math.floor((effectiveDist * 10000) / (speed * timeFactor));
+    if (!Number.isFinite(travelTime) || travelTime < 1) travelTime = 1;
+
+    const movedArtifact = tx.intent.artifact
+      ? this.entityStore.getArtifactById(tx.intent.artifact)
+      : undefined;
+    const isShipMove =
+      movedArtifact && isSpaceShip(movedArtifact.artifactType ?? ArtifactType.Unknown);
+
+    let arrivalType = ArrivalType.Normal;
+    if (wormholeModifier > 1) {
+      arrivalType = ArrivalType.Wormhole;
+    } else if (!isShipMove) {
+      const activeFrom = this.getActiveArtifact(fromPlanet);
+      const delay = this.contractConstants.PHOTOID_ACTIVATION_DELAY;
+      if (
+        activeFrom &&
+        activeFrom.artifactType === ArtifactType.PhotoidCannon &&
+        isActivated(activeFrom) &&
+        currentBlock >= activeFrom.lastActivated + delay
+      ) {
+        arrivalType = ArrivalType.Photoid;
+      }
+    }
+
+    let energyMoved = tx.intent.forces;
+    let silverMoved = tx.intent.silver;
+    if (tx.intent.abandoning) {
+      energyMoved = Math.floor(fromPlanet.energy);
+      silverMoved = Math.floor(fromPlanet.silver);
+    }
+
+    let energyArriving = this.getEnergyArrivingForMove(
+      fromPlanet.locationId,
+      undefined,
+      effectiveDist,
+      energyMoved,
+      tx.intent.abandoning
+    );
+    if (arrivalType === ArrivalType.Wormhole && toPlanet.owner !== fromPlanet.owner) {
+      energyArriving = 0;
+    }
+
+    const arrivalId = `${PENDING_ARRIVAL_PREFIX}${tx.id}` as VoyageId;
+    const pendingArrival: QueuedArrival = {
+      eventId: arrivalId,
+      player: this.account ?? EMPTY_ADDRESS,
+      fromPlanet: fromPlanet.locationId,
+      toPlanet: toPlanet.locationId,
+      energyArriving,
+      silverMoved,
+      artifactId: tx.intent.artifact,
+      departureTime: currentBlock,
+      distance: effectiveDist,
+      arrivalTime: currentBlock + travelTime,
+      arrivalType,
+    };
+
+    this.entityStore.addPendingArrival(pendingArrival);
+    this.pendingArrivalsByTx.set(tx.id, {
+      arrivalId,
+      toPlanet: toPlanet.locationId,
+    });
+    this.emit(GameManagerEvent.PlanetUpdate);
+  }
+
+  private clearPendingArrivalForMove(tx: Transaction<UnconfirmedMove>): void {
+    const pending = this.pendingArrivalsByTx.get(tx.id);
+    if (!pending) return;
+    this.entityStore.clearArrival(pending.toPlanet, pending.arrivalId);
+    this.pendingArrivalsByTx.delete(tx.id);
+    this.emit(GameManagerEvent.PlanetUpdate);
   }
 
   public async refreshPlanetsFromChain(planetIds: LocationId[]): Promise<void> {
@@ -881,6 +1018,9 @@ class GameManager extends EventEmitter {
       )
       .on(ContractsAPIEvent.TxQueued, (tx: Transaction) => {
         gameManager.entityStore.onTxIntent(tx);
+        if (isUnconfirmedMoveTx(tx)) {
+          gameManager.addPendingArrivalForMove(tx);
+        }
       })
       .on(ContractsAPIEvent.TxSubmitted, (tx: Transaction) => {
         gameManager.persistentChunkStore.onEthTxSubmit(tx);
@@ -909,6 +1049,7 @@ class GameManager extends EventEmitter {
           // mining manager should be initialized already via joinGame, but just in case...
           gameManager.initMiningManager(tx.intent.location.coords, 4);
         } else if (isUnconfirmedMoveTx(tx)) {
+          gameManager.clearPendingArrivalForMove(tx);
           const promises = [gameManager.bulkHardRefreshPlanets([tx.intent.from, tx.intent.to])];
           if (tx.intent.artifact) {
             promises.push(gameManager.hardRefreshArtifact(tx.intent.artifact));
@@ -964,6 +1105,7 @@ class GameManager extends EventEmitter {
       .on(ContractsAPIEvent.TxErrored, async (tx: Transaction) => {
         gameManager.entityStore.clearUnconfirmedTxIntent(tx);
         if (isUnconfirmedMoveTx(tx)) {
+          gameManager.clearPendingArrivalForMove(tx);
           const refreshes = [gameManager.bulkHardRefreshPlanets([tx.intent.from, tx.intent.to])];
           if (tx.intent.artifact) {
             refreshes.push(gameManager.hardRefreshArtifact(tx.intent.artifact));
@@ -976,6 +1118,9 @@ class GameManager extends EventEmitter {
         gameManager.onTxReverted(tx);
       })
       .on(ContractsAPIEvent.TxCancelled, async (tx: Transaction) => {
+        if (isUnconfirmedMoveTx(tx)) {
+          gameManager.clearPendingArrivalForMove(tx);
+        }
         gameManager.onTxCancelled(tx);
       })
       .on(ContractsAPIEvent.RadiusUpdated, async () => {
@@ -3240,7 +3385,9 @@ class GameManager extends EventEmitter {
     const arrivals = this.entityStore
       .getAllVoyages()
       .filter(
-        (arrival) => arrival.arrivalTime + ARRIVAL_PROVING_BUFFER_BLOCKS <= currentBlockNumber
+        (arrival) =>
+          !this.isPendingArrivalId(arrival.eventId) &&
+          arrival.arrivalTime + ARRIVAL_PROVING_BUFFER_BLOCKS <= currentBlockNumber
       )
       .sort((a, b) => a.arrivalTime - b.arrivalTime);
 
@@ -3322,6 +3469,7 @@ class GameManager extends EventEmitter {
   }
 
   private queueResolveArrival(arrival: QueuedArrival): void {
+    if (this.isPendingArrivalId(arrival.eventId)) return;
     if (this.resolvingArrivals.has(arrival.eventId)) return;
     const shouldLog = VERBOSE_LOGGING || detailedLogger.isEnabled();
     const formatLocation = (id?: LocationId) => (id ? `0x${id}` : 'unknown');

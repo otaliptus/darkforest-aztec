@@ -76,6 +76,10 @@ import { LayeredMap } from './LayeredMap';
 
 type CoordsString = Abstract<string, 'CoordString'>;
 
+const PENDING_ARRIVAL_PREFIX = 'pending:';
+const isPendingArrival = (arrival: QueuedArrival) =>
+  String(arrival.eventId).startsWith(PENDING_ARRIVAL_PREFIX);
+
 const getCoordsString = (coords: WorldCoords): CoordsString => {
   return `${coords.x},${coords.y}` as CoordsString;
 };
@@ -1108,6 +1112,20 @@ export class GameObjects {
     this.removeArrival(planetId, arrivalId);
   }
 
+  public addPendingArrival(arrival: QueuedArrival): void {
+    const planetId = arrival.toPlanet;
+    const updatedAwts = this.processArrivalsForPlanet(planetId, [arrival]);
+    if (updatedAwts.length === 0) return;
+
+    const arrivalIds = this.planetArrivalIds.get(planetId) ?? [];
+    for (const awt of updatedAwts) {
+      const arrivalId = awt.arrivalData.eventId;
+      this.arrivals.set(arrivalId, awt);
+      arrivalIds.push(arrivalId);
+    }
+    this.planetArrivalIds.set(planetId, arrivalIds);
+  }
+
   private processArrivalsForPlanet(
     planetId: LocationId,
     arrivals: QueuedArrival[]
@@ -1125,6 +1143,10 @@ export class GameObjects {
     const currentBlockNumber = this.currentBlockNumber;
     for (const arrival of arrivals) {
       try {
+        if (isPendingArrival(arrival)) {
+          arrivalsWithTimers.push({ arrivalData: arrival });
+          continue;
+        }
         if (this.arrivalMaturedHandler) {
           arrivalsWithTimers.push({ arrivalData: arrival });
           continue;
@@ -1158,6 +1180,9 @@ export class GameObjects {
       .sort((a, b) => a.arrivalTime - b.arrivalTime);
 
     for (const arrival of arrivals) {
+      if (isPendingArrival(arrival)) {
+        continue;
+      }
       if (arrival.arrivalTime > currentBlockNumber) {
         break;
       }
