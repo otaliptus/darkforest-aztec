@@ -444,7 +444,6 @@ const buildInitArgs = (x, y, radius, config) => [
     config.perlinLengthScale,
     config.perlinMirrorX,
     config.perlinMirrorY,
-    config.configHashSpacetype,
     config.maxLocationId,
     config.worldRadius,
     config.spawnRimArea,
@@ -754,7 +753,6 @@ async function main() {
             config.perlinLengthScale,
             config.perlinMirrorX,
             config.perlinMirrorY,
-            config.configHashSpacetype,
             config.maxLocationId,
             config.worldRadius
         ),

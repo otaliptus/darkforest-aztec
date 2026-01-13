@@ -1,0 +1,15 @@
+TASK 026 - Clean unused helper warnings in Noir tests
+
+Mission:
+Eliminate compiler warnings from unused helper functions in `packages/contracts/src/test/darkforest_stub.nr` without changing test behavior.
+
+Scope:
+Only test helpers in darkforest_stub.nr. No contract logic changes.
+
+Acceptance criteria:
+- Remove or use helper functions that trigger unused warnings in `darkforest_stub.nr`.
+- `yarn workspace @darkforest-aztec/contracts test:nr` runs without unused helper warnings from this file.
+- Test behavior remains unchanged.
+
+Notes:
+- Prefer removing dead helpers rather than adding dummy calls.

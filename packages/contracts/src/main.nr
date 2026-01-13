@@ -1311,7 +1311,6 @@ pub contract DarkForest {
         perlin_length_scale: u64,
         perlin_mirror_x: bool,
         perlin_mirror_y: bool,
-        expected_config_hash: Field,
         max_location_id: Field,
         world_radius: u64,
         spawn_rim_area: u64,
@@ -1347,7 +1346,6 @@ pub contract DarkForest {
         );
 
         let location_id = mimc_sponge_2_220(x, y, planethash_key);
-        assert(cfg_hash == expected_config_hash);
         assert(bn254::lt(location_id, max_location_id));
         assert(radius <= world_radius);
         if spawn_rim_area != 0 {
@@ -1374,6 +1372,7 @@ pub contract DarkForest {
                 player,
                 location_id,
                 perlin_u64,
+                cfg_hash,
             )
         );
     }
@@ -1384,7 +1383,11 @@ pub contract DarkForest {
         player: AztecAddress,
         location_id: Field,
         perlin: u64,
+        config_hash: Field,
     ) {
+        let stored_hash = self.storage.config_hash_spacetype.read();
+        assert(config_hash == stored_hash);
+
         let current_block = self.context.block_number();
         let existing_planet = self.storage.planets.at(location_id).read();
         // v0.6: LibPlanet._initializePlanet reverts if the planet is already initialized.
@@ -1426,6 +1429,9 @@ pub contract DarkForest {
         let config = self.storage.config.read();
         let current_block = self.context.block_number();
         if action == 1 {
+            let stored = self.storage.config_hash_spacetype.read();
+            assert(config_hash == stored);
+
             let existing = self.storage.revealed.at(location_id).read();
             assert(existing.location_id == 0);
 
@@ -1514,6 +1520,7 @@ pub contract DarkForest {
         } else if action == 5 {
             let stored = self.storage.config_hash_biome.read();
             assert(config_hash == stored);
+
             let biomebase = perlin;
             let planet = self.storage.planets.at(location_id).read();
             assert(!self.internal.is_planet_destroyed(location_id));
@@ -1736,7 +1743,6 @@ pub contract DarkForest {
         perlin_length_scale: u64,
         perlin_mirror_x: bool,
         perlin_mirror_y: bool,
-        expected_config_hash: Field,
         max_location_id: Field,
     ) {
         let player = self.context.msg_sender().unwrap();
@@ -1763,7 +1769,6 @@ pub contract DarkForest {
         );
 
         let location_id = mimc_sponge_2_220(x, y, planethash_key);
-        assert(cfg_hash == expected_config_hash);
         assert(bn254::lt(location_id, max_location_id));
 
         self.enqueue(
@@ -1890,7 +1895,6 @@ pub contract DarkForest {
         perlin_length_scale: u64,
         perlin_mirror_x: bool,
         perlin_mirror_y: bool,
-        expected_config_hash: Field,
         max_location_id: Field,
     ) {
         let player = self.context.msg_sender().unwrap();
@@ -1916,7 +1920,6 @@ pub contract DarkForest {
             perlin_mirror_x,
             perlin_mirror_y,
         );
-        assert(cfg_hash == expected_config_hash);
         assert(bn254::lt(location_id, max_location_id));
 
         self.enqueue(
@@ -2049,7 +2052,6 @@ pub contract DarkForest {
         perlin_length_scale: u64,
         perlin_mirror_x: bool,
         perlin_mirror_y: bool,
-        expected_config_hash: Field,
         max_location_id: Field,
         world_radius: u64,
     ) {
@@ -2093,7 +2095,6 @@ pub contract DarkForest {
 
         let from_location_id = mimc_sponge_2_220(x1, y1, planethash_key);
         let to_location_id = mimc_sponge_2_220(x2, y2, planethash_key);
-        assert(cfg_hash == expected_config_hash);
         assert(radius <= world_radius);
         assert(bn254::lt(to_location_id, max_location_id));
 
@@ -2134,7 +2135,6 @@ pub contract DarkForest {
         perlin_length_scale: u64,
         perlin_mirror_x: bool,
         perlin_mirror_y: bool,
-        expected_config_hash: Field,
         max_location_id: Field,
         world_radius: u64,
     ) {
@@ -2171,7 +2171,6 @@ pub contract DarkForest {
 
         let from_location_id = mimc_sponge_2_220(x1, y1, planethash_key);
         let to_location_id = mimc_sponge_2_220(x2, y2, planethash_key);
-        assert(cfg_hash == expected_config_hash);
         assert(radius <= world_radius);
         assert(bn254::lt(to_location_id, max_location_id));
 
@@ -2214,7 +2213,9 @@ pub contract DarkForest {
             let arrival_id = move_config as u64;
             self.internal.execute_arrival(arrival_id);
         } else {
-        let config = self.storage.config.read();
+            let stored = self.storage.config_hash_spacetype.read();
+            assert(config_hash == stored);
+            let config = self.storage.config.read();
         let dist_max_raw = (move_config >> 64) as u64;
         let require_to_initialized = dist_max_raw >= MOVE_KNOWN_FLAG;
         let dist_max = if require_to_initialized {

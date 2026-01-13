@@ -120,7 +120,6 @@ export function buildInitPlayerArgs(
         config.perlinLengthScale,
         config.perlinMirrorX,
         config.perlinMirrorY,
-        gameConfig.configHashSpacetype,
         gameConfig.maxLocationId,
         gameConfig.worldRadius,
         gameConfig.spawnRimArea,
@@ -143,7 +142,6 @@ export function buildRevealLocationArgs(
         config.perlinLengthScale,
         config.perlinMirrorX,
         config.perlinMirrorY,
-        gameConfig.configHashSpacetype,
         gameConfig.maxLocationId,
     ] as const;
 }
@@ -164,7 +162,6 @@ export function buildFindArtifactArgs(
         config.perlinLengthScale,
         config.perlinMirrorX,
         config.perlinMirrorY,
-        gameConfig.configHashBiome,
         gameConfig.maxLocationId,
     ] as const;
 }
@@ -421,7 +418,6 @@ export async function connectDarkForest(
                     perlinConfig.perlinLengthScale,
                     perlinConfig.perlinMirrorX,
                     perlinConfig.perlinMirrorY,
-                    gameConfig.configHashSpacetype,
                     gameConfig.maxLocationId,
                     gameConfig.worldRadius
                 )
@@ -455,7 +451,6 @@ export async function connectDarkForest(
                     perlinConfig.perlinLengthScale,
                     perlinConfig.perlinMirrorX,
                     perlinConfig.perlinMirrorY,
-                    gameConfig.configHashSpacetype,
                     gameConfig.maxLocationId,
                     gameConfig.worldRadius
                 )
