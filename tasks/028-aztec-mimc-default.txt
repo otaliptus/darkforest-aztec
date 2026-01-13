@@ -1,0 +1,31 @@
+TASK 028 - Aztec MiMC default across stack
+
+Mission:
+Make Aztec MiMC (91 rounds, exponent 7) the default hashing path everywhere (contracts, client, hashing libs), removing mismatches with original Dark Forest MiMC.
+
+Background:
+We previously introduced Aztec MiMC implementations and a feature flag in contracts, but the build script overwrites the flag file and client/worker still use the original MiMC. This creates a universe mismatch and breaks mining/proofs. We now accept a new universe and want Aztec MiMC everywhere by default.
+
+Scope:
+Contracts + df-hashing library + client usage + tests.
+
+Plan:
+1) Fix feature flag generation to always define USE_AZTEC_MIMC = true (or provide a clear, consistent default).
+2) Ensure contract hash_2/hash_3_4 always use Aztec MiMC by default.
+3) Update df-hashing to default to Aztec MiMC for location IDs and perlin rand hashes (perlinRandHash).
+4) Update client/miner imports/usages to use Aztec MiMC where they currently use mimcHash.
+5) Adjust any test vectors or comments that assume v0.6 MiMC.
+
+Acceptance criteria:
+- Contract hashing uses Aztec MiMC by default and is not overwritten to undefined values by build scripts.
+- Client/miner hashing uses Aztec MiMC by default and matches contract outputs.
+- Perlin rand hashes use Aztec MiMC by default (consistent with contract).
+- No mismatched universe between client and contract.
+
+Risks / side-effects:
+- New universe: location IDs, perlin values, artifact IDs change.
+- Requires redeploy + client rebuild.
+
+Testing / benchmarks:
+- Re-run contract tests.
+- Basic client smoke: miner hashes align with contract location IDs for a known coordinate (optional scripted check).

@@ -1,7 +1,7 @@
 import { PerlinConfig } from '@darkforest_eth/types';
 import BigInt, { BigInteger } from 'big-integer';
 import { Fraction } from './fractions/bigFraction.js';
-import { perlinRandHash } from './mimc';
+import { aztecPerlinRandHash } from './aztec-mimc';
 
 const TRACK_LCM = false;
 
@@ -28,7 +28,7 @@ type HashFn = (...inputs: number[]) => number;
 export const rand =
   (key: number) =>
   (...args: number[]) => {
-    return perlinRandHash(key)(...args)
+    return aztecPerlinRandHash(key)(...args)
       .remainder(16)
       .toJSNumber();
   };

@@ -1,18 +1,18 @@
 use crate::test::utils;
 use crate::{
-    mimc::mimc_sponge_2_220,
+    hash::hash_2,
     perlin::multi_scale_perlin,
     utils::exp_neg_q32,
     DarkForest,
 };
 use dep::aztec::protocol_types::storage::map::derive_storage_slot_in_map;
 
-pub global INIT_X: Field = 990;
-pub global INIT_Y: Field = 0;
+pub global INIT_X: Field = 900;
+pub global INIT_Y: Field = 1;
 pub global INIT_RADIUS: u64 = 1000;
-// Precomputed for PLANETHASH_KEY=42 with MiMC, valid under PLANET_RARITY=16384.
-pub global REAL_INIT_X: Field = 1;
-pub global REAL_INIT_Y: Field = 4863;
+// Precomputed for PLANETHASH_KEY=42 with Aztec MiMC, valid under PLANET_RARITY=16384.
+pub global REAL_INIT_X: Field = 88;
+pub global REAL_INIT_Y: Field = 89;
 pub global REAL_INIT_RADIUS: u64 = 4864;
 
 pub global REVEAL_X: Field = 123;
@@ -20,11 +20,11 @@ pub global REVEAL_Y: Field = 456;
 pub global REVEAL_X_2: Field = 124;
 pub global REVEAL_Y_2: Field = 456;
 pub global HOME_PLANET_POPULATION: u64 = 200000;
-pub global MOVE_X_2: Field = 990;
+pub global MOVE_X_2: Field = 900;
 pub global MOVE_Y_2: Field = 10;
 pub global MOVE_DIST_MAX: u64 = 10;
 pub global MOVE_POP_MOVED: u64 = 10000;
-pub global CAPTURE_X_2: Field = 990;
+pub global CAPTURE_X_2: Field = 901;
 pub global CAPTURE_Y_2: Field = 1;
 pub global CAPTURE_DIST_MAX: u64 = 1;
 pub global PLANET_TYPE_PLANET: u8 = 0;
@@ -92,7 +92,7 @@ fn unpack_u64_high(packed: Field) -> u64 {
 }
 
 fn expected_location_id(x: Field, y: Field) -> Field {
-    mimc_sponge_2_220(x, y, utils::PLANETHASH_KEY)
+    hash_2(x, y, utils::PLANETHASH_KEY)
 }
 
 fn expected_perlin(x: Field, y: Field) -> u64 {
@@ -179,7 +179,7 @@ fn expected_planet_type(location_id: Field, space_type: u8, level: u8) -> u8 {
 
 fn expected_ship_id(location_id: Field, ship_type: u8) -> Field {
     let salt = (SHIP_ID_SALT + (ship_type as u64)) as Field;
-    mimc_sponge_2_220(location_id, salt, utils::PLANETHASH_KEY)
+    hash_2(location_id, salt, utils::PLANETHASH_KEY)
 }
 
 fn expected_population_after_time(
@@ -1193,9 +1193,9 @@ unconstrained fn test_fail_arrival_too_early() {
             INIT_X,
             INIT_Y,
             INIT_X,
-            INIT_Y + 2,
+            INIT_Y + 50,
             utils::WORLD_RADIUS,
-            2,
+            50,
             MOVE_POP_MOVED,
             0,
             0,

@@ -1,3 +1,6 @@
+mod aztec_mimc;
+mod feature_flags;
+mod hash;
 mod mimc;
 mod perlin;
 mod test;
@@ -22,7 +25,7 @@ pub contract DarkForest {
     use dep::darkforest_nft::NFT;
     use dep::std::field::bn254;
     use crate::{
-        mimc::mimc_sponge_2_220,
+        hash::hash_2,
         perlin::multi_scale_perlin,
         types::{
             Artifact,
@@ -525,7 +528,7 @@ pub contract DarkForest {
 
     #[internal("public")]
     fn pseudo_blockhash(block_number: u32, planethash_key: Field) -> Field {
-        mimc_sponge_2_220(block_number as Field, 0, planethash_key)
+        hash_2(block_number as Field, 0, planethash_key)
     }
 
     #[internal("public")]
@@ -536,8 +539,8 @@ pub contract DarkForest {
         planethash_key: Field,
     ) -> Field {
         let addr_field = contract_address.to_field();
-        let seed1 = mimc_sponge_2_220(location_id, addr_field, planethash_key);
-        mimc_sponge_2_220(seed1, block_hash, planethash_key)
+        let seed1 = hash_2(location_id, addr_field, planethash_key);
+        hash_2(seed1, block_hash, planethash_key)
     }
 
     #[internal("public")]
@@ -576,7 +579,7 @@ pub contract DarkForest {
         planethash_key: Field,
     ) -> pub Field {
         let salt = (SHIP_ID_SALT + (ship_type as u64)) as Field;
-        let seed = mimc_sponge_2_220(location_id, salt, planethash_key);
+        let seed = hash_2(location_id, salt, planethash_key);
         assert(seed != 0);
         seed
     }
@@ -1345,7 +1348,7 @@ pub contract DarkForest {
             perlin_mirror_y,
         );
 
-        let location_id = mimc_sponge_2_220(x, y, planethash_key);
+        let location_id = hash_2(x, y, planethash_key);
         assert(bn254::lt(location_id, max_location_id));
         assert(radius <= world_radius);
         if spawn_rim_area != 0 {
@@ -1364,7 +1367,7 @@ pub contract DarkForest {
 
         // Private nullifier ensures init claims are one-time even if public state is stale within a block.
         self.context.push_nullifier(location_id);
-        let player_nullifier = mimc_sponge_2_220(player.to_field(), 1, planethash_key);
+        let player_nullifier = hash_2(player.to_field(), 1, planethash_key);
         self.context.push_nullifier(player_nullifier);
 
         self.enqueue(
@@ -1768,7 +1771,7 @@ pub contract DarkForest {
             perlin_mirror_y,
         );
 
-        let location_id = mimc_sponge_2_220(x, y, planethash_key);
+        let location_id = hash_2(x, y, planethash_key);
         assert(bn254::lt(location_id, max_location_id));
 
         self.enqueue(
@@ -1898,7 +1901,7 @@ pub contract DarkForest {
         max_location_id: Field,
     ) {
         let player = self.context.msg_sender().unwrap();
-        let location_id = mimc_sponge_2_220(x, y, planethash_key);
+        let location_id = hash_2(x, y, planethash_key);
 
         let x_abs = field_abs_u128(x);
         let y_abs = field_abs_u128(y);
@@ -2093,8 +2096,8 @@ pub contract DarkForest {
             perlin_mirror_y,
         );
 
-        let from_location_id = mimc_sponge_2_220(x1, y1, planethash_key);
-        let to_location_id = mimc_sponge_2_220(x2, y2, planethash_key);
+        let from_location_id = hash_2(x1, y1, planethash_key);
+        let to_location_id = hash_2(x2, y2, planethash_key);
         assert(radius <= world_radius);
         assert(bn254::lt(to_location_id, max_location_id));
 
@@ -2169,8 +2172,8 @@ pub contract DarkForest {
             perlin_mirror_y,
         );
 
-        let from_location_id = mimc_sponge_2_220(x1, y1, planethash_key);
-        let to_location_id = mimc_sponge_2_220(x2, y2, planethash_key);
+        let from_location_id = hash_2(x1, y1, planethash_key);
+        let to_location_id = hash_2(x2, y2, planethash_key);
         assert(radius <= world_radius);
         assert(bn254::lt(to_location_id, max_location_id));
 

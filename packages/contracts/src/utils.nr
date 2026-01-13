@@ -1,6 +1,6 @@
 use dep::std::field::bn254;
 
-use crate::mimc::mimc_sponge_2_220;
+use crate::hash::hash_2;
 
 pub fn config_hash(
     planethash_key: Field,
@@ -10,9 +10,10 @@ pub fn config_hash(
     perlin_mirror_y: bool,
 ) -> Field {
     let flags: u8 = (perlin_mirror_x as u8) + ((perlin_mirror_y as u8) << 1);
-    let seed = mimc_sponge_2_220(planethash_key, config_key, 0);
-    mimc_sponge_2_220(perlin_length_scale as Field, flags as Field, seed)
+    let seed = hash_2(planethash_key, config_key, 0);
+    hash_2(perlin_length_scale as Field, flags as Field, seed)
 }
+
 
 pub struct Signed {
     pub neg: bool,

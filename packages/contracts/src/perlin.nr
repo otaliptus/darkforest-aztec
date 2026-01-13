@@ -1,4 +1,4 @@
-use crate::mimc::mimc_sponge_3_4;
+use crate::hash::hash_3_4;
 use crate::utils::{
     Signed,
     field_to_signed,
@@ -20,7 +20,7 @@ global DENOMINATOR: u128 = 1125899906842624000;
 global MAX_PERLIN_VALUE: u128 = 32;
 
 fn random_u4(x: Field, y: Field, scale: Field, key: Field) -> u8 {
-    let out = mimc_sponge_3_4(x, y, scale, key);
+    let out = hash_3_4(x, y, scale, key);
     // Use a 128-bit limb decomposition to avoid a full 254-bit bit-decomposition.
     let (lo, _) = bn254::decompose(out);
     let lo_u128: u128 = lo as u128;
@@ -229,7 +229,7 @@ fn test_random_u4_matches_bits() {
     let keys: [Field; 5] = [4, 42, 98765, 555, 7];
 
     for i in 0..5 {
-        let out = mimc_sponge_3_4(xs[i], ys[i], scales[i], keys[i]);
+        let out = hash_3_4(xs[i], ys[i], scales[i], keys[i]);
         let bits: [u1; 254] = out.to_le_bits();
         let mut expected: u8 = 0;
         if bits[0] == 1 { expected += 1; }

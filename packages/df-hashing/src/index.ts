@@ -24,13 +24,20 @@
  *
  * @packageDocumentation
  */
+import aztecMimcHash, { aztecPerlinRandHash } from './aztec-mimc';
 import { fakeHash, seededRandom } from './fakeHash';
 import { Fraction } from './fractions/bigFraction.js';
-import mimcHash, { modPBigInt, modPBigIntNative } from './mimc';
+import mimcHashOriginal, { modPBigInt, modPBigIntNative } from './mimc';
 import { getRandomGradientAt, IntegerVector, MAX_PERLIN_VALUE, perlin, rand } from './perlin';
 
 export {
-  mimcHash,
+  // Default MiMC (Aztec optimized: 91 rounds, exponent 7)
+  aztecMimcHash as mimcHash,
+  // Original Dark Forest MiMC (220 rounds, exponent 5)
+  mimcHashOriginal,
+  // Aztec optimized MiMC (91 rounds, exponent 7)
+  aztecMimcHash,
+  aztecPerlinRandHash,
   IntegerVector,
   perlin,
   rand,
