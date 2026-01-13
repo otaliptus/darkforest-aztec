@@ -1,0 +1,8 @@
+[package]
+name = "darkforest_ticker"
+type = "contract"
+authors = [ "" ]
+compiler_version = ">=0.18.0"
+
+[dependencies]
+aztec = { git = "https://github.com/AztecProtocol/aztec-nr/", tag = "v3.0.0-devnet.20251212", directory = "aztec" }

@@ -1,0 +1,27 @@
+TASK 013 - Utility batch getters for arrivals and planet data
+
+Mission:
+Reduce RPC fan-out by providing batch getters in the contract.
+
+Background:
+Client currently issues many `read` calls in parallel (e.g., touched planet IDs, revealed coords, arrival lists). This can overload the node.
+
+Scope:
+Contract change + client update.
+
+Plan:
+1) Add `#[external("utility")]` batch getters, e.g.:
+   - `get_planet_arrivals_batch(location_ids: [Field; N])`
+   - `get_revealed_coords_batch(location_ids: [Field; N])`
+2) Keep batch sizes fixed and small to avoid large calldata or public bytecode limits.
+3) Update client to use batch endpoints when syncing.
+
+Acceptance criteria:
+- Sync flows replace many single reads with a few batch reads.
+- Batch size is bounded and safe.
+
+Risks / side-effects:
+- Adds public interface surface. Must be kept stable.
+
+Testing / benchmarks:
+- Measure total RPC count before/after sync.

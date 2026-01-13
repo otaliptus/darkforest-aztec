@@ -1,0 +1,25 @@
+TASK 023 - Config hash validation against on-chain storage
+
+Mission:
+Prevent forged config usage by validating against stored hashes, not caller-provided hashes.
+
+Background:
+Private functions accept config and compare the computed hash against a caller-provided expected hash. This allows clients to forge config if the contract does not check against stored values.
+
+Scope:
+Contract change + client update.
+
+Plan:
+1) Read `config_hash_spacetype` and `config_hash_biome` from storage inside private functions.
+2) Compute the config hash from inputs and compare to the stored hash.
+3) Remove any reliance on caller-provided expected hash values.
+
+Acceptance criteria:
+- Forged config inputs are rejected.
+- Stored config hashes are the single source of truth.
+
+Risks / side-effects:
+- Adds MiMC cost (expected). Performance optimizations should build on top of this, not bypass it.
+
+Testing / benchmarks:
+- Add a negative test with modified config; it must fail.

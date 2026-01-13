@@ -1,5 +1,6 @@
 mod mimc;
 mod perlin;
+mod feature_flags;
 mod test;
 mod types;
 mod utils;
@@ -22,6 +23,7 @@ pub contract DarkForest {
     use dep::darkforest_nft::NFT;
     use dep::std::field::bn254;
     use crate::{
+        feature_flags::ADMIN_ACTIONS_ENABLED,
         mimc::mimc_sponge_2_220,
         perlin::multi_scale_perlin,
         types::{
@@ -1373,17 +1375,45 @@ pub contract DarkForest {
         self.context.push_nullifier(player_nullifier);
 
         self.enqueue(
-            DarkForest::at(self.context.this_address()).apply_player_action(
+            DarkForest::at(self.context.this_address()).apply_init_player(
                 player,
                 location_id,
-                x,
-                y,
                 perlin_u64,
-                radius,
-                cfg_hash,
-                0,
             )
         );
+    }
+
+    #[external("public")]
+    #[only_self]
+    fn apply_init_player(
+        player: AztecAddress,
+        location_id: Field,
+        perlin: u64,
+    ) {
+        let current_block = self.context.block_number();
+        let existing_planet = self.storage.planets.at(location_id).read();
+        // v0.6: LibPlanet._initializePlanet reverts if the planet is already initialized.
+        assert(!existing_planet.is_initialized);
+        let planet = self.internal.default_planet(
+            player,
+            location_id,
+            perlin,
+            true,
+            current_block
+        );
+        self.storage.planets.at(location_id).write(planet);
+        self.internal.init_planet_extras(location_id, planet);
+        self.storage
+            .players
+            .at(player)
+            .write(Player::new(location_id, current_block));
+        self.storage.player_claimed_ships.at(player).write(0);
+        self.storage.player_space_junk.at(player).write(0);
+        self.storage
+            .player_space_junk_limit
+            .at(player)
+            .write(SPACE_JUNK_LIMIT);
+        self.internal.index_touched_planet(location_id);
     }
 
     #[external("public")]
@@ -1400,35 +1430,7 @@ pub contract DarkForest {
     ) {
         let config = self.storage.config.read();
         let current_block = self.context.block_number();
-        if (action >= 6) & (action <= 9) {
-            let stored_admin = self.storage.admin.read();
-            assert(player.eq(stored_admin));
-        }
-        if action == 0 {
-            let existing_planet = self.storage.planets.at(location_id).read();
-            // v0.6: LibPlanet._initializePlanet reverts if the planet is already initialized.
-            assert(!existing_planet.is_initialized);
-            let planet = self.internal.default_planet(
-                player,
-                location_id,
-                perlin,
-                true,
-                current_block
-            );
-            self.storage.planets.at(location_id).write(planet);
-            self.internal.init_planet_extras(location_id, planet);
-            self.storage
-                .players
-                .at(player)
-                .write(Player::new(location_id, current_block));
-            self.storage.player_claimed_ships.at(player).write(0);
-            self.storage.player_space_junk.at(player).write(0);
-            self.storage
-                .player_space_junk_limit
-                .at(player)
-                .write(SPACE_JUNK_LIMIT);
-            self.internal.index_touched_planet(location_id);
-        } else if action == 1 {
+        if action == 1 {
             let existing = self.storage.revealed.at(location_id).read();
             assert(existing.location_id == 0);
 
@@ -1574,44 +1576,6 @@ pub contract DarkForest {
 
             state.has_tried_finding_artifact = true;
             self.storage.planet_artifact_state.at(location_id).write(state);
-        } else if action == 6 {
-            let mut planet = self.storage.planets.at(location_id).read();
-            planet.silver =
-                if perlin > planet.silver_cap { planet.silver_cap } else { perlin };
-            self.storage.planets.at(location_id).write(planet);
-        } else if action == 7 {
-            let owner = AztecAddress::deserialize([y]);
-            let mut planet = self.storage.planets.at(location_id).read();
-            planet.owner = owner;
-            self.storage.planets.at(location_id).write(planet);
-        } else if action == 8 {
-            let mut planet = self.storage.planets.at(location_id).read();
-            planet.planet_type = perlin as u8;
-            planet.planet_level = radius as u8;
-            self.storage.planets.at(location_id).write(planet);
-        } else if action == 9 {
-            let artifact_id = x;
-            let owner = AztecAddress::deserialize([y]);
-            let value0 = perlin;
-            let value1 = radius;
-            let value2 = config_hash as u64;
-
-            let mut planet_artifacts = self.storage.planet_artifacts.at(location_id).read();
-            planet_artifacts = self.internal.planet_artifacts_add(planet_artifacts, artifact_id);
-
-            let artifact = Artifact::new(
-                artifact_id,
-                location_id,
-                value1 as u8,
-                value2 as u8,
-                owner,
-                value0 as u8,
-            );
-
-            self.storage.artifacts.at(artifact_id).write(artifact);
-            self.storage.planet_artifacts.at(location_id).write(planet_artifacts);
-            self.storage.artifact_locations.at(artifact_id).write(location_id);
-            self.internal.nft_mint(owner, artifact_id);
         } else if (action == 10) | (action == 11) {
             let withdrawing = action == 11;
             let artifact_id = x;
@@ -1766,6 +1730,50 @@ pub contract DarkForest {
             }
         } else if action == 13 {
             let _ = self.internal.execute_deactivate_artifact(player, location_id);
+        } else if ADMIN_ACTIONS_ENABLED {
+            let stored_admin = self.storage.admin.read();
+            assert(player.eq(stored_admin));
+            if action == 6 {
+                let mut planet = self.storage.planets.at(location_id).read();
+                planet.silver =
+                    if perlin > planet.silver_cap { planet.silver_cap } else { perlin };
+                self.storage.planets.at(location_id).write(planet);
+            } else if action == 7 {
+                let owner = AztecAddress::deserialize([y]);
+                let mut planet = self.storage.planets.at(location_id).read();
+                planet.owner = owner;
+                self.storage.planets.at(location_id).write(planet);
+            } else if action == 8 {
+                let mut planet = self.storage.planets.at(location_id).read();
+                planet.planet_type = perlin as u8;
+                planet.planet_level = radius as u8;
+                self.storage.planets.at(location_id).write(planet);
+            } else if action == 9 {
+                let artifact_id = x;
+                let owner = AztecAddress::deserialize([y]);
+                let value0 = perlin;
+                let value1 = radius;
+                let value2 = config_hash as u64;
+
+                let mut planet_artifacts = self.storage.planet_artifacts.at(location_id).read();
+                planet_artifacts = self.internal.planet_artifacts_add(planet_artifacts, artifact_id);
+
+                let artifact = Artifact::new(
+                    artifact_id,
+                    location_id,
+                    value1 as u8,
+                    value2 as u8,
+                    owner,
+                    value0 as u8,
+                );
+
+                self.storage.artifacts.at(artifact_id).write(artifact);
+                self.storage.planet_artifacts.at(location_id).write(planet_artifacts);
+                self.storage.artifact_locations.at(artifact_id).write(location_id);
+                self.internal.nft_mint(owner, artifact_id);
+            } else {
+                assert(false);
+            }
         } else {
             assert(false);
         }

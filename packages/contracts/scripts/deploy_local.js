@@ -217,6 +217,7 @@ function buildEnvBlock(
     nodeUrl,
     darkforestAddress,
     nftAddress,
+    tickerAddress,
     sponsoredAddress,
     config,
     init,
@@ -227,6 +228,7 @@ function buildEnvBlock(
         `VITE_AZTEC_NODE_URL=${nodeUrl}`,
         `VITE_DARKFOREST_ADDRESS=${darkforestAddress}`,
         `VITE_NFT_ADDRESS=${nftAddress}`,
+        `VITE_TICKER_ADDRESS=${tickerAddress}`,
         `VITE_SPONSORED_FPC_ADDRESS=${sponsoredAddress ?? ""}`,
         `VITE_ACCOUNT_INDEX=0`,
         `VITE_PROVER_ENABLED=false`,
@@ -263,6 +265,7 @@ async function main() {
 
     const darkforestArtifact = loadArtifact("target/darkforest_contract-DarkForest.json");
     const nftArtifact = loadArtifact("../nft/target/darkforest_nft-NFT.json");
+    const tickerArtifact = loadArtifact("../ticker/target/darkforest_ticker-Ticker.json");
 
     const sponsoredAddress = await resolveSponsoredFpc(wallet, node);
     const fee = sponsoredAddress
@@ -283,6 +286,11 @@ async function main() {
     const darkforest = await dfDeploy.send({ from: account.address, fee }).deployed();
     console.log(`DarkForest deployed at ${darkforest.address.toString()}`);
 
+    console.log("Deploying Ticker...");
+    const tickerDeploy = Contract.deploy(wallet, tickerArtifact, []);
+    const ticker = await tickerDeploy.send({ from: account.address, fee }).deployed();
+    console.log(`Ticker deployed at ${ticker.address.toString()}`);
+
     console.log("Setting NFT minter...");
     await nft.methods
         .set_minter(darkforest.address)
@@ -294,6 +302,7 @@ async function main() {
         nodeUrl,
         darkforest.address.toString(),
         nft.address.toString(),
+        ticker.address.toString(),
         sponsoredAddress?.toString(),
         config,
         init,

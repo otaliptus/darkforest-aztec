@@ -1,0 +1,25 @@
+TASK 015 - Foreground tick arrival resolver service
+
+Mission:
+Resolve matured arrivals even when players are idle.
+
+Background:
+Arrivals currently resolve only if a client submits `resolve_arrival`. A shared tick service can improve liveness.
+
+Scope:
+External service update (e.g., `aztec-tick.mjs`) and optional client hooks.
+
+Plan:
+1) Extend the tick service to scan for matured arrivals (via snapshots or an index).
+2) Submit resolution txs on behalf of players or via a relayer model.
+3) Ensure it is optional and does not violate decentralization expectations.
+
+Acceptance criteria:
+- Matured arrivals resolve even if no player client is active.
+- Service can be disabled without breaking gameplay.
+
+Risks / side-effects:
+- Centralization and gas funding concerns. Document clearly.
+
+Testing / benchmarks:
+- Simulate idle clients and verify arrivals still resolve.

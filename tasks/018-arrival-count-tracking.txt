@@ -1,0 +1,27 @@
+TASK 018 - Arrival count tracking in storage
+
+Mission:
+Avoid scanning all 12 arrival slots when fewer are populated.
+
+Background:
+`planet_arrivals` is fixed-length (12). We always iterate all slots. Storing a count could allow early stopping in some loops.
+
+Scope:
+Contract storage layout change + migration.
+
+Plan:
+1) Extend `PlanetArrivals` to include `count`.
+2) Update insert/remove logic to maintain count.
+3) Update iteration logic to stop after `count` (still guard against 0s).
+4) Provide migration strategy for existing storage.
+
+Acceptance criteria:
+- All arrival insert/remove logic maintains `count` correctly.
+- Iteration logic uses `count` without breaking semantics.
+
+Risks / side-effects:
+- Storage layout change requires migration and test coverage.
+- Small performance gain relative to MiMC costs.
+
+Testing / benchmarks:
+- Add tests for insert/remove edge cases.

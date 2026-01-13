@@ -64,8 +64,8 @@ This is the implicit graph that precedes all actions:
   -> `DarkForest::init_player` (private)
      -> perlin + config hash validation, `mimc_sponge_2_220` location id
      -> push nullifiers
-     -> enqueue `apply_player_action(..., action=0)`
-  -> `DarkForest::apply_player_action` (public only_self)
+     -> enqueue `apply_init_player(...)`
+  -> `DarkForest::apply_init_player` (public only_self)
      -> `default_planet` + `init_planet_extras`
      -> write `players`, `planets`, `player_*`
      -> `index_touched_planet`
@@ -240,4 +240,3 @@ This is the implicit graph that precedes all actions:
 ### NFT burn (unused by DarkForest)
 - `NFT.burn(token_id)` exists but is not called by DarkForest;
   burn semantics are implemented as transfer to the contract itself.
-

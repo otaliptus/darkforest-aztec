@@ -29,7 +29,8 @@ Usage: scripts/df-local.sh [options]
 Options:
   --reset            Stop/remove aztec local-network container(s) (no ~/.aztec deletion)
   --deploy           Redeploy DarkForest + NFT and write apps/client/.env.local
-  --mine-foreground <s> Wait <s> seconds, then mine a block repeatedly (foreground only)
+  --mine-foreground <s> Wait <s> seconds, then mine a block repeatedly (foreground only).
+                      Uses Ticker if VITE_TICKER_ADDRESS is set; otherwise uses admin_set_planet_owner.
   --run-client       Start the client dev server (yarn client:dev)
   --snapshot         Build snapshot.json + enable DF_SNAPSHOT_URL for the client
   --snapshot-watch   Keep snapshot.json updated in the background
@@ -355,6 +356,7 @@ if [[ "$SKIP_BUILD" -eq 0 ]]; then
   echo "Building Noir contracts + client..."
   (cd "$ROOT_DIR" && yarn workspace @darkforest-aztec/nft compile)
   (cd "$ROOT_DIR" && yarn workspace @darkforest-aztec/contracts compile)
+  (cd "$ROOT_DIR" && yarn workspace @darkforest-aztec/ticker compile)
   (cd "$ROOT_DIR" && yarn client:build)
   echo "Build complete."
 else

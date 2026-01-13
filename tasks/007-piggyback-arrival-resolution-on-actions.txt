@@ -1,0 +1,25 @@
+TASK 007 - Piggyback arrival resolution on moves/upgrades
+
+Mission:
+Reduce explicit resolve txs by relying on side-effect resolution in existing actions.
+
+Background:
+`apply_move` already calls `process_pending_arrivals` for from/to planets. Similar behavior exists for upgrades. We can skip explicit resolve calls when a relevant action is pending.
+
+Scope:
+Client-side logic update (optionally add notes in contract docs).
+
+Plan:
+1) When a move or upgrade is queued to a planet, mark that planet as "arrival-resolve-covered" for the pending tx.
+2) Skip submitting `resolve_arrival` for that planet while the action tx is in flight.
+3) If the action fails, re-queue resolution.
+
+Acceptance criteria:
+- Explicit resolve tx count drops in busy gameplay.
+- Arrivals still resolve when the move/upgrade lands.
+
+Risks / side-effects:
+- If action tx fails or is dropped, arrivals might delay; ensure retry logic exists.
+
+Testing / benchmarks:
+- Create an arrival and issue a move to the same planet; verify arrivals resolve after the move without explicit resolve.

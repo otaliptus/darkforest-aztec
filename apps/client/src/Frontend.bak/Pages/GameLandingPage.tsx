@@ -693,6 +693,7 @@ export function GameLandingPage({ match, location }: RouteComponentProps<{ contr
           connection: ethConnection,
           terminal,
           contractAddress,
+          autoResolveArrivals: CLIENT_CONFIG.autoResolveArrivals,
         });
       } catch (e) {
         console.error(e);

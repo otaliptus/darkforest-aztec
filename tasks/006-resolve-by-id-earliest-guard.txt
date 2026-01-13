@@ -1,0 +1,26 @@
+TASK 006 - Earliest-arrival guard for resolve-by-ID
+
+Mission:
+Prevent out-of-order resolution when resolving by arrival ID.
+
+Background:
+Resolving a later arrival first can advance `last_updated` and permanently block earlier arrivals. This can create repeated resolve attempts and wasted proofs.
+
+Scope:
+Contract change only.
+
+Plan:
+1) In `resolve_arrival(id)`, find the earliest matured arrival for the destination planet.
+2) Require that `id` matches the earliest matured arrival id before allowing resolution.
+3) If not, revert with a clear error.
+
+Acceptance criteria:
+- Resolving a non-earliest matured arrival reverts.
+- Resolving the earliest matured arrival succeeds and allows the next ones to proceed.
+
+Risks / side-effects:
+- Slight extra lookup cost (scan up to 12 arrivals).
+
+Testing / benchmarks:
+- Create two arrivals to the same planet. Attempt to resolve the later one first; verify revert.
+- Resolve in order and verify success.

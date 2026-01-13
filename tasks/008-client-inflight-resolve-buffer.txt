@@ -1,0 +1,26 @@
+TASK 008 - Client inflight tracking + proving buffer
+
+Mission:
+Prevent duplicate resolve submissions and reduce wasted proofs during long proving times.
+
+Background:
+The client often attempts `resolve_arrival` as soon as an arrival matures, but proving can take multiple blocks. This causes duplicate submissions.
+
+Scope:
+Client-only change in `apps/client`.
+
+Plan:
+1) Track inflight resolve txs by `arrivalId` and `toPlanet`.
+2) Before submitting, check inflight maps and skip if already pending.
+3) Add a buffer: only attempt resolve at `arrival_block + PROVING_BUFFER`.
+4) Clear inflight entries on success or final failure.
+
+Acceptance criteria:
+- Duplicate resolve txs for the same arrival do not occur.
+- Resolution is delayed by a small buffer (e.g., 2 blocks) to account for proving.
+
+Risks / side-effects:
+- Small UX delay is intentional; make it visible in logs or UI.
+
+Testing / benchmarks:
+- Simulate long proof time; verify only one resolve attempt is made.

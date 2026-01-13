@@ -1,0 +1,26 @@
+TASK 012 - Client arrival state caching and lazy verification
+
+Mission:
+Avoid expensive `getArrivalState` queries unless needed.
+
+Background:
+The client often re-queries arrival state even when local state is consistent, adding RPC load.
+
+Scope:
+Client-only change.
+
+Plan:
+1) Trust local state for arrivals when possible.
+2) Only call `getArrivalState` when a resolve tx fails, is delayed, or local state is stale.
+3) Track a "last verified" timestamp per arrival.
+
+Acceptance criteria:
+- `getArrivalState` calls drop significantly in normal operation.
+- Fallback verification still occurs on failure paths.
+
+Risks / side-effects:
+- If local state is wrong, arrivals may appear stale; ensure retry logic exists.
+
+Testing / benchmarks:
+- Simulate normal flow and verify fewer RPC calls.
+- Simulate a failed resolve tx and verify verification is triggered.

@@ -62,7 +62,7 @@ Aztec will use a single contract with internal modules/functions instead of the 
 - `private validate_init_player(x, y, r, ...)`:
   - Recompute `locationId = mimc(x,y, PLANETHASH_KEY)` and `perlin = perlin(x,y, SPACETYPE_KEY, SCALE, mirrors)`.
   - Enforce `x^2 + y^2` bounds (spawn ring) and `perlin` in init range.
-  - Enqueue `public apply_init_player(player, locationId, perlin, r)`.
+  - Enqueue `public apply_init_player(player, locationId, perlin)`.
 - `public apply_init_player(...) (only_self)`:
   - Initialize player + planet state.
 

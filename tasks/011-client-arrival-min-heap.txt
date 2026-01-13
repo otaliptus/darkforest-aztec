@@ -1,0 +1,25 @@
+TASK 011 - Client arrival scheduling with min-heap or per-planet queues
+
+Mission:
+Remove O(n log n) sorting per tick for arrival scheduling.
+
+Background:
+The client sorts all arrivals every tick to find the earliest. This scales poorly with many arrivals.
+
+Scope:
+Client-only change.
+
+Plan:
+1) Maintain a min-heap keyed by `arrivalTime`, or maintain a map of per-planet earliest arrival.
+2) Update the heap when arrivals are added/removed or resolved.
+3) Each tick, only examine the earliest arrival(s) rather than sorting all.
+
+Acceptance criteria:
+- No full-array sort per tick.
+- Scheduling still resolves all matured arrivals.
+
+Risks / side-effects:
+- More complex state management; must handle stale or removed arrivals.
+
+Testing / benchmarks:
+- Add 1000 arrivals; verify tick time is stable and does not scale with sorting.

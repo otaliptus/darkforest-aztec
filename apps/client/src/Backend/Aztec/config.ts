@@ -34,6 +34,7 @@ export type ClientConfig = {
     perlin: PerlinConfig;
     account?: ClientAccountConfig;
     proverEnabled?: boolean;
+    autoResolveArrivals?: boolean;
 };
 
 export const DEFAULT_PERLIN_CONFIG: PerlinConfig = {
@@ -70,6 +71,7 @@ export const CLIENT_CONFIG: ClientConfig = {
             : undefined,
     },
     proverEnabled: toBool(getEnv("PROVER_ENABLED"), false),
+    autoResolveArrivals: toBool(getEnv("DF_AUTO_RESOLVE_ARRIVALS"), true),
 };
 
 export const VERBOSE_LOGGING = toBool(getEnv("DF_VERBOSE_LOGS"), false);

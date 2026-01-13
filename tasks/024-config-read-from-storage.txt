@@ -1,0 +1,26 @@
+TASK 024 - Read config from storage in private functions
+
+Mission:
+Eliminate client-supplied config data in proofs and use on-chain config directly.
+
+Background:
+Passing full config arrays into private functions is large and enables potential mismatches. Loading from storage is safer and reduces input size.
+
+Scope:
+Contract change + client update.
+
+Plan:
+1) Add a private helper `load_config()` to read config values from storage.
+2) Replace config parameters in `init_player`, `reveal_location`, `move`, and `move_known` with storage-loaded values.
+3) Update client calls to remove config inputs.
+
+Acceptance criteria:
+- Private functions no longer accept full config arrays.
+- Config values used in proofs match on-chain storage.
+
+Risks / side-effects:
+- Adds private storage reads; ensure proving cost is acceptable.
+- Requires client updates and possibly ABI changes.
+
+Testing / benchmarks:
+- Add tests to confirm correct behavior with config pulled from storage.

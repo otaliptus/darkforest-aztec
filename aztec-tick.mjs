@@ -30,26 +30,30 @@ const DF_ADDRESS =
   process.env.DARKFOREST_ADDRESS ||
   process.env.VITE_DARKFOREST_ADDRESS ||
   envFromFile.VITE_DARKFOREST_ADDRESS;
+const TICKER_ADDRESS =
+  process.env.TICKER_ADDRESS ||
+  process.env.VITE_TICKER_ADDRESS ||
+  envFromFile.VITE_TICKER_ADDRESS;
 
 const INTERVAL = Number(process.env.INTERVAL ?? '0.5'); // seconds
 const TICK_LOCATION_ID = BigInt(process.env.TICK_LOCATION_ID ?? '1');
 
-if (!DF_ADDRESS) {
-  console.error('Missing DARKFOREST_ADDRESS. Ensure apps/client/.env.local has VITE_DARKFOREST_ADDRESS.');
+if (!DF_ADDRESS && !TICKER_ADDRESS) {
+  console.error(
+    'Missing DARKFOREST_ADDRESS and TICKER_ADDRESS. Ensure apps/client/.env.local has VITE_DARKFOREST_ADDRESS or VITE_TICKER_ADDRESS.'
+  );
   process.exit(1);
 }
-
-const artifactPath = path.join(ROOT, 'packages', 'contracts', 'target', 'darkforest_contract-DarkForest.json');
-if (!fs.existsSync(artifactPath)) {
-  console.error('Missing contract artifact. Run: yarn contracts:compile');
-  process.exit(1);
-}
-
-const artifact = loadContractArtifact(JSON.parse(fs.readFileSync(artifactPath, 'utf8')));
 
 console.log(`Aztec node: ${AZTEC_NODE_URL}`);
-console.log(`DarkForest: ${DF_ADDRESS}`);
-console.log(`Tick location: 0x${TICK_LOCATION_ID.toString(16)}`);
+if (DF_ADDRESS) {
+  console.log(`DarkForest: ${DF_ADDRESS}`);
+}
+if (TICKER_ADDRESS) {
+  console.log(`Ticker: ${TICKER_ADDRESS}`);
+} else {
+  console.log(`Tick location: 0x${TICK_LOCATION_ID.toString(16)}`);
+}
 
 const node = createAztecNodeClient(AZTEC_NODE_URL);
 await waitForNode(node);
@@ -64,19 +68,59 @@ const admin = await wallet.createSchnorrAccount(
   adminData.signingKey
 );
 
-const dfAddress = AztecAddress.fromString(DF_ADDRESS);
-const onChain = await node.getContract(dfAddress);
-if (!onChain) throw new Error('DarkForest contract not found on-chain.');
-await wallet.registerContract(onChain, artifact);
-const darkforest = await Contract.at(dfAddress, artifact, wallet);
+let darkforest;
+if (DF_ADDRESS && !TICKER_ADDRESS) {
+  const artifactPath = path.join(
+    ROOT,
+    'packages',
+    'contracts',
+    'target',
+    'darkforest_contract-DarkForest.json'
+  );
+  if (!fs.existsSync(artifactPath)) {
+    console.error('Missing DarkForest artifact. Run: yarn contracts:compile');
+    process.exit(1);
+  }
+  const artifact = loadContractArtifact(JSON.parse(fs.readFileSync(artifactPath, 'utf8')));
+  const dfAddress = AztecAddress.fromString(DF_ADDRESS);
+  const onChain = await node.getContract(dfAddress);
+  if (!onChain) throw new Error('DarkForest contract not found on-chain.');
+  await wallet.registerContract(onChain, artifact);
+  darkforest = await Contract.at(dfAddress, artifact, wallet);
+}
+
+let ticker;
+if (TICKER_ADDRESS) {
+  const tickerArtifactPath = path.join(
+    ROOT,
+    'packages',
+    'ticker',
+    'target',
+    'darkforest_ticker-Ticker.json'
+  );
+  if (!fs.existsSync(tickerArtifactPath)) {
+    console.error('Missing Ticker artifact. Run: yarn contracts:compile');
+    process.exit(1);
+  }
+  const tickerArtifact = loadContractArtifact(
+    JSON.parse(fs.readFileSync(tickerArtifactPath, 'utf8'))
+  );
+  const tickerAddress = AztecAddress.fromString(TICKER_ADDRESS);
+  const tickerOnChain = await node.getContract(tickerAddress);
+  if (!tickerOnChain) throw new Error('Ticker contract not found on-chain.');
+  await wallet.registerContract(tickerOnChain, tickerArtifact);
+  ticker = await Contract.at(tickerAddress, tickerArtifact, wallet);
+}
 
 console.log(`Admin: ${admin.address.toString()}`);
 
 while (true) {
   try {
-    const sent = await darkforest.methods.admin_set_planet_owner(TICK_LOCATION_ID, admin.address).send({
-      from: admin.address,
-    });
+    const sent = ticker
+      ? await ticker.methods.tick().send({ from: admin.address })
+      : await darkforest.methods
+          .admin_set_planet_owner(TICK_LOCATION_ID, admin.address)
+          .send({ from: admin.address });
     await sent.wait();
     const l2 = await node.getBlockNumber();
     console.log(`Tick tx mined. L2 block: ${l2}`);

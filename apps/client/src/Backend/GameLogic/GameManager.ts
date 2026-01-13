@@ -389,6 +389,7 @@ class GameManager extends EventEmitter {
    * Generates capture zones.
    */
   private captureZoneGenerator: CaptureZoneGenerator | undefined;
+  private readonly autoResolveArrivals: boolean;
 
   private constructor(
     terminal: React.MutableRefObject<TerminalHandle | undefined>,
@@ -409,7 +410,8 @@ class GameManager extends EventEmitter {
     useMockHash: boolean,
     artifacts: Map<ArtifactId, Artifact>,
     ethConnection: AztecConnection,
-    paused: boolean
+    paused: boolean,
+    autoResolveArrivals: boolean
   ) {
     super();
 
@@ -460,6 +462,7 @@ class GameManager extends EventEmitter {
     this.contractConstants = contractConstants;
     this.homeLocation = homeLocation;
     this.contractsAPI = contractsAPI;
+    this.autoResolveArrivals = autoResolveArrivals;
     this.resolvingArrivals = new Set();
     this.arrivalResolveSkips = new Map();
     this.arrivalResolveInflightSkips = new Map();
@@ -498,6 +501,9 @@ class GameManager extends EventEmitter {
       }
     }
 
+    const arrivalHandler = this.autoResolveArrivals
+      ? this.queueResolveArrival.bind(this)
+      : undefined;
     this.entityStore = new GameObjects(
       account,
       touchedPlanets,
@@ -510,7 +516,7 @@ class GameManager extends EventEmitter {
       unprocessedPlanetArrivalIds,
       contractConstants,
       worldRadius,
-      this.queueResolveArrival.bind(this)
+      arrivalHandler
     );
     this.persistentChunkStore = persistentChunkStore;
     this.snarkHelper = snarkHelper;
@@ -694,10 +700,12 @@ class GameManager extends EventEmitter {
     connection,
     terminal,
     contractAddress,
+    autoResolveArrivals,
   }: {
     connection: AztecConnection;
     terminal: React.MutableRefObject<TerminalHandle | undefined>;
     contractAddress: EthAddress;
+    autoResolveArrivals?: boolean;
   }): Promise<GameManager> {
     if (!terminal.current) {
       throw new Error('you must pass in a handle to a terminal');
@@ -776,6 +784,7 @@ class GameManager extends EventEmitter {
     const useMockHash = initialState.contractConstants.DISABLE_ZK_CHECKS;
     const snarkHelper = SnarkArgsHelper.create(hashConfig, terminal, useMockHash);
 
+    const shouldAutoResolveArrivals = autoResolveArrivals ?? true;
     const gameManager = new GameManager(
       terminal,
       account,
@@ -797,7 +806,8 @@ class GameManager extends EventEmitter {
       useMockHash,
       knownArtifacts,
       connection,
-      initialState.paused
+      initialState.paused,
+      shouldAutoResolveArrivals
     );
 
     const config = {
@@ -3189,7 +3199,9 @@ class GameManager extends EventEmitter {
         this.captureZoneGenerator.generate(blockNumber);
       }
       this.entityStore.setCurrentBlockNumber(blockNumber);
-      this.resolveMaturedArrivals(blockNumber);
+      if (this.autoResolveArrivals) {
+        this.resolveMaturedArrivals(blockNumber);
+      }
       void this.syncOwnedPlanets(blockNumber);
     });
   }

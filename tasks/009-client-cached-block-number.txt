@@ -1,0 +1,25 @@
+TASK 009 - Client cached block number usage
+
+Mission:
+Reduce RPC chatter by reusing the tick's block number for arrival checks.
+
+Background:
+Per-arrival calls to `getCurrentBlockNumber()` cause RPC spam and latency spikes.
+
+Scope:
+Client-only change.
+
+Plan:
+1) Capture the block number once per tick.
+2) Pass it down to arrival resolution logic instead of re-querying.
+3) Remove redundant calls in resolve loops.
+
+Acceptance criteria:
+- Only one block number call per tick.
+- Arrival scheduling uses the same block value across the tick.
+
+Risks / side-effects:
+- If block advances mid-tick, some arrivals resolve one tick later. This is acceptable.
+
+Testing / benchmarks:
+- Log the number of block-number RPC calls per tick and verify it is 1.

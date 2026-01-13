@@ -1,0 +1,27 @@
+TASK 005 - Resolve-by-planet API
+
+Mission:
+Replace per-arrival resolution with a planet-scoped resolution method.
+
+Background:
+Resolving by arrival ID can be done out of order and causes client complexity. A planet-level resolver is more aligned with the 12-slot arrival list.
+
+Scope:
+Contract change + client update.
+
+Plan:
+1) Add a public `apply_resolve_planet(location_id, up_to_block)` entry point (only self).
+2) Private wrapper to enqueue the public call.
+3) In public apply, loop arrivals and resolve any with `arrival_time <= up_to_block`.
+4) Update client to call this instead of `resolve_arrival(id)`.
+
+Acceptance criteria:
+- Resolvers do not require an arrival ID.
+- All matured arrivals for the planet are resolved up to the block cap.
+- Existing per-arrival resolution still works (optional, but useful for fallback).
+
+Risks / side-effects:
+- New API surface; must be used carefully to avoid reentrancy style issues.
+
+Testing / benchmarks:
+- Resolve a mix of matured and non-matured arrivals and verify only matured are applied.

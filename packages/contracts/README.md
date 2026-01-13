@@ -9,6 +9,21 @@ yarn compile
 yarn test:nr
 ```
 
+Feature flags (public bytecode size):
+
+```bash
+# Disable admin-only public actions (6–9) for production builds.
+DF_ENABLE_ADMIN_ACTIONS=0 yarn compile
+# or
+yarn compile:prod
+```
+
+Check public bytecode size:
+
+```bash
+yarn bytecode:size
+```
+
 ## Local deploy (devnet)
 
 ```bash

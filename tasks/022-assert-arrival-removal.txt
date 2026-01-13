@@ -1,0 +1,25 @@
+TASK 022 - Assert arrival ID removal
+
+Mission:
+Add a defensive assertion to ensure arrival IDs are removed from the planet list.
+
+Background:
+`execute_arrival` iterates and clears the arrival ID from `planet_arrivals` but does not assert that it was found. Silent failure leaves stale IDs and can block future arrivals.
+
+Scope:
+Contract change.
+
+Plan:
+1) Track a `removed` flag when clearing the ID.
+2) After the loop, assert `removed == true`.
+3) Provide a clear error message.
+
+Acceptance criteria:
+- If the ID is missing from the list, the function reverts.
+- Normal resolution paths still succeed.
+
+Risks / side-effects:
+- Any inconsistent on-chain state will now hard-fail (intended).
+
+Testing / benchmarks:
+- Add a test that attempts to resolve an arrival with a missing ID and verify revert.

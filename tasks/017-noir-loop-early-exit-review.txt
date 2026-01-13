@@ -1,0 +1,25 @@
+TASK 017 - Noir loop early-exit review
+
+Mission:
+Confirm we already use the optimal loop pattern given Noir lacks `break`.
+
+Background:
+Noir loops always run full iterations. Guarded loops with `found` are the best available micro-optimization.
+
+Scope:
+Contract review only (possible minor refactor).
+
+Plan:
+1) Scan loops that check arrays of size 12 (arrivals, planets).
+2) Ensure guard flags are used consistently to minimize work.
+3) Add a comment or small refactor if any loop is missing the guard.
+
+Acceptance criteria:
+- All relevant loops use a guard flag for minimal work.
+- No semantic changes.
+
+Risks / side-effects:
+- Tiny gains only; do not change logic for micro-optimizations.
+
+Testing / benchmarks:
+- None required beyond existing tests.

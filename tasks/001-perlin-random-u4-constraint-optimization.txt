@@ -1,0 +1,32 @@
+TASK 001 - Perlin random_u4 constraint optimization
+
+Mission:
+Reduce proof constraints by eliminating 254-bit decomposition inside Perlin noise, while keeping exact v0.6 outputs.
+
+Background:
+`random_u4` in `packages/contracts/src/perlin.nr` currently calls `to_le_bits(254)` and slices 4 bits. This is a large constraint cost and is called many times per move.
+
+Scope:
+Contract-only change in `packages/contracts/src/perlin.nr` plus tests/benchmarks.
+
+Plan:
+1) Add a new helper (or replace the existing one) that constrains the MiMC output as `out = q * 16 + r`.
+2) Constrain `r` to a 4-bit value (0..15). Use an explicit range check or u4 type if available.
+3) Replace all `random_u4` call sites with the optimized helper.
+4) Add a small test harness that compares old vs new outputs for fixed seeds.
+
+Acceptance criteria:
+- Perlin outputs are identical to the current implementation for a fixed set of test vectors.
+- Proof constraints for `move` and `move_known` drop measurably (record before/after).
+- No changes to MiMC parameters or input ordering.
+
+Risks / side-effects:
+- A raw cast (e.g., `out as u8 & 15`) is NOT enough; it must be constrained or it will be unsound.
+- Any change in hash input ordering breaks v0.6 parity.
+
+Testing / benchmarks:
+- Add a Noir test that compares outputs for at least 20 fixed (x,y,scale,key) tuples.
+- Run existing move proof benchmarks and record constraint counts or proving time.
+
+Out of scope:
+- Replacing MiMC or changing Perlin scales.

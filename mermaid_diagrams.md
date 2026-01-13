@@ -236,7 +236,7 @@ flowchart TD
     J4["ContractsAPI.submitTransaction<br/>apps/client/src/Backend/GameLogic/ContractsAPI.ts:1003"]
     J5["dispatchAztecTransaction(METHOD.INIT)<br/>ContractsAPI.ts:1171"]
     J6["DarkForestClient.initPlayer -> darkforest.methods.init_player<br/>apps/client/src/Backend/Aztec/scripts/darkforest.ts:370"]
-    J7["Noir: DarkForest::init_player -> apply_player_action<br/>docs/action-call-graphs.md:56"]
+    J7["Noir: DarkForest::init_player -> apply_init_player<br/>docs/action-call-graphs.md:56"]
     J8["Post-confirm: getSpaceships + hardRefreshPlanet<br/>GameManager.ts:2082"]
     Jerr["catch -> txInitError('initializePlayer')<br/>GameManager.ts:2088"]
     J1 --> J2 --> J3 --> J4 --> J5 --> J6 --> J7 --> J8

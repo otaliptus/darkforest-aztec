@@ -1,0 +1,25 @@
+TASK 016 - Batch multiple actions in a single tx (research)
+
+Mission:
+Explore batching actions (e.g., prospect + find) to reduce per-tx proof overhead.
+
+Background:
+Multiple actions in sequence can require multiple proofs/txs. Batching could reduce overhead but may exceed grant scope.
+
+Scope:
+Research + design proposal. Implementation only if within grant constraints.
+
+Plan:
+1) Identify candidate action pairs with clear ordering (prospect -> find, upgrade -> move, etc.).
+2) Check Aztec private->public flow constraints for batching.
+3) Draft a minimal API proposal if feasible.
+
+Acceptance criteria:
+- A clear go/no-go decision with technical rationale.
+- If feasible, a minimal contract+client design sketch.
+
+Risks / side-effects:
+- May be out of grant scope and could introduce complex state transitions.
+
+Testing / benchmarks:
+- If implemented, measure tx count and proving time savings.

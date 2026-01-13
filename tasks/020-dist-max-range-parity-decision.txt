@@ -1,0 +1,25 @@
+TASK 020 - dist_max range parity decision
+
+Mission:
+Document and enforce the v0.6 behavior that allows delayed arrivals when `dist_max > actual_distance`.
+
+Background:
+The v0.6 rules allow `dist_max` to exceed actual distance to intentionally delay arrival. Enforcing `dist_max <= range` would break parity.
+
+Scope:
+Contract tests + client documentation. No functional clamp should be added.
+
+Plan:
+1) Add a test that validates `actual_distance <= dist_max` is sufficient for a valid move.
+2) Ensure no new logic clamps `dist_max` to `range` unless explicitly approved.
+3) Document this parity requirement in a non-.md note or code comment.
+
+Acceptance criteria:
+- Tests confirm delayed-arrival strategy works.
+- No `dist_max <= range` enforcement is added without a dedicated decision.
+
+Risks / side-effects:
+- None; this protects parity.
+
+Testing / benchmarks:
+- Add a test that submits a move with `dist_max > actual_distance` and verifies success.

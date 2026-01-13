@@ -112,12 +112,12 @@ Grouped by component to make it easier to reason about:
   - `apply_spaceship_depart` and `apply_spaceship_arrive` apply ship stat effects.
 
 ### Action flows (flow-wise)
-Action logic is executed via `apply_player_action` and `apply_move`. The private entrypoints only validate and enqueue.
+Action logic is executed via `apply_init_player`, `apply_player_action`, and `apply_move`. The private entrypoints only validate and enqueue.
 
-1) Init player (action 0)
+1) Init player (`apply_init_player`)
 - Validates spawn radius, perlin range, and config hash in private `init_player`.
 - Pushes nullifiers for location and player.
-- `apply_player_action`:
+- `apply_init_player`:
   - Initializes the home planet if unset and writes `Player` record.
   - Sets claimed ships flag, space junk, and space junk limit.
   - Indexes the planet id as touched.
@@ -296,4 +296,3 @@ Missing or stubbed
 - Timing: uses Aztec block numbers for cooldowns and travel time; no wall-clock timestamps.
 - Client UX: lobbies and social integrations are disabled; the Aztec flow is direct-to-game.
 - Some v0.6 features are disabled in constants (capture zones, planet transfers) or stubbed.
-

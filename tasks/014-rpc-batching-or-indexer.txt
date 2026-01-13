@@ -1,0 +1,25 @@
+TASK 014 - RPC batching / indexer / caching layer
+
+Mission:
+Reduce latency and node load by aggregating read calls.
+
+Background:
+Client sync uses hundreds of parallel reads. Even with contract batch getters, a caching layer can further reduce repeated reads.
+
+Scope:
+Infrastructure change (optional). No contract changes required.
+
+Plan:
+1) Prototype an RPC batcher that coalesces read requests.
+2) Optionally introduce a lightweight indexer cache for frequent reads.
+3) Add feature flags in the client to enable/disable.
+
+Acceptance criteria:
+- Sync read count and latency improves measurably.
+- Client still works when the batcher is disabled.
+
+Risks / side-effects:
+- Added infrastructure complexity; must be optional for decentralized usage.
+
+Testing / benchmarks:
+- Measure median sync time before/after with a test dataset.
