@@ -144,6 +144,7 @@ export enum GameManagerEvent {
 }
 
 const AZTEC_PLANET_SYNC_INTERVAL_BLOCKS = 2;
+const ARRIVAL_PROVING_BUFFER_BLOCKS = 2;
 
 type TxTimings = {
   createdAt: number;
@@ -3238,7 +3239,9 @@ class GameManager extends EventEmitter {
   private resolveMaturedArrivals(currentBlockNumber: number): void {
     const arrivals = this.entityStore
       .getAllVoyages()
-      .filter((arrival) => arrival.arrivalTime <= currentBlockNumber)
+      .filter(
+        (arrival) => arrival.arrivalTime + ARRIVAL_PROVING_BUFFER_BLOCKS <= currentBlockNumber
+      )
       .sort((a, b) => a.arrivalTime - b.arrivalTime);
 
     let started = 0;
@@ -3339,6 +3342,7 @@ class GameManager extends EventEmitter {
         `from=${meta.fromPlanet ?? 'unknown'}`,
         `to=${meta.toPlanet ?? 'unknown'}`,
         `arrivalBlock=${meta.arrivalBlock ?? 'n/a'}`,
+        `readyBlock=${meta.readyBlock ?? 'n/a'}`,
         `now=${meta.currentBlock ?? 'n/a'}`,
         `owner=${meta.owner ?? 'unknown'}`,
         `energy=${meta.energy ?? 'n/a'}`,
@@ -3422,11 +3426,13 @@ class GameManager extends EventEmitter {
         toPlanet = locationIdFromBigInt(arrivalState.toPlanet);
         currentBlock = await this.contractsAPI.getCurrentBlockNumber();
         const toPlanetSnapshot = this.entityStore.getPlanetWithId(toPlanet, false);
+        const readyBlock = arrivalBlock + ARRIVAL_PROVING_BUFFER_BLOCKS;
         resolveMeta = {
           ...resolveMeta,
           fromPlanet: formatLocation(chainFromPlanet),
           toPlanet: formatLocation(toPlanet),
           arrivalBlock,
+          readyBlock,
           currentBlock,
           owner: toPlanetSnapshot?.owner ?? 'unknown',
           energy: formatEnergy(toPlanetSnapshot?.energy),
@@ -3438,17 +3444,18 @@ class GameManager extends EventEmitter {
           silverMovedOnChain: arrivalState.silverMoved.toString(),
           carriedArtifactId: arrivalState.carriedArtifactId.toString(),
         };
-        if (currentBlock < arrivalBlock) {
+        if (currentBlock < readyBlock) {
           if (!this.arrivalResolveSkips.has(arrival.eventId)) {
-            this.arrivalResolveSkips.set(arrival.eventId, arrivalBlock);
+            this.arrivalResolveSkips.set(arrival.eventId, readyBlock);
             console.info('[Aztec] arrival not ready', {
               arrivalId: arrival.eventId,
               arrivalBlock,
+              readyBlock,
               currentBlock,
               toPlanet,
             });
             this.terminal.current?.println(
-              `Arrival ${arrival.eventId} waiting on block ${arrivalBlock} (now ${currentBlock})`,
+              `Arrival ${arrival.eventId} waiting on block ${readyBlock} (now ${currentBlock})`,
               TerminalTextStyle.Sub
             );
           }
