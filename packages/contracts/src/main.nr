@@ -764,7 +764,7 @@ pub contract DarkForest {
     fn planet_artifacts_has_space(artifacts: PlanetArtifacts) -> bool {
         let mut has_space = false;
         for i in 0..(MAX_PLANET_ARTIFACTS as u32) {
-            if artifacts.ids[i] == 0 {
+            if (!has_space) & (artifacts.ids[i] == 0) {
                 has_space = true;
             }
         }
@@ -776,7 +776,7 @@ pub contract DarkForest {
         let arrival_list = self.storage.planet_arrivals.at(location_id).read();
         let mut has = false;
         for i in 0..12 {
-            if arrival_list.get(i) != 0 {
+            if (!has) & (arrival_list.get(i) != 0) {
                 has = true;
             }
         }
