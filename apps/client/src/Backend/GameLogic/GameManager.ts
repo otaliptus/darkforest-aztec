@@ -2816,6 +2816,9 @@ class GameManager extends EventEmitter {
       }
 
       const oldPlanet = this.entityStore.getPlanetWithLocation(oldLocation);
+      const toPlanet = this.entityStore.getPlanetWithId(to, false);
+      const toIsInitializedHint =
+        toPlanet?.syncedWithContract ? Boolean(toPlanet.isInContract) : undefined;
 
       const localArtifact = artifactMoved
         ? this.entityStore.getArtifactById(artifactMoved)
@@ -2860,7 +2863,7 @@ class GameManager extends EventEmitter {
         return args;
       };
 
-      const txIntent: UnconfirmedMove = {
+      const txIntent: UnconfirmedMove & { toIsInitializedHint?: boolean } = {
         methodName: 'move',
         contract: this.contractsAPI.contract,
         args: getArgs(),
@@ -2870,6 +2873,7 @@ class GameManager extends EventEmitter {
         silver: silverMoved,
         artifact: artifactMoved,
         abandoning,
+        toIsInitializedHint,
       };
 
       if (artifactMoved) {

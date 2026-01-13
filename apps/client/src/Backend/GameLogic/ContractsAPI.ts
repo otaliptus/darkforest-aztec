@@ -985,27 +985,84 @@ export class ContractsAPI extends EventEmitter {
         const y1Field = toFieldBigInt(y1);
         const x2Field = toFieldBigInt(x2);
         const y2Field = toFieldBigInt(y2);
-        const moveIntent = intent as UnconfirmedMove;
+        const moveIntent = intent as UnconfirmedMove & { toIsInitializedHint?: boolean };
         const toLocationId = toBigInt(moveIntent.to);
-        const isInitialized = await readPlanetInitialized(
-          this.aztecConnection.getNode(),
-          this.aztecConnection.getClient().darkforestAddress,
-          this.storageSlots,
-          toLocationId
-        );
-        const moveFn = isInitialized ? client.moveKnown : client.move;
-        return moveFn(
-          x1Field,
-          y1Field,
-          x2Field,
-          y2Field,
-          BigInt(radius),
-          BigInt(distMax),
-          BigInt(popMoved),
-          BigInt(silverMoved),
-          artifact,
-          Boolean(abandoning)
-        );
+        let isInitialized: boolean;
+        let source: 'cache' | 'chain';
+        if (typeof moveIntent.toIsInitializedHint === 'boolean') {
+          isInitialized = moveIntent.toIsInitializedHint;
+          source = 'cache';
+        } else {
+          isInitialized = await readPlanetInitialized(
+            this.aztecConnection.getNode(),
+            this.aztecConnection.getClient().darkforestAddress,
+            this.storageSlots,
+            toLocationId
+          );
+          source = 'chain';
+        }
+
+        if (VERBOSE_LOGGING) {
+          console.info('[Aztec tx] move_known.select', {
+            toLocationId: toLocationId.toString(),
+            isInitialized,
+            source,
+          });
+        }
+        detailedLogger.log('contracts', 'move_known.select', {
+          toLocationId,
+          isInitialized,
+          source,
+        });
+
+        const moveKnown = async () =>
+          client.moveKnown(
+            x1Field,
+            y1Field,
+            x2Field,
+            y2Field,
+            BigInt(radius),
+            BigInt(distMax),
+            BigInt(popMoved),
+            BigInt(silverMoved),
+            artifact,
+            Boolean(abandoning)
+          );
+        const move = async () =>
+          client.move(
+            x1Field,
+            y1Field,
+            x2Field,
+            y2Field,
+            BigInt(radius),
+            BigInt(distMax),
+            BigInt(popMoved),
+            BigInt(silverMoved),
+            artifact,
+            Boolean(abandoning)
+          );
+
+        if (isInitialized) {
+          try {
+            return await moveKnown();
+          } catch (error) {
+            if (VERBOSE_LOGGING) {
+              console.warn('[Aztec tx] move_known fallback to move', {
+                toLocationId: toLocationId.toString(),
+                source,
+                error: (error as Error)?.message ?? error,
+              });
+            }
+            detailedLogger.log('contracts', 'move_known.fallback', {
+              toLocationId,
+              source,
+              error,
+            }, 'warn');
+            return move();
+          }
+        }
+
+        return move();
       }
       case METHOD.UPGRADE: {
         const [locationId, branch] = args as [string, number];
