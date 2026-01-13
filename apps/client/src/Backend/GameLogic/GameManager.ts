@@ -3243,11 +3243,78 @@ class GameManager extends EventEmitter {
 
     let started = 0;
     const maxToResolve = 3;
+    const arrivalsByPlanet = new Map<LocationId, QueuedArrival[]>();
     for (const arrival of arrivals) {
+      const list = arrivalsByPlanet.get(arrival.toPlanet) ?? [];
+      list.push(arrival);
+      arrivalsByPlanet.set(arrival.toPlanet, list);
+    }
+
+    for (const [planetId, planetArrivals] of arrivalsByPlanet.entries()) {
       if (started >= maxToResolve) break;
-      if (this.resolvingArrivals.has(arrival.eventId)) continue;
-      this.queueResolveArrival(arrival);
-      started += 1;
+      const pending = planetArrivals.filter(
+        (arrival) => !this.resolvingArrivals.has(arrival.eventId)
+      );
+      if (pending.length === 0) continue;
+      const inflightMoves = this.getUnconfirmedMoves().filter(
+        (tx) => tx.intent.from === planetId || tx.intent.to === planetId
+      );
+      if (inflightMoves.length > 0) {
+        continue;
+      }
+
+      if (pending.length >= 2) {
+        const arrivalIds = pending.map((arrival) => arrival.eventId);
+        const logId = this.logActionStart('resolve_planet_arrivals', {
+          planetId,
+          arrivals: arrivalIds,
+        });
+        started += 1;
+        for (const arrival of pending) {
+          this.resolvingArrivals.add(arrival.eventId);
+        }
+        void (async () => {
+          let outcome = 'started';
+          let fallbackToSingle = false;
+          let txHash: string | undefined;
+          try {
+            txHash = await this.contractsAPI.resolvePlanetArrivals(planetId);
+            for (const arrival of pending) {
+              this.entityStore.clearArrival(planetId, arrival.eventId);
+            }
+            outcome = 'resolved';
+          } catch (err) {
+            outcome = 'error';
+            fallbackToSingle = true;
+            this.logActionError('resolve_planet_arrivals', logId, err, {
+              planetId,
+              arrivals: arrivalIds,
+              outcome,
+            });
+          } finally {
+            for (const arrival of pending) {
+              this.resolvingArrivals.delete(arrival.eventId);
+              this.arrivalResolveSkips.delete(arrival.eventId);
+              this.arrivalResolveInflightSkips.delete(arrival.eventId);
+            }
+            await this.hardRefreshPlanet(planetId);
+            if (fallbackToSingle) {
+              for (const arrival of pending) {
+                this.queueResolveArrival(arrival);
+              }
+            }
+            this.logActionEnd('resolve_planet_arrivals', logId, {
+              planetId,
+              arrivals: arrivalIds,
+              txHash,
+              outcome,
+            });
+          }
+        })();
+      } else {
+        this.queueResolveArrival(pending[0]);
+        started += 1;
+      }
     }
   }
 

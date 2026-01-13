@@ -99,6 +99,7 @@ export type DarkForestClient = {
     ) => Promise<SentTx>;
     giveSpaceShips: (locationId: bigint) => Promise<SentTx>;
     resolveArrival: (arrivalId: bigint) => Promise<SentTx>;
+    resolvePlanetArrivals: (locationId: bigint) => Promise<SentTx>;
     stop: () => Promise<void> | void;
 };
 
@@ -473,6 +474,8 @@ export async function connectDarkForest(
             darkforest.methods.give_space_ships(locationId).send(sendOptions),
         resolveArrival: (arrivalId) =>
             darkforest.methods.resolve_arrival(arrivalId).send(sendOptions),
+        resolvePlanetArrivals: (locationId) =>
+            darkforest.methods.resolve_planet_arrivals(locationId).send(sendOptions),
         stop: () => wallet.stop(),
     };
 }

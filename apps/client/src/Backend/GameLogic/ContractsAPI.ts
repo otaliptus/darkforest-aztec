@@ -773,6 +773,63 @@ export class ContractsAPI extends EventEmitter {
     }
   }
 
+  public async resolvePlanetArrivals(planetId: LocationId): Promise<string | undefined> {
+    const logId = detailedLogger.start('contracts', 'resolve_planet_arrivals', { planetId });
+    const id = BigInt(planetId);
+    try {
+      const sendStart = Date.now();
+      const sentTx = await this.aztecConnection.getClient().resolvePlanetArrivals(id);
+      const rawHash = sentTx.getTxHash ? await sentTx.getTxHash() : sentTx.txHash;
+      const txHash = formatTxHash(rawHash);
+      const submittedAt = Date.now();
+      const submitMs = submittedAt - sendStart;
+      if (VERBOSE_LOGGING) {
+        console.info('[Aztec tx] submitted', {
+          method: 'resolvePlanetArrivals',
+          hash: txHash ?? UNKNOWN_HASH,
+          args: [planetId],
+          submitMs,
+        });
+      }
+      detailedLogger.log(
+        'contracts',
+        'resolve_planet_arrivals.submitted',
+        {
+          planetId,
+          hash: txHash,
+          submitMs,
+        },
+        'info',
+        logId
+      );
+      await sentTx.wait();
+      const confirmedAt = Date.now();
+      const confirmMs = confirmedAt - submittedAt;
+      if (VERBOSE_LOGGING) {
+        console.info('[Aztec tx] confirmed', {
+          method: 'resolvePlanetArrivals',
+          hash: txHash ?? UNKNOWN_HASH,
+          confirmMs,
+        });
+      }
+      detailedLogger.end('contracts', 'resolve_planet_arrivals', logId, {
+        planetId,
+        hash: txHash,
+        submitMs,
+        confirmMs,
+        totalMs: confirmedAt - sendStart,
+      });
+      return txHash;
+    } catch (error) {
+      detailedLogger.error('contracts', 'resolve_planet_arrivals', logId, {
+        planetId,
+        error,
+        stack: (error as Error)?.stack,
+      });
+      throw error;
+    }
+  }
+
   public emitTransactionEvents(tx: Transaction): void {
     tx.submittedPromise
       .then(() => {

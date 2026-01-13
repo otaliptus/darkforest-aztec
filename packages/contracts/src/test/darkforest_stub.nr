@@ -1216,6 +1216,109 @@ unconstrained fn test_fail_arrival_too_early() {
     );
 }
 
+#[test]
+unconstrained fn test_resolve_planet_arrivals_batch() {
+    let (mut env, contract_address) = utils::setup();
+    let player = env.create_light_account();
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).init_player( 
+            INIT_X,
+            INIT_Y,
+            INIT_RADIUS,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+            utils::SPAWN_RIM_AREA,
+            utils::INIT_PERLIN_MIN,
+            utils::INIT_PERLIN_MAX,
+        )
+    );
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).move( 
+            INIT_X,
+            INIT_Y,
+            CAPTURE_X_2,
+            CAPTURE_Y_2,
+            utils::WORLD_RADIUS,
+            CAPTURE_DIST_MAX,
+            MOVE_POP_MOVED,
+            0,
+            0,
+            false,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+        )
+    );
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).move( 
+            INIT_X,
+            INIT_Y,
+            CAPTURE_X_2,
+            CAPTURE_Y_2,
+            utils::WORLD_RADIUS,
+            CAPTURE_DIST_MAX,
+            MOVE_POP_MOVED,
+            0,
+            0,
+            false,
+            utils::PLANETHASH_KEY,
+            utils::SPACETYPE_KEY,
+            utils::PERLIN_LENGTH_SCALE,
+            utils::PERLIN_MIRROR_X,
+            utils::PERLIN_MIRROR_Y,
+            utils::MAX_LOCATION_ID,
+            utils::WORLD_RADIUS,
+        )
+    );
+
+    let arrival_planet = expected_location_id(CAPTURE_X_2, CAPTURE_Y_2);
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).resolve_planet_arrivals(arrival_planet)
+    );
+
+    let arrival_one = arrival_planet;
+    let arrival_two = arrival_planet;
+    env.public_context_at(contract_address, |context| {
+        let arrival_slot_one = derive_storage_slot_in_map(
+            DarkForest::storage_layout().arrivals.slot,
+            1,
+        );
+        let arrival_slot_two = derive_storage_slot_in_map(
+            DarkForest::storage_layout().arrivals.slot,
+            2,
+        );
+        let arrival_one_meta = context.storage_read(arrival_slot_one + 4);
+        let arrival_two_meta = context.storage_read(arrival_slot_two + 4);
+        assert_eq(arrival_one_meta, 0);
+        assert_eq(arrival_two_meta, 0);
+
+        let planet_one_slot =
+            derive_storage_slot_in_map(DarkForest::storage_layout().planets.slot, arrival_one);
+        let planet_two_slot =
+            derive_storage_slot_in_map(DarkForest::storage_layout().planets.slot, arrival_two);
+        let planet_one_owner = context.storage_read(planet_one_slot + 1);
+        let planet_two_owner = context.storage_read(planet_two_slot + 1);
+        assert_eq(planet_one_owner, player);
+        assert_eq(planet_two_owner, player);
+    });
+}
+
 #[test(should_fail)]
 unconstrained fn test_fail_reveal_duplicate() {
     let (mut env, contract_address) = utils::setup();

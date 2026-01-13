@@ -2516,6 +2516,20 @@ pub contract DarkForest {
         );
     }
 
+    #[external("private")]
+    fn resolve_planet_arrivals(location_id: Field) {
+        self.enqueue(
+            DarkForest::at(self.context.this_address()).apply_resolve_planet(location_id)
+        );
+    }
+
+    #[external("public")]
+    #[only_self]
+    fn apply_resolve_planet(location_id: Field) {
+        let current_block = self.context.block_number();
+        self.internal.process_pending_arrivals(location_id, current_block);
+    }
+
     #[internal("public")]
     fn execute_arrival(arrival_id: u64) {
         let arrival_key = arrival_id as Field;
