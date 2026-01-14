@@ -2963,8 +2963,14 @@ class GameManager extends EventEmitter {
 
       const oldPlanet = this.entityStore.getPlanetWithLocation(oldLocation);
       const toPlanet = this.entityStore.getPlanetWithId(to, false);
-      const toIsInitializedHint =
-        toPlanet?.syncedWithContract ? Boolean(toPlanet.isInContract) : undefined;
+      let toIsInitializedHint: boolean | undefined;
+      if (toPlanet?.syncedWithContract) {
+        toIsInitializedHint = Boolean(toPlanet.isInContract);
+      } else if (this.entityStore.isPlanetInContract(to)) {
+        toIsInitializedHint = true;
+      } else if (toPlanet) {
+        toIsInitializedHint = false;
+      }
 
       const localArtifact = artifactMoved
         ? this.entityStore.getArtifactById(artifactMoved)

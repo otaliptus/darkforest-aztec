@@ -16,6 +16,10 @@ See `docs/PROJECT_MAP.md` for active vs reference directories.
 - `docs/devnet.md`: Local/devnet deployment runbook + troubleshooting.
 - `docs/performance.md`: Turn-time benchmark notes.
 
+## LLM tooling
+
+- `docs/oracle_bundle.md`: Bundle repo context into a single prompt file for GPT Pro.
+
 ## Workspace Layout
 
 - `packages/contracts`: Aztec Noir contracts + tests.

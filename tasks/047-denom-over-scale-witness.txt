@@ -1,0 +1,17 @@
+TASK 047 - Perlin denom_over_scale witness
+Status: Done (2026-01-14)
+
+Mission:
+Remove divide-by-scale in single_scale_perlin by passing denom_over_scale as a witness and constraining denom_over_scale * scale == DENOMINATOR.
+
+Scope:
+- Noir perlin implementation.
+- Update callers if signature changes.
+
+Acceptance criteria:
+- single_scale_perlin uses denom_over_scale input.
+- Constraint added: denom_over_scale * scale == DENOMINATOR.
+- multi_scale_perlin passes denom_over_scale values.
+
+Testing:
+- yarn contracts:test:nr

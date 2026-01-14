@@ -435,20 +435,10 @@ const readGameConfig = async (node, contractAddress, slots) => {
     };
 };
 
-const buildInitArgs = (x, y, radius, config) => [
+const buildInitArgs = (x, y, radius) => [
     x,
     y,
     radius,
-    config.planethashKey,
-    config.spacetypeKey,
-    config.perlinLengthScale,
-    config.perlinMirrorX,
-    config.perlinMirrorY,
-    config.maxLocationId,
-    config.worldRadius,
-    config.spawnRimArea,
-    config.initPerlinMin,
-    config.initPerlinMax,
 ];
 
 const calcDistMax = (from, to) => {
@@ -689,7 +679,7 @@ async function main() {
         await sendTxTimed(
             "init_player",
             darkforest.methods.init_player(
-                ...buildInitArgs(initCoords.x, initCoords.y, initCoords.radius, config)
+                ...buildInitArgs(initCoords.x, initCoords.y, initCoords.radius)
             ),
             admin.address,
             fee,
@@ -747,14 +737,7 @@ async function main() {
             populationToMove,
             0n,
             0n,
-            false,
-            config.planethashKey,
-            config.spacetypeKey,
-            config.perlinLengthScale,
-            config.perlinMirrorX,
-            config.perlinMirrorY,
-            config.maxLocationId,
-            config.worldRadius
+            false
         ),
         admin.address,
         fee,

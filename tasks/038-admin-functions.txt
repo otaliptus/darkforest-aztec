@@ -1,0 +1,19 @@
+Title: Implement missing admin functions (v0.6 parity)
+
+Context
+- v0.6 exposes admin-only functions (pause/unpause, world radius changes, owner setting, etc.).
+- Aztec contract currently lacks these admin paths in `packages/contracts/src/main.nr`.
+
+Acceptance Criteria
+- Add admin-only functions required for v0.6 parity (safeSetOwner, changeWorldRadiusMin, adminSetWorldRadius, changeLocationRevealCooldown, withdraw, setPlanetTransferEnabled, addScore/deductScore, setTokenMintEndTime, etc.).
+- Implement private validate -> public apply (only_self) flow with explicit admin access control.
+- Wire client/admin tooling if present (or keep admin-only flows non-exposed in public UI).
+- Tests cover admin-only access and state changes.
+- No unbounded loops in public contract functions.
+
+Out of Scope
+- New admin features beyond v0.6.
+- Non-admin gameplay changes.
+
+Notes
+- This may conflict with `tasks/025-remove-admin-actions.txt`. Resolve direction before implementation.

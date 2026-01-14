@@ -1,4 +1,5 @@
 TASK 023 - Config hash validation against on-chain storage
+Status: Done (2026-01-14)
 
 Mission:
 Prevent forged config usage by validating against stored hashes, not caller-provided hashes.

@@ -713,44 +713,15 @@ const readNftOwner = async (node, nftAddress, nftSlots, tokenId) => {
     return AztecAddress.fromBigInt(ownerField ?? 0n);
 };
 
-const buildInitArgs = (x, y, radius, config) => [
+const buildInitArgs = (x, y, radius) => [
     x,
     y,
     radius,
-    config.planethashKey,
-    config.spacetypeKey,
-    config.perlinLengthScale,
-    config.perlinMirrorX,
-    config.perlinMirrorY,
-    config.maxLocationId,
-    config.worldRadius,
-    config.spawnRimArea,
-    config.initPerlinMin,
-    config.initPerlinMax,
 ];
 
-const buildRevealArgs = (x, y, config) => [
-    x,
-    y,
-    config.planethashKey,
-    config.spacetypeKey,
-    config.perlinLengthScale,
-    config.perlinMirrorX,
-    config.perlinMirrorY,
-    config.maxLocationId,
-];
+const buildRevealArgs = (x, y) => [x, y];
 
-const buildFindArtifactArgs = (x, y, biomebase, config) => [
-    x,
-    y,
-    biomebase,
-    config.planethashKey,
-    config.biomebaseKey,
-    config.perlinLengthScale,
-    config.perlinMirrorX,
-    config.perlinMirrorY,
-    config.maxLocationId,
-];
+const buildFindArtifactArgs = (x, y, biomebase) => [x, y, biomebase];
 
 const toBytes32 = (value) => {
     const hex = value.toString(16).padStart(64, "0");
@@ -1076,7 +1047,7 @@ async function main() {
     await sendTx(
         "init_player (player1)",
         darkforest.methods.init_player(
-            ...buildInitArgs(DEFAULT_INIT.x, DEFAULT_INIT.y, DEFAULT_INIT.radius, config)
+            ...buildInitArgs(DEFAULT_INIT.x, DEFAULT_INIT.y, DEFAULT_INIT.radius)
         ),
         player1.address,
         fee,
@@ -1086,7 +1057,7 @@ async function main() {
     await sendTx(
         "init_player (player2)",
         darkforest.methods.init_player(
-            ...buildInitArgs(DEFAULT_INIT_2.x, DEFAULT_INIT_2.y, DEFAULT_INIT_2.radius, config)
+            ...buildInitArgs(DEFAULT_INIT_2.x, DEFAULT_INIT_2.y, DEFAULT_INIT_2.radius)
         ),
         player2.address,
         fee,
@@ -1096,7 +1067,7 @@ async function main() {
     await expectFail(
         "init_player repeat should fail",
         darkforest.methods.init_player(
-            ...buildInitArgs(DEFAULT_INIT.x, DEFAULT_INIT.y, DEFAULT_INIT.radius, config)
+            ...buildInitArgs(DEFAULT_INIT.x, DEFAULT_INIT.y, DEFAULT_INIT.radius)
         ),
         player1.address,
         fee,
@@ -1106,7 +1077,7 @@ async function main() {
     await expectFail(
         "reveal_location out of bounds should fail",
         darkforest.methods.reveal_location(
-            ...buildRevealArgs(MAX_COORD_ABS + 1n, 0n, config)
+            ...buildRevealArgs(MAX_COORD_ABS + 1n, 0n)
         ),
         player1.address,
         fee,
@@ -1165,14 +1136,7 @@ async function main() {
             home1.population + 1n,
             0n,
             0n,
-            false,
-            config.planethashKey,
-            config.spacetypeKey,
-            config.perlinLengthScale,
-            config.perlinMirrorX,
-            config.perlinMirrorY,
-            config.maxLocationId,
-            config.worldRadius
+            false
         ),
         player1.address,
         fee,
@@ -1182,7 +1146,7 @@ async function main() {
     await sendTx(
         "reveal_location (target)",
         darkforest.methods.reveal_location(
-            ...buildRevealArgs(targetPlanet.x, targetPlanet.y, config)
+            ...buildRevealArgs(targetPlanet.x, targetPlanet.y)
         ),
         player1.address,
         fee,
@@ -1211,14 +1175,7 @@ async function main() {
             movePopulation,
             0n,
             0n,
-            false,
-            config.planethashKey,
-            config.spacetypeKey,
-            config.perlinLengthScale,
-            config.perlinMirrorX,
-            config.perlinMirrorY,
-            config.maxLocationId,
-            config.worldRadius
+            false
         ),
         player1.address,
         fee,

@@ -6,10 +6,10 @@ This document maps Dark Forest v0.6 circuits, Solidity facets, and client subsys
 
 | v0.6 circuit | Purpose | Aztec mapping | Notes |
 | --- | --- | --- | --- |
-| `circuits/init` | Player initialization (home planet validity, perlin checks) | `private validate_init_player(...)` → `public apply_init_player(...)` | Validation happens in private; public apply updates minimal public state. |
-| `circuits/move` | Move proof (old/new location, distance, perlin flags) | `private validate_move(...)` → `public apply_move(...)` | Includes perlin flag checks and movement constraints; public apply writes arrivals + planet deltas. |
-| `circuits/reveal` | Reveal location (coords preimage) | `private validate_reveal(...)` → `public apply_reveal(...)` | Use private input for coords; public updates revealed coords / planet visibility. |
-| `circuits/biomebase` | Biomebase proof | `private validate_biomebase(...)` | Used for artifact/foundry logic and/or reveal validation. |
+| `circuits/init` | Player initialization (home planet validity, perlin checks) | `private init_player(...)` → `public apply_init_player(...)` | Private reads config from storage; public apply updates minimal public state. |
+| `circuits/move` | Move proof (old/new location, distance, perlin flags) | `private move(...)` → `public apply_move(...)` | Private reads config from storage; public apply writes arrivals + planet deltas. |
+| `circuits/reveal` | Reveal location (coords preimage) | `private reveal_location(...)` → `public apply_player_action(...)` | Private uses coords input; public updates revealed coords / planet visibility. |
+| `circuits/biomebase` | Biomebase proof | `private find_artifact(...)` | Used for artifact/foundry logic and/or reveal validation. |
 | `circuits/perlin` | Perlin noise proof helpers | Internal helpers used by validators | Keep logic in Noir library for reuse. |
 | `circuits/range_proof` | Bound checks on inputs | Internal helpers used by validators | Replace with Noir range checks where possible. |
 | `circuits/whitelist` | Whitelist key proof | `private validate_whitelist_key(...)` → `public apply_whitelist(...)` | If kept for v0.6 faithfulness; otherwise admin-managed allowlist. |
@@ -19,13 +19,13 @@ This document maps Dark Forest v0.6 circuits, Solidity facets, and client subsys
 The v0.6 client uses `packages/snarks` to build proofs and contract call args. In Aztec, these become private function inputs.
 
 - Init (v0.6): `x, y, r, PLANETHASH_KEY, SPACETYPE_KEY, SCALE, xMirror, yMirror`
-  - Noir: `private validate_init_player(x, y, r, planethash_key, spacetype_key, scale, x_mirror, y_mirror)`
+  - Noir: `private init_player(x, y, r)` (config read from storage)
 - Reveal (v0.6): `x, y, PLANETHASH_KEY, SPACETYPE_KEY, SCALE, xMirror, yMirror`
-  - Noir: `private validate_reveal(x, y, planethash_key, spacetype_key, scale, x_mirror, y_mirror)`
+  - Noir: `private reveal_location(x, y)` (config read from storage)
 - Move (v0.6): `x1, y1, x2, y2, r, distMax, PLANETHASH_KEY, SPACETYPE_KEY, SCALE, xMirror, yMirror`
-  - Noir: `private validate_move(x1, y1, x2, y2, r, dist_max, planethash_key, spacetype_key, scale, x_mirror, y_mirror)`
+  - Noir: `private move(x1, y1, x2, y2, r, dist_max, pop_moved, silver_moved, moved_artifact_id, abandoning)`
 - Biomebase (v0.6): `x, y, PLANETHASH_KEY, BIOMEBASE_KEY, SCALE, xMirror, yMirror`
-  - Noir: `private validate_biomebase(x, y, planethash_key, biomebase_key, scale, x_mirror, y_mirror)`
+  - Noir: `private find_artifact(x, y, biomebase)` (config read from storage)
 - Whitelist (v0.6): `key, recipient`
   - Noir: `private validate_whitelist_key(key, recipient)`
 
@@ -59,10 +59,10 @@ Aztec will use a single contract with internal modules/functions instead of the 
   - Initializes `Player` and home `Planet`.
 
 **Aztec mapping**
-- `private validate_init_player(x, y, r, ...)`:
-  - Recompute `locationId = mimc(x,y, PLANETHASH_KEY)` and `perlin = perlin(x,y, SPACETYPE_KEY, SCALE, mirrors)`.
-  - Enforce `x^2 + y^2` bounds (spawn ring) and `perlin` in init range.
-  - Enqueue `public apply_init_player(player, locationId, perlin)`.
+- `private init_player(x, y, r)`:
+  - Reads on-chain config, recomputes `locationId = mimc(x,y, PLANETHASH_KEY)` and `perlin = perlin(x,y, SPACETYPE_KEY, SCALE, mirrors)`.
+  - Enforces `x^2 + y^2` bounds (spawn ring) and `perlin` in init range.
+  - Enqueue `public apply_init_player(player, locationId, perlin)` with stored config hash.
 - `public apply_init_player(...) (only_self)`:
   - Initialize player + planet state.
 
@@ -73,9 +73,9 @@ Aztec will use a single contract with internal modules/functions instead of the 
   - Initialize planet if needed; store revealed coords.
 
 **Aztec mapping**
-- `private validate_reveal(x, y, ...)`:
-  - Recompute `locationId` and `perlin` and verify against inputs.
-  - Enqueue `public apply_reveal(player, locationId, x, y, perlin)`.
+- `private reveal_location(x, y)`:
+  - Reads on-chain config, recomputes `locationId` and `perlin`.
+  - Enqueue `public apply_player_action(player, locationId, x, y, perlin, action=1)` with stored config hash.
 - `public apply_reveal(...) (only_self)`:
   - Store `RevealedCoords`, initialize planet if missing.
 

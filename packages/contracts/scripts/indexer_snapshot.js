@@ -411,9 +411,10 @@ const readGameConfig = async (node, contractAddress, storageSlots) => {
     worldRadius,
     spawnRimArea,
     locationRevealCooldown,
+    timeFactorHundredths,
     planetRarity,
     maxLocationId,
-  ] = await readPublicFields(node, contractAddress, configSlot, 13);
+  ] = await readPublicFields(node, contractAddress, configSlot, 14);
 
   const configHashSpacetype = await readPublicField(
     node,
@@ -438,6 +439,7 @@ const readGameConfig = async (node, contractAddress, storageSlots) => {
     worldRadius,
     spawnRimArea,
     locationRevealCooldown,
+    timeFactorHundredths,
     planetRarity,
     maxLocationId,
     configHashSpacetype,

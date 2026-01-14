@@ -139,35 +139,32 @@ fn dot(a: [Signed; 2], b: [Signed; 2]) -> Signed {
     signed_div_exact(sum, DENOMINATOR)
 }
 
-fn single_scale_perlin(p: [Signed; 2], scale: u128, key: Field) -> Signed {
+unconstrained fn denom_over_scale_hint(scale: u128) -> u128 {
+    DENOMINATOR / scale
+}
+
+fn single_scale_perlin(
+    p: [Signed; 2],
+    scale: u128,
+    denom_over_scale: u128,
+    key: Field,
+) -> Signed {
     let (coords, grads) = get_corners_and_grads(p, scale, key);
-    let scaled_p = [
-        signed_mul_u128(p[0], DENOMINATOR),
-        signed_mul_u128(p[1], DENOMINATOR),
+    assert(denom_over_scale * scale == DENOMINATOR);
+    let p_unit = [
+        signed_mul_u128(p[0], denom_over_scale),
+        signed_mul_u128(p[1], denom_over_scale),
     ];
 
     let mut total = signed_zero();
     for i in 0..4 {
-        let scaled_corner = [
-            signed_mul_u128(coords[i as u32][0], DENOMINATOR),
-            signed_mul_u128(coords[i as u32][1], DENOMINATOR),
-        ];
-        let dist_vec = [
-            signed_sub(scaled_p[0], scaled_corner[0]),
-            signed_sub(scaled_p[1], scaled_corner[1]),
-        ];
-
         let corner_unit = [
-            signed_div_exact(scaled_corner[0], scale),
-            signed_div_exact(scaled_corner[1], scale),
-        ];
-        let p_unit = [
-            signed_div_exact(scaled_p[0], scale),
-            signed_div_exact(scaled_p[1], scale),
+            signed_mul_u128(coords[i as u32][0], denom_over_scale),
+            signed_mul_u128(coords[i as u32][1], denom_over_scale),
         ];
         let dist_unit = [
-            signed_div_exact(dist_vec[0], scale),
-            signed_div_exact(dist_vec[1], scale),
+            signed_sub(p_unit[0], corner_unit[0]),
+            signed_sub(p_unit[1], corner_unit[1]),
         ];
 
         let weight = get_weight(corner_unit, p_unit, i as u8);
@@ -209,9 +206,15 @@ pub fn multi_scale_perlin(
     }
 
     let scale_i = scale as u128;
-    let p0 = single_scale_perlin([px, py], scale_i, key);
-    let p1 = single_scale_perlin([px, py], scale_i * 2, key);
-    let p2 = single_scale_perlin([px, py], scale_i * 4, key);
+    // Safety: denom_over_scale_hint is unconstrained; single_scale_perlin constrains denom_over_scale * scale.
+    let denom0 = unsafe { denom_over_scale_hint(scale_i) };
+    // Safety: denom_over_scale_hint is unconstrained; single_scale_perlin constrains denom_over_scale * scale.
+    let denom1 = unsafe { denom_over_scale_hint(scale_i * 2) };
+    // Safety: denom_over_scale_hint is unconstrained; single_scale_perlin constrains denom_over_scale * scale.
+    let denom2 = unsafe { denom_over_scale_hint(scale_i * 4) };
+    let p0 = single_scale_perlin([px, py], scale_i, denom0, key);
+    let p1 = single_scale_perlin([px, py], scale_i * 2, denom1, key);
+    let p2 = single_scale_perlin([px, py], scale_i * 4, denom2, key);
 
     let mut total = signed_add(p0, p0);
     total = signed_add(total, p1);

@@ -1,0 +1,17 @@
+Title: Implement whitelist system (v0.6 parity or Aztec-native equivalent)
+
+Context
+- Whitelist / key proof flow is missing in `packages/contracts/src/main.nr`.
+- Client still contains whitelist UI and helpers (`apps/client/src/Frontend/Pages/GameLandingPage.tsx`, `apps/client/src/Backend/Utils/WhitelistSnarkArgsHelper.ts`).
+
+Acceptance Criteria
+- Implement whitelist logic that matches v0.6 behavior (key usage, admin key management) or an explicitly approved Aztec-native equivalent.
+- Private validate -> public apply (only_self) flow for whitelist usage.
+- Clear access control for whitelist admin operations.
+- Client whitelist flow works end-to-end.
+- Tests cover allowlist, key usage, and admin actions.
+- No unbounded loops in public contract functions.
+
+Out of Scope
+- New onboarding flows beyond v0.6 whitelist behavior.
+- UI redesign beyond enabling existing whitelist UI.

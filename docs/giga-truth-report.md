@@ -1,6 +1,6 @@
 # Giga Truth Report - Current Architecture (Aztec Dark Forest)
 
-Date: 2026-01-07
+Date: 2026-01-14
 Ticket: 035 (Giga truth report)
 
 ## Scope and method
@@ -56,8 +56,8 @@ Grouped by component to make it easier to reason about:
 1) Admin and config
 - `admin`: Admin address.
 - `nft_contract`: Address of Aztec NFT contract.
-- `config`: `GameConfig` struct (keys, world bounds, time factor, etc).
-- `config_hash_spacetype`, `config_hash_biome`: Hashes used to validate private proofs.
+- `config`: `GameConfig` struct (keys, world bounds, time factor, etc), stored as `PublicImmutable` (WithHash) to enable private reads.
+- `config_hash_spacetype`, `config_hash_biome`: PublicImmutable hashes used to validate private flows in public apply handlers.
 
 2) Players
 - `players`: `Map<AztecAddress, Player>`.
@@ -92,7 +92,7 @@ Grouped by component to make it easier to reason about:
 
 ### Core internal logic (component-wise)
 - **Location hashing**: `mimc_sponge_2_220(x, y, planethash_key)` produces `location_id`.
-- **Config hash**: `config_hash(planethash_key, spacetype_key/biomebase_key, perlin_length_scale, perlin_mirror_*)` is used to validate the private input set.
+- **Config hash**: `config_hash(planethash_key, spacetype_key/biomebase_key, perlin_length_scale, perlin_mirror_*)` is stored on-chain and passed through private calls to be validated in public apply handlers.
 - **Perlin and planet defaults**:
   - `multi_scale_perlin` + thresholds map to `space_type`.
   - `planet_level_from_location`, `planet_type_from_location`, `biome_from_space_type` are derived from location and perlin.
@@ -115,7 +115,7 @@ Grouped by component to make it easier to reason about:
 Action logic is executed via `apply_init_player`, `apply_player_action`, and `apply_move`. The private entrypoints only validate and enqueue.
 
 1) Init player (`apply_init_player`)
-- Validates spawn radius, perlin range, and config hash in private `init_player`.
+- Validates spawn radius and perlin range in private `init_player` using config read from storage; public `apply_init_player` validates the stored config hash.
 - Pushes nullifiers for location and player.
 - `apply_init_player`:
   - Initializes the home planet if unset and writes `Player` record.
@@ -123,7 +123,7 @@ Action logic is executed via `apply_init_player`, `apply_player_action`, and `ap
   - Indexes the planet id as touched.
 
 2) Reveal location (action 1)
-- Private `reveal_location` validates perlin + config.
+- Private `reveal_location` validates perlin using config read from storage.
 - `apply_player_action`:
   - Enforces reveal cooldown (non-admin).
   - Initializes the planet if absent and pushes a nullifier to prevent re-init.
@@ -145,7 +145,7 @@ Action logic is executed via `apply_init_player`, `apply_player_action`, and `ap
 - Marks `prospected_block_number` for a Foundry planet (only once).
 
 6) Find artifact (action 5)
-- Validates biomebase + config hash.
+- Validates biomebase using config read from storage (config hash validated in public apply).
 - Requires a previous prospect and a block delay (<256 blocks).
 - Derives artifact seed, type, rarity, and creates the artifact.
 - Adds artifact to planet artifacts and writes location mapping.
@@ -171,7 +171,7 @@ Action logic is executed via `apply_init_player`, `apply_player_action`, and `ap
 - Clears wormhole target and updates activation timestamps.
 
 11) Move (apply_move path)
-- Private `move` validates coordinates, distance, perlin, config hash and queues `apply_move`.
+- Private `move` validates coordinates, distance, perlin using config read from storage and queues `apply_move` (public handler checks config hash).
 - `apply_move`:
   - Refreshes origin and destination (and resolves pending arrivals on both).
   - Validates ownership, moved resources, and artifact constraints.

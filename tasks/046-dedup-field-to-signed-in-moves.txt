@@ -1,0 +1,28 @@
+TASK 046 - Deduplicate field_to_signed usage in move/move_known
+Status: Done (2026-01-14)
+
+Mission:
+Reduce constraint-heavy sign checks by computing signed coordinates once in move paths.
+
+Background:
+Both move and move_known currently call field_abs_u128 (which calls field_to_signed)
+and then call field_to_signed again for diffs. This duplicates bn254 comparisons.
+
+Scope:
+Contract change only in packages/contracts/src/main.nr (move + move_known).
+
+Plan:
+1) Compute signed x/y for both endpoints once.
+2) Use signed magnitudes for abs checks.
+3) Use signed values for diff_x/diff_y.
+
+Acceptance criteria:
+- move and move_known produce identical behavior for valid/invalid inputs.
+- No public interface changes.
+- Noir contract tests pass.
+
+Risks / side-effects:
+- Any missed reuse could change behavior; verify abs bounds and diff checks remain intact.
+
+Testing / benchmarks:
+- Run Noir contract tests (yarn contracts:test:nr).

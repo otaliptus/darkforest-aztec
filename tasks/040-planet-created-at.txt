@@ -1,0 +1,14 @@
+Title: Add planet createdAt timestamp (v0.6 parity)
+
+Context
+- `Planet` has `last_updated` but no `createdAt` in `packages/contracts/src/types.nr`.
+
+Acceptance Criteria
+- Add `createdAt` to `Planet` state with v0.6 parity.
+- Set `createdAt` on first initialization and keep it unchanged thereafter.
+- Wire client types/state to surface `createdAt` if used.
+- Tests cover initialization and immutability of `createdAt`.
+- No unbounded loops in public contract functions.
+
+Out of Scope
+- Any gameplay changes beyond adding the timestamp.

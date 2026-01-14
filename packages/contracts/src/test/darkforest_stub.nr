@@ -252,16 +252,6 @@ unconstrained fn test_init_player_sets_home_and_planet() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -321,16 +311,6 @@ unconstrained fn test_reveal_updates_indexes() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -339,12 +319,6 @@ unconstrained fn test_reveal_updates_indexes() {
         DarkForest::at(contract_address).reveal_location( 
             REVEAL_X,
             REVEAL_Y,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -398,16 +372,6 @@ unconstrained fn test_init_player_real_planet_rarity() {
             REAL_INIT_X,
             REAL_INIT_Y,
             REAL_INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::REAL_MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -438,16 +402,6 @@ unconstrained fn test_fail_init_player_location_out_of_range() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            0,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 }
@@ -463,16 +417,6 @@ unconstrained fn test_fail_init_player_duplicate() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
     env.call_private(
@@ -481,16 +425,6 @@ unconstrained fn test_fail_init_player_duplicate() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 }
@@ -506,12 +440,6 @@ unconstrained fn test_fail_init_player_on_initialized_planet() {
         DarkForest::at(contract_address).reveal_location( 
             INIT_X,
             INIT_Y,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
         )
     );
     let location_id = expected_location_id(INIT_X, INIT_Y);
@@ -527,16 +455,6 @@ unconstrained fn test_fail_init_player_on_initialized_planet() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 }
@@ -579,16 +497,6 @@ unconstrained fn test_fail_init_player_home_constraints() {
             bad_x,
             bad_y,
             bad_radius,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 }
@@ -604,23 +512,17 @@ unconstrained fn test_fail_init_outside_ring() {
             0,
             0,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 }
 
 #[test(should_fail)]
-unconstrained fn test_fail_reveal_location_bad_config() {
-    let (mut env, contract_address) = utils::setup();
+unconstrained fn test_fail_reveal_location_out_of_range() {
+    let (mut env, contract_address) = utils::setup_with_params(
+        utils::DEFAULT_REVEAL_COOLDOWN,
+        utils::PLANET_RARITY,
+        0,
+    );
     let player = env.create_light_account();
 
     env.call_private(
@@ -628,12 +530,6 @@ unconstrained fn test_fail_reveal_location_bad_config() {
         DarkForest::at(contract_address).reveal_location(
             REVEAL_X,
             REVEAL_Y,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE + 1,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
         )
     );
 }
@@ -648,12 +544,6 @@ unconstrained fn test_reveal_location_sets_coords() {
         DarkForest::at(contract_address).reveal_location( 
             REVEAL_X,
             REVEAL_Y,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -692,16 +582,6 @@ unconstrained fn test_move_creates_arrival() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -748,13 +628,6 @@ unconstrained fn test_move_creates_arrival() {
             0,
             0,
             false,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
         )
     );
 
@@ -826,16 +699,6 @@ unconstrained fn test_move_known_creates_arrival() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -844,12 +707,6 @@ unconstrained fn test_move_known_creates_arrival() {
         DarkForest::at(contract_address).reveal_location( 
             MOVE_X_2,
             MOVE_Y_2,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -896,13 +753,6 @@ unconstrained fn test_move_known_creates_arrival() {
             0,
             0,
             false,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
         )
     );
 
@@ -967,16 +817,6 @@ unconstrained fn test_fail_move_radius_above_world() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -993,19 +833,12 @@ unconstrained fn test_fail_move_radius_above_world() {
             0,
             0,
             false,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
         )
     );
 }
 
 #[test(should_fail)]
-unconstrained fn test_fail_move_bad_config() {
+unconstrained fn test_fail_move_distance_too_small() {
     let (mut env, contract_address) = utils::setup();
     let player = env.create_light_account();
 
@@ -1015,16 +848,6 @@ unconstrained fn test_fail_move_bad_config() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1036,18 +859,11 @@ unconstrained fn test_fail_move_bad_config() {
             MOVE_X_2,
             MOVE_Y_2,
             utils::WORLD_RADIUS,
-            MOVE_DIST_MAX,
+            1,
             MOVE_POP_MOVED,
             0,
             0,
             false,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY + 1,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
         )
     );
 }
@@ -1063,16 +879,6 @@ unconstrained fn test_fail_move_too_much_population() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1089,13 +895,6 @@ unconstrained fn test_fail_move_too_much_population() {
             0,
             0,
             false,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
         )
     );
 }
@@ -1111,16 +910,6 @@ unconstrained fn test_apply_arrival_captures_unowned_planet() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1137,13 +926,6 @@ unconstrained fn test_apply_arrival_captures_unowned_planet() {
             0,
             0,
             false,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
         )
     );
 
@@ -1174,16 +956,6 @@ unconstrained fn test_fail_arrival_too_early() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1200,13 +972,6 @@ unconstrained fn test_fail_arrival_too_early() {
             0,
             0,
             false,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
         )
     );
 
@@ -1227,16 +992,6 @@ unconstrained fn test_resolve_planet_arrivals_batch() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1253,13 +1008,6 @@ unconstrained fn test_resolve_planet_arrivals_batch() {
             0,
             0,
             false,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
         )
     );
 
@@ -1276,13 +1024,6 @@ unconstrained fn test_resolve_planet_arrivals_batch() {
             0,
             0,
             false,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
         )
     );
 
@@ -1329,12 +1070,6 @@ unconstrained fn test_fail_reveal_duplicate() {
         DarkForest::at(contract_address).reveal_location( 
             REVEAL_X,
             REVEAL_Y,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
         )
     );
     env.call_private(
@@ -1342,12 +1077,6 @@ unconstrained fn test_fail_reveal_duplicate() {
         DarkForest::at(contract_address).reveal_location( 
             REVEAL_X,
             REVEAL_Y,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
         )
     );
 }
@@ -1362,12 +1091,6 @@ unconstrained fn test_fail_reveal_cooldown() {
         DarkForest::at(contract_address).reveal_location( 
             REVEAL_X,
             REVEAL_Y,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
         )
     );
     env.call_private(
@@ -1375,12 +1098,6 @@ unconstrained fn test_fail_reveal_cooldown() {
         DarkForest::at(contract_address).reveal_location( 
             REVEAL_X_2,
             REVEAL_Y_2,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
         )
     );
 }
@@ -1396,16 +1113,6 @@ unconstrained fn test_give_space_ships_once() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1457,16 +1164,6 @@ unconstrained fn test_fail_give_space_ships_twice() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1492,16 +1189,6 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1510,12 +1197,6 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
         DarkForest::at(contract_address).reveal_location( 
             MOVE_X_2,
             MOVE_Y_2,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -1524,12 +1205,6 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
         DarkForest::at(contract_address).reveal_location( 
             CAPTURE_X_2,
             CAPTURE_Y_2,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -1587,13 +1262,6 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
             0,
             ship_id,
             false,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
         )
     );
 
@@ -1619,12 +1287,6 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
                 DarkForest::at(contract_address).reveal_location( 
                     (6000 + (i as u64)) as Field,
                     0,
-                    utils::PLANETHASH_KEY,
-                    utils::SPACETYPE_KEY,
-                    utils::PERLIN_LENGTH_SCALE,
-                    utils::PERLIN_MIRROR_X,
-                    utils::PERLIN_MIRROR_Y,
-                    utils::MAX_LOCATION_ID,
                 )
             );
         }
@@ -1676,13 +1338,6 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
             0,
             ship_id,
             false,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
         )
     );
 
@@ -1699,12 +1354,6 @@ unconstrained fn test_spaceship_move_depart_and_arrive_effects() {
                 DarkForest::at(contract_address).reveal_location( 
                     (8000 + (i as u64)) as Field,
                     0,
-                    utils::PLANETHASH_KEY,
-                    utils::SPACETYPE_KEY,
-                    utils::PERLIN_LENGTH_SCALE,
-                    utils::PERLIN_MIRROR_X,
-                    utils::PERLIN_MIRROR_Y,
-                    utils::MAX_LOCATION_ID,
                 )
             );
         }
@@ -1773,16 +1422,6 @@ unconstrained fn test_spaceship_location_mapping_updates() {
             INIT_X,
             INIT_Y,
             INIT_RADIUS,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
-            utils::SPAWN_RIM_AREA,
-            utils::INIT_PERLIN_MIN,
-            utils::INIT_PERLIN_MAX,
         )
     );
 
@@ -1791,12 +1430,6 @@ unconstrained fn test_spaceship_location_mapping_updates() {
         DarkForest::at(contract_address).reveal_location( 
             MOVE_X_2,
             MOVE_Y_2,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
         )
     );
 
@@ -1833,13 +1466,6 @@ unconstrained fn test_spaceship_location_mapping_updates() {
             0,
             ship_id,
             false,
-            utils::PLANETHASH_KEY,
-            utils::SPACETYPE_KEY,
-            utils::PERLIN_LENGTH_SCALE,
-            utils::PERLIN_MIRROR_X,
-            utils::PERLIN_MIRROR_Y,
-            utils::MAX_LOCATION_ID,
-            utils::WORLD_RADIUS,
         )
     );
 
@@ -1865,12 +1491,6 @@ unconstrained fn test_spaceship_location_mapping_updates() {
                 DarkForest::at(contract_address).reveal_location( 
                     (9000 + (i as u64)) as Field,
                     0,
-                    utils::PLANETHASH_KEY,
-                    utils::SPACETYPE_KEY,
-                    utils::PERLIN_LENGTH_SCALE,
-                    utils::PERLIN_MIRROR_X,
-                    utils::PERLIN_MIRROR_Y,
-                    utils::MAX_LOCATION_ID,
                 )
             );
         }

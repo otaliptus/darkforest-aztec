@@ -62,7 +62,7 @@ This is the implicit graph that precedes all actions:
      -> `AztecConnection.getClient().initPlayer(xField, yField, radius)`
      -> `darkforest.methods.init_player(...buildInitPlayerArgs(...))`
   -> `DarkForest::init_player` (private)
-     -> perlin + config hash validation, `mimc_sponge_2_220` location id
+     -> reads on-chain config, computes perlin, `mimc_sponge_2_220` location id
      -> push nullifiers
      -> enqueue `apply_init_player(...)`
   -> `DarkForest::apply_init_player` (public only_self)
@@ -78,7 +78,7 @@ This is the implicit graph that precedes all actions:
      -> `AztecConnection.getClient().revealLocation(xField, yField)`
      -> `darkforest.methods.reveal_location(...buildRevealLocationArgs(...))`
   -> `DarkForest::reveal_location` (private)
-     -> perlin + config hash validation, `mimc_sponge_2_220`
+     -> reads on-chain config, computes perlin, `mimc_sponge_2_220`
      -> enqueue `apply_player_action(..., action=1)`
   -> `DarkForest::apply_player_action` (public only_self)
      -> cooldown checks
@@ -92,9 +92,9 @@ This is the implicit graph that precedes all actions:
   -> `txIntent.methodName = "move"` -> `ContractsAPI.submitTransaction`
   -> `dispatchAztecTransaction(METHOD.MOVE)`
      -> `AztecConnection.getClient().move(...)`
-     -> `darkforest.methods.move(..., perlinConfig.*, gameConfig.configHashSpacetype, maxLocationId, worldRadius)`
+     -> `darkforest.methods.move(x1, y1, x2, y2, radius, distMax, forces, silver, artifactId, abandoning)`
   -> `DarkForest::move` (private)
-     -> bounds + dist validation + perlin + config hash
+     -> bounds + dist validation + perlin (config loaded from storage)
      -> enqueue `apply_move(..., config_hash)`
   -> `DarkForest::apply_move` (public only_self)
      -> `process_pending_arrivals` (from/to)
@@ -146,7 +146,7 @@ This is the implicit graph that precedes all actions:
      -> `AztecConnection.getClient().findArtifact(xField, yField, biomebase)`
      -> `darkforest.methods.find_artifact(...buildFindArtifactArgs(...))`
   -> `DarkForest::find_artifact` (private)
-     -> config hash validation, `mimc_sponge_2_220`
+     -> reads on-chain config, `mimc_sponge_2_220`
      -> enqueue `apply_player_action(..., action=5)`
   -> `DarkForest::apply_player_action` (public only_self)
      -> prospect timing checks

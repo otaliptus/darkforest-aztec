@@ -20,7 +20,7 @@ pub contract DarkForest {
             address::AztecAddress,
             traits::ToField,
         },
-        state_vars::{Map, PublicMutable},
+        state_vars::{Map, PublicImmutable, PublicMutable},
     };
     use dep::darkforest_nft::NFT;
     use dep::std::field::bn254;
@@ -281,9 +281,9 @@ pub contract DarkForest {
     #[storage]
     struct Storage<Context> {
         nft_contract: PublicMutable<AztecAddress, Context>,
-        config: PublicMutable<GameConfig, Context>,
-        config_hash_spacetype: PublicMutable<Field, Context>,
-        config_hash_biome: PublicMutable<Field, Context>,
+        config: PublicImmutable<GameConfig, Context>,
+        config_hash_spacetype: PublicImmutable<Field, Context>,
+        config_hash_biome: PublicImmutable<Field, Context>,
         players: Map<AztecAddress, PublicMutable<Player, Context>, Context>,
         player_claimed_ships: Map<AztecAddress, PublicMutable<u8, Context>, Context>,
         player_space_junk: Map<AztecAddress, PublicMutable<u64, Context>, Context>,
@@ -338,9 +338,9 @@ pub contract DarkForest {
             config.perlin_mirror_x,
             config.perlin_mirror_y,
         );
-        self.storage.config_hash_spacetype.write(spacetype_hash);
-        self.storage.config_hash_biome.write(biome_hash);
-        self.storage.config.write(config);
+        self.storage.config_hash_spacetype.initialize(spacetype_hash);
+        self.storage.config_hash_biome.initialize(biome_hash);
+        self.storage.config.initialize(config);
     }
 
     #[internal("public")]
@@ -1309,18 +1309,10 @@ pub contract DarkForest {
         x: Field,
         y: Field,
         radius: u64,
-        planethash_key: Field,
-        spacetype_key: Field,
-        perlin_length_scale: u64,
-        perlin_mirror_x: bool,
-        perlin_mirror_y: bool,
-        max_location_id: Field,
-        world_radius: u64,
-        spawn_rim_area: u64,
-        init_perlin_min: u64,
-        init_perlin_max: u64,
     ) {
         let player = self.context.msg_sender().unwrap();
+        let config = self.storage.config.read();
+        let cfg_hash = self.storage.config_hash_spacetype.read();
 
         let x_abs = field_abs_u128(x);
         let y_abs = field_abs_u128(y);
@@ -1335,39 +1327,32 @@ pub contract DarkForest {
         let perlin_u64 = multi_scale_perlin(
             x,
             y,
-            spacetype_key,
-            perlin_length_scale,
-            perlin_mirror_x,
-            perlin_mirror_y,
-        );
-        let cfg_hash = config_hash(
-            planethash_key,
-            spacetype_key,
-            perlin_length_scale,
-            perlin_mirror_x,
-            perlin_mirror_y,
+            config.spacetype_key,
+            config.perlin_length_scale,
+            config.perlin_mirror_x,
+            config.perlin_mirror_y,
         );
 
-        let location_id = hash_2(x, y, planethash_key);
-        assert(bn254::lt(location_id, max_location_id));
-        assert(radius <= world_radius);
-        if spawn_rim_area != 0 {
+        let location_id = hash_2(x, y, config.planethash_key);
+        assert(bn254::lt(location_id, config.max_location_id));
+        assert(radius <= config.world_radius);
+        if config.spawn_rim_area != 0 {
             assert(dist_sq * 100 > r_sq * 98);
             let radius_u = radius as u128;
-            let world_u = world_radius as u128;
+            let world_u = config.world_radius as u128;
             let lhs = ((radius_u * radius_u * 314u128) / 100u128)
-                + (spawn_rim_area as u128);
+                + (config.spawn_rim_area as u128);
             let rhs = (world_u * world_u * 314u128) / 100u128;
             assert(lhs >= rhs);
         }
         assert(
-            (perlin_u64 >= init_perlin_min)
-            & (perlin_u64 < init_perlin_max)
+            (perlin_u64 >= config.init_perlin_min)
+            & (perlin_u64 < config.init_perlin_max)
         );
 
         // Private nullifier ensures init claims are one-time even if public state is stale within a block.
         self.context.push_nullifier(location_id);
-        let player_nullifier = hash_2(player.to_field(), 1, planethash_key);
+        let player_nullifier = hash_2(player.to_field(), 1, config.planethash_key);
         self.context.push_nullifier(player_nullifier);
 
         self.enqueue(
@@ -1741,14 +1726,10 @@ pub contract DarkForest {
     fn reveal_location(
         x: Field,
         y: Field,
-        planethash_key: Field,
-        spacetype_key: Field,
-        perlin_length_scale: u64,
-        perlin_mirror_x: bool,
-        perlin_mirror_y: bool,
-        max_location_id: Field,
     ) {
         let player = self.context.msg_sender().unwrap();
+        let config = self.storage.config.read();
+        let cfg_hash = self.storage.config_hash_spacetype.read();
 
         let x_abs = field_abs_u128(x);
         let y_abs = field_abs_u128(y);
@@ -1758,21 +1739,14 @@ pub contract DarkForest {
         let perlin_u64 = multi_scale_perlin(
             x,
             y,
-            spacetype_key,
-            perlin_length_scale,
-            perlin_mirror_x,
-            perlin_mirror_y,
-        );
-        let cfg_hash = config_hash(
-            planethash_key,
-            spacetype_key,
-            perlin_length_scale,
-            perlin_mirror_x,
-            perlin_mirror_y,
+            config.spacetype_key,
+            config.perlin_length_scale,
+            config.perlin_mirror_x,
+            config.perlin_mirror_y,
         );
 
-        let location_id = hash_2(x, y, planethash_key);
-        assert(bn254::lt(location_id, max_location_id));
+        let location_id = hash_2(x, y, config.planethash_key);
+        assert(bn254::lt(location_id, config.max_location_id));
 
         self.enqueue(
             DarkForest::at(self.context.this_address()).apply_player_action(
@@ -1893,15 +1867,11 @@ pub contract DarkForest {
         x: Field,
         y: Field,
         biomebase: u64,
-        planethash_key: Field,
-        biomebase_key: Field,
-        perlin_length_scale: u64,
-        perlin_mirror_x: bool,
-        perlin_mirror_y: bool,
-        max_location_id: Field,
     ) {
         let player = self.context.msg_sender().unwrap();
-        let location_id = hash_2(x, y, planethash_key);
+        let config = self.storage.config.read();
+        let cfg_hash = self.storage.config_hash_biome.read();
+        let location_id = hash_2(x, y, config.planethash_key);
 
         let x_abs = field_abs_u128(x);
         let y_abs = field_abs_u128(y);
@@ -1910,20 +1880,13 @@ pub contract DarkForest {
         let computed_biomebase = multi_scale_perlin(
             x,
             y,
-            biomebase_key,
-            perlin_length_scale,
-            perlin_mirror_x,
-            perlin_mirror_y,
+            config.biomebase_key,
+            config.perlin_length_scale,
+            config.perlin_mirror_x,
+            config.perlin_mirror_y,
         );
         assert(computed_biomebase == biomebase);
-        let cfg_hash = config_hash(
-            planethash_key,
-            biomebase_key,
-            perlin_length_scale,
-            perlin_mirror_x,
-            perlin_mirror_y,
-        );
-        assert(bn254::lt(location_id, max_location_id));
+        assert(bn254::lt(location_id, config.max_location_id));
 
         self.enqueue(
             DarkForest::at(self.context.this_address()).apply_player_action(
@@ -2050,20 +2013,19 @@ pub contract DarkForest {
         silver_moved: u64,
         moved_artifact_id: Field,
         abandoning: bool,
-        planethash_key: Field,
-        spacetype_key: Field,
-        perlin_length_scale: u64,
-        perlin_mirror_x: bool,
-        perlin_mirror_y: bool,
-        max_location_id: Field,
-        world_radius: u64,
     ) {
         let player = self.context.msg_sender().unwrap();
+        let config = self.storage.config.read();
+        let cfg_hash = self.storage.config_hash_spacetype.read();
 
-        let x1_abs = field_abs_u128(x1);
-        let y1_abs = field_abs_u128(y1);
-        let x2_abs = field_abs_u128(x2);
-        let y2_abs = field_abs_u128(y2);
+        let x1_signed = field_to_signed(x1);
+        let y1_signed = field_to_signed(y1);
+        let x2_signed = field_to_signed(x2);
+        let y2_signed = field_to_signed(y2);
+        let x1_abs = x1_signed.mag;
+        let y1_abs = y1_signed.mag;
+        let x2_abs = x2_signed.mag;
+        let y2_abs = y2_signed.mag;
         assert(x1_abs <= MAX_COORD_ABS);
         assert(y1_abs <= MAX_COORD_ABS);
         assert(x2_abs <= MAX_COORD_ABS);
@@ -2074,8 +2036,8 @@ pub contract DarkForest {
         let r_sq = r_u * r_u;
         assert(dist_from_origin_sq < r_sq);
 
-        let diff_x = signed_sub(field_to_signed(x1), field_to_signed(x2));
-        let diff_y = signed_sub(field_to_signed(y1), field_to_signed(y2));
+        let diff_x = signed_sub(x1_signed, x2_signed);
+        let diff_y = signed_sub(y1_signed, y2_signed);
         let dist_sq = diff_x.mag * diff_x.mag + diff_y.mag * diff_y.mag;
         let dist_max_u = dist_max as u128;
         assert(dist_sq <= dist_max_u * dist_max_u);
@@ -2083,23 +2045,16 @@ pub contract DarkForest {
         let perlin_u64 = multi_scale_perlin(
             x2,
             y2,
-            spacetype_key,
-            perlin_length_scale,
-            perlin_mirror_x,
-            perlin_mirror_y,
-        );
-        let cfg_hash = config_hash(
-            planethash_key,
-            spacetype_key,
-            perlin_length_scale,
-            perlin_mirror_x,
-            perlin_mirror_y,
+            config.spacetype_key,
+            config.perlin_length_scale,
+            config.perlin_mirror_x,
+            config.perlin_mirror_y,
         );
 
-        let from_location_id = hash_2(x1, y1, planethash_key);
-        let to_location_id = hash_2(x2, y2, planethash_key);
-        assert(radius <= world_radius);
-        assert(bn254::lt(to_location_id, max_location_id));
+        let from_location_id = hash_2(x1, y1, config.planethash_key);
+        let to_location_id = hash_2(x2, y2, config.planethash_key);
+        assert(radius <= config.world_radius);
+        assert(bn254::lt(to_location_id, config.max_location_id));
 
         let move_config: u128 =
             ((dist_max as u128) << 64) | (radius as u128);
@@ -2133,20 +2088,19 @@ pub contract DarkForest {
         silver_moved: u64,
         moved_artifact_id: Field,
         abandoning: bool,
-        planethash_key: Field,
-        spacetype_key: Field,
-        perlin_length_scale: u64,
-        perlin_mirror_x: bool,
-        perlin_mirror_y: bool,
-        max_location_id: Field,
-        world_radius: u64,
     ) {
         let player = self.context.msg_sender().unwrap();
+        let config = self.storage.config.read();
+        let cfg_hash = self.storage.config_hash_spacetype.read();
 
-        let x1_abs = field_abs_u128(x1);
-        let y1_abs = field_abs_u128(y1);
-        let x2_abs = field_abs_u128(x2);
-        let y2_abs = field_abs_u128(y2);
+        let x1_signed = field_to_signed(x1);
+        let y1_signed = field_to_signed(y1);
+        let x2_signed = field_to_signed(x2);
+        let y2_signed = field_to_signed(y2);
+        let x1_abs = x1_signed.mag;
+        let y1_abs = y1_signed.mag;
+        let x2_abs = x2_signed.mag;
+        let y2_abs = y2_signed.mag;
         assert(x1_abs <= MAX_COORD_ABS);
         assert(y1_abs <= MAX_COORD_ABS);
         assert(x2_abs <= MAX_COORD_ABS);
@@ -2157,25 +2111,17 @@ pub contract DarkForest {
         let r_sq = r_u * r_u;
         assert(dist_from_origin_sq < r_sq);
 
-        let diff_x = signed_sub(field_to_signed(x1), field_to_signed(x2));
-        let diff_y = signed_sub(field_to_signed(y1), field_to_signed(y2));
+        let diff_x = signed_sub(x1_signed, x2_signed);
+        let diff_y = signed_sub(y1_signed, y2_signed);
         let dist_sq = diff_x.mag * diff_x.mag + diff_y.mag * diff_y.mag;
         assert(dist_max < MOVE_KNOWN_FLAG);
         let dist_max_u = dist_max as u128;
         assert(dist_sq <= dist_max_u * dist_max_u);
 
-        let cfg_hash = config_hash(
-            planethash_key,
-            spacetype_key,
-            perlin_length_scale,
-            perlin_mirror_x,
-            perlin_mirror_y,
-        );
-
-        let from_location_id = hash_2(x1, y1, planethash_key);
-        let to_location_id = hash_2(x2, y2, planethash_key);
-        assert(radius <= world_radius);
-        assert(bn254::lt(to_location_id, max_location_id));
+        let from_location_id = hash_2(x1, y1, config.planethash_key);
+        let to_location_id = hash_2(x2, y2, config.planethash_key);
+        assert(radius <= config.world_radius);
+        assert(bn254::lt(to_location_id, config.max_location_id));
 
         let dist_max_flagged = dist_max + MOVE_KNOWN_FLAG;
         let move_config: u128 =

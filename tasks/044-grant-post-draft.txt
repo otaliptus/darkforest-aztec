@@ -1,0 +1,13 @@
+Title: Draft grant update post (status + plan)
+
+Context
+- Need a detailed forum post summarizing current progress vs v0.6 requirements.
+- Must call out what is done, what remains, and key risks (esp. proving speed).
+
+Acceptance Criteria
+- Draft a comprehensive grant update post that aligns with the original RFPG requirements.
+- Include: completed items, in-progress, missing parity items, performance measurements, risks/negatives, and next steps.
+- Keep it grounded in repo evidence (docs + code), no speculative claims.
+
+Out of Scope
+- Code changes beyond documentation.

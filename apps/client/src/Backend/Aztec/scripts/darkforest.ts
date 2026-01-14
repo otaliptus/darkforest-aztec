@@ -109,62 +109,23 @@ export function buildInitPlayerArgs(
     x: bigint,
     y: bigint,
     radius: bigint,
-    config: PerlinConfig,
-    gameConfig: OnChainConfig
 ) {
-    return [
-        x,
-        y,
-        radius,
-        config.planethashKey,
-        config.spacetypeKey,
-        config.perlinLengthScale,
-        config.perlinMirrorX,
-        config.perlinMirrorY,
-        gameConfig.maxLocationId,
-        gameConfig.worldRadius,
-        gameConfig.spawnRimArea,
-        gameConfig.initPerlinMin,
-        gameConfig.initPerlinMax,
-    ] as const;
+    return [x, y, radius] as const;
 }
 
 export function buildRevealLocationArgs(
     x: bigint,
     y: bigint,
-    config: PerlinConfig,
-    gameConfig: OnChainConfig
 ) {
-    return [
-        x,
-        y,
-        config.planethashKey,
-        config.spacetypeKey,
-        config.perlinLengthScale,
-        config.perlinMirrorX,
-        config.perlinMirrorY,
-        gameConfig.maxLocationId,
-    ] as const;
+    return [x, y] as const;
 }
 
 export function buildFindArtifactArgs(
     x: bigint,
     y: bigint,
     biomebase: bigint,
-    config: PerlinConfig,
-    gameConfig: OnChainConfig
 ) {
-    return [
-        x,
-        y,
-        biomebase,
-        gameConfig.planethashKey,
-        gameConfig.biomebaseKey,
-        config.perlinLengthScale,
-        config.perlinMirrorX,
-        config.perlinMirrorY,
-        gameConfig.maxLocationId,
-    ] as const;
+    return [x, y, biomebase] as const;
 }
 
 function parseAddress(value: string, label: string) {
@@ -384,11 +345,11 @@ export async function connectDarkForest(
         sponsoredFee,
         initPlayer: (x, y, radius) =>
             darkforest.methods
-                .init_player(...buildInitPlayerArgs(x, y, radius, perlinConfig, gameConfig))
+                .init_player(...buildInitPlayerArgs(x, y, radius))
                 .send(sendOptions),
         revealLocation: (x, y) =>
             darkforest.methods
-                .reveal_location(...buildRevealLocationArgs(x, y, perlinConfig, gameConfig))
+                .reveal_location(...buildRevealLocationArgs(x, y))
                 .send(sendOptions),
         move: (
             x1,
@@ -413,14 +374,7 @@ export async function connectDarkForest(
                     popMoved,
                     silverMoved,
                     movedArtifactId,
-                    abandoning,
-                    perlinConfig.planethashKey,
-                    perlinConfig.spacetypeKey,
-                    perlinConfig.perlinLengthScale,
-                    perlinConfig.perlinMirrorX,
-                    perlinConfig.perlinMirrorY,
-                    gameConfig.maxLocationId,
-                    gameConfig.worldRadius
+                    abandoning
                 )
                 .send(sendOptions),
         moveKnown: (
@@ -446,14 +400,7 @@ export async function connectDarkForest(
                     popMoved,
                     silverMoved,
                     movedArtifactId,
-                    abandoning,
-                    perlinConfig.planethashKey,
-                    perlinConfig.spacetypeKey,
-                    perlinConfig.perlinLengthScale,
-                    perlinConfig.perlinMirrorX,
-                    perlinConfig.perlinMirrorY,
-                    gameConfig.maxLocationId,
-                    gameConfig.worldRadius
+                    abandoning
                 )
                 .send(sendOptions),
         upgradePlanet: (locationId, branch) =>
@@ -462,7 +409,7 @@ export async function connectDarkForest(
             darkforest.methods.prospect_planet(locationId).send(sendOptions),
         findArtifact: (x, y, biomebase) =>
             darkforest.methods
-                .find_artifact(...buildFindArtifactArgs(x, y, biomebase, perlinConfig, gameConfig))
+                .find_artifact(...buildFindArtifactArgs(x, y, biomebase))
                 .send(sendOptions),
         tradeArtifact: (locationId, artifactId, withdrawing) =>
             darkforest.methods.trade_artifact(locationId, artifactId, withdrawing).send(sendOptions),

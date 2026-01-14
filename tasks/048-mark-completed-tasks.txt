@@ -1,0 +1,15 @@
+TASK 048 - Mark completed tasks done
+
+Mission:
+Mark confirmed completed tasks in /tasks as done with a consistent status line.
+
+Scope:
+- Update task files to include a status marker.
+
+Acceptance criteria:
+- Each specified task file includes "Status: Done (2026-01-14)" after the title line.
+- No other task content changes.
+
+Testing:
+- None
+

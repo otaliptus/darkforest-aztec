@@ -1,0 +1,18 @@
+Title: Implement player score tracking (v0.6 parity)
+
+Context
+- `Player` lacks a `score` field in `packages/contracts/src/types.nr`.
+- Reward claiming and capture zone scoring depend on player score.
+
+Acceptance Criteria
+- Add `score` to `Player` state with v0.6 parity.
+- Implement score updates for the relevant gameplay actions (planet capture and capture zones as in v0.6).
+- Wire client to display and use score from contract state.
+- Tests cover score updates and edge cases.
+- No unbounded loops in public contract functions.
+
+Out of Scope
+- New scoring rules beyond v0.6.
+
+Notes
+- Depends on capture-zone implementation (`tasks/031-capture-zones.txt`).
