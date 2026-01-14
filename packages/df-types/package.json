@@ -30,6 +30,7 @@
     "ts-toolbelt": "^9.6.0"
   },
   "devDependencies": {
+    "@types/minimatch": "^5.1.2",
     "del-cli": "^4.0.1",
     "eslint": "^7.30.0",
     "prettier": "^2.3.0",

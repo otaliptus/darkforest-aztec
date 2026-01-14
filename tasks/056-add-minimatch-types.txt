@@ -1,0 +1,15 @@
+TASK 056 - Add minimatch types for Cloudflare build
+Status: Done (2026-01-14)
+
+Mission:
+Fix Cloudflare build failure "Cannot find type definition file for 'minimatch'" by
+adding @types/minimatch to the df-types workspace.
+
+Scope:
+- packages/df-types/package.json
+
+Plan:
+1) Add @types/minimatch to devDependencies in df-types.
+
+Acceptance criteria:
+- yarn workspace @darkforest_eth/types prepare succeeds in Cloudflare build.
