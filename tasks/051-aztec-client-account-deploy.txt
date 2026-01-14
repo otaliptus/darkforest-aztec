@@ -1,0 +1,19 @@
+TASK 051 - Ensure Aztec client deploys account on first use
+Status: Done (2026-01-14)
+
+Mission:
+When a player creates/imports an Aztec account in the browser, ensure the
+account contract is deployed on-chain before sending game transactions.
+
+Scope:
+- Client only (Aztec connection flow).
+
+Plan:
+1) Add an account deployment helper in the Aztec client connect flow.
+2) Use Sponsored FPC (if available) for the deployment fee.
+3) Skip deploy if the account already exists on-chain.
+
+Acceptance criteria:
+- Fresh browser accounts are deployed on-chain before init_player is called.
+- If account already exists, the client skips deployment.
+- Errors surface with a clear log message.

@@ -15,7 +15,11 @@ import GameManager, { GameManagerEvent } from '../../Backend/GameLogic/GameManag
 import GameUIManager from '../../Backend/GameLogic/GameUIManager';
 import TutorialManager, { TutorialState } from '../../Backend/GameLogic/TutorialManager';
 import { addAccount, getAccounts } from '../../Backend/Network/AccountManager';
-import { getEthConnection, loadDiamondContract } from '../../Backend/Network/Blockchain';
+import {
+  getEthConnection,
+  loadDiamondContract,
+  stopEthConnection,
+} from '../../Backend/Network/Blockchain';
 import {
   callRegisterAndWaitForConfirmation,
   EmailResponse,
@@ -41,6 +45,7 @@ import { TerminalTextStyle } from '../Utils/TerminalTypes';
 import UIEmitter, { UIEmitterEvent } from '../Utils/UIEmitter';
 import { GameWindowLayout } from '../Views/GameWindowLayout';
 import { Terminal, TerminalHandle } from '../Views/Terminal';
+import { generateSchnorrAccounts } from '@aztec/accounts/testing';
 
 const enum TerminalPromptStep {
   NONE,
@@ -63,6 +68,85 @@ const enum TerminalPromptStep {
   TERMINATED,
   ERROR,
 }
+
+const AZTEC_ACCOUNT_STORAGE_KEY = 'df_aztec_account_v1';
+
+type AztecStoredAccount = {
+  secret: string;
+  salt: string;
+  signingKey: string;
+  createdAt: string;
+};
+
+const readAztecStoredAccount = (): AztecStoredAccount | undefined => {
+  if (typeof window === 'undefined' || !window.localStorage) return undefined;
+  const raw = window.localStorage.getItem(AZTEC_ACCOUNT_STORAGE_KEY);
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as Partial<AztecStoredAccount>;
+    if (!parsed.secret || !parsed.salt || !parsed.signingKey) return undefined;
+    return {
+      secret: parsed.secret,
+      salt: parsed.salt,
+      signingKey: parsed.signingKey,
+      createdAt: parsed.createdAt ?? new Date().toISOString(),
+    };
+  } catch {
+    return undefined;
+  }
+};
+
+const writeAztecStoredAccount = (account: AztecStoredAccount) => {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  window.localStorage.setItem(AZTEC_ACCOUNT_STORAGE_KEY, JSON.stringify(account));
+};
+
+const clearAztecStoredAccount = () => {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  window.localStorage.removeItem(AZTEC_ACCOUNT_STORAGE_KEY);
+};
+
+const hasAztecEnvAccount = () => {
+  if (
+    CLIENT_CONFIG.account?.secret &&
+    CLIENT_CONFIG.account?.salt &&
+    CLIENT_CONFIG.account?.signingKey
+  ) {
+    return true;
+  }
+  return CLIENT_CONFIG.account?.testAccountIndex !== undefined;
+};
+
+const applyAztecAccountConfig = (account: AztecStoredAccount) => {
+  CLIENT_CONFIG.account = {
+    ...CLIENT_CONFIG.account,
+    secret: account.secret,
+    salt: account.salt,
+    signingKey: account.signingKey,
+  };
+};
+
+const parseAztecAccountInput = (
+  input: string
+): { secret: string; salt: string; signingKey: string } | undefined => {
+  const trimmed = input.trim();
+  if (!trimmed) return undefined;
+  try {
+    const parsed = JSON.parse(trimmed) as Partial<AztecStoredAccount>;
+    if (parsed.secret && parsed.salt && parsed.signingKey) {
+      return {
+        secret: parsed.secret,
+        salt: parsed.salt,
+        signingKey: parsed.signingKey,
+      };
+    }
+  } catch {
+    // fall through
+  }
+  const parts = trimmed.split(/[\s,]+/).filter(Boolean);
+  if (parts.length !== 3) return undefined;
+  return { secret: parts[0], salt: parts[1], signingKey: parts[2] };
+};
 
 export function GameLandingPage({ match, location }: RouteComponentProps<{ contract: string }>) {
   const history = useHistory();
@@ -95,6 +179,7 @@ export function GameLandingPage({ match, location }: RouteComponentProps<{ contr
   }
 
   useEffect(() => {
+    if (isAztec) return;
     getEthConnection()
       .then((ethConnection) => setEthConnection(ethConnection))
       .catch((e) => {
@@ -107,7 +192,27 @@ export function GameLandingPage({ match, location }: RouteComponentProps<{ contr
         );
         console.error(e);
       });
-  }, []);
+  }, [isAztec]);
+
+  const ensureAztecConnection = useCallback(
+    async (terminal: React.MutableRefObject<TerminalHandle | undefined>) => {
+      if (ethConnection) return ethConnection;
+      try {
+        const connection = await getEthConnection();
+        setEthConnection(connection);
+        return connection;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        terminal.current?.println(
+          `Error connecting to Aztec node: ${message}`,
+          TerminalTextStyle.Red
+        );
+        console.error(e);
+        throw e;
+      }
+    },
+    [ethConnection]
+  );
 
   useEffect(() => {
     if (!gameManager) return;
@@ -151,6 +256,26 @@ export function GameLandingPage({ match, location }: RouteComponentProps<{ contr
       } else {
         setStep(TerminalPromptStep.COMPATIBILITY_CHECKS_PASSED);
       }
+    },
+    []
+  );
+
+  const advanceStateFromAztecImportAccount = useCallback(
+    async (terminal: React.MutableRefObject<TerminalHandle | undefined>) => {
+      terminal.current?.println(
+        'Paste Aztec account keys as JSON or "secret salt signingKey":',
+        TerminalTextStyle.Text
+      );
+      terminal.current?.println(
+        'Example JSON: {"secret":"0x...","salt":"0x...","signingKey":"0x..."}'
+      );
+      const rawInput = (await terminal.current?.getInput()) || '';
+      const parsed = parseAztecAccountInput(rawInput);
+      if (!parsed) {
+        terminal.current?.println('Invalid account format. Please try again.', TerminalTextStyle.Red);
+        return undefined;
+      }
+      return parsed;
     },
     []
   );
@@ -288,8 +413,114 @@ export function GameLandingPage({ match, location }: RouteComponentProps<{ contr
       }
 
       if (isAztec) {
-        terminal.current?.println('Aztec mode detected. Using local node account.');
-        terminal.current?.println('Skipping Ethereum account selection and whitelist checks.');
+        terminal.current?.println('Aztec mode detected.');
+        terminal.current?.println('Aztec accounts are stored locally in your browser.');
+
+        const envAccount = hasAztecEnvAccount();
+        const storedAccount = readAztecStoredAccount();
+
+        if (envAccount) {
+          terminal.current?.println('Using account from environment config.');
+          await ensureAztecConnection(terminal);
+          setStep(TerminalPromptStep.FETCHING_ETH_DATA);
+          return;
+        }
+
+        if (storedAccount) {
+          terminal.current?.println('Found a locally stored Aztec account.');
+          terminal.current?.println('(c) Continue with stored account.');
+          terminal.current?.println('(n) Create a new account.');
+          terminal.current?.println('(i) Import existing account keys.');
+          terminal.current?.println('(x) Forget stored account.');
+          terminal.current?.println('');
+          terminal.current?.println('Select an option:', TerminalTextStyle.Text);
+          const input = ((await terminal.current?.getInput()) || '').trim().toLowerCase();
+          if (input === 'c') {
+            applyAztecAccountConfig(storedAccount);
+            await ensureAztecConnection(terminal);
+            setStep(TerminalPromptStep.FETCHING_ETH_DATA);
+            return;
+          }
+          if (input === 'x') {
+            clearAztecStoredAccount();
+            terminal.current?.println('Stored account removed.');
+            await advanceStateFromCompatibilityPassed(terminal);
+            return;
+          } else if (input === 'i') {
+            const importInput = await advanceStateFromAztecImportAccount(terminal);
+            if (!importInput) {
+              await advanceStateFromCompatibilityPassed(terminal);
+              return;
+            }
+            const importedAccount: AztecStoredAccount = {
+              ...importInput,
+              createdAt: new Date().toISOString(),
+            };
+            writeAztecStoredAccount(importedAccount);
+            applyAztecAccountConfig(importedAccount);
+            await stopEthConnection();
+            await ensureAztecConnection(terminal);
+            setStep(TerminalPromptStep.FETCHING_ETH_DATA);
+            return;
+          } else if (input !== 'n') {
+            terminal.current?.println('Unrecognized input. Please try again.');
+            await advanceStateFromCompatibilityPassed(terminal);
+            return;
+          }
+        } else {
+          terminal.current?.println('(n) Create a new account.');
+          terminal.current?.println('(i) Import existing account keys.');
+          terminal.current?.println('');
+          terminal.current?.println('Select an option:', TerminalTextStyle.Text);
+          const input = ((await terminal.current?.getInput()) || '').trim().toLowerCase();
+          if (input !== 'n' && input !== 'i') {
+            terminal.current?.println('Unrecognized input. Please try again.');
+            await advanceStateFromCompatibilityPassed(terminal);
+            return;
+          }
+          if (input === 'i') {
+            const importInput = await advanceStateFromAztecImportAccount(terminal);
+            if (!importInput) {
+              await advanceStateFromCompatibilityPassed(terminal);
+              return;
+            }
+            const importedAccount: AztecStoredAccount = {
+              ...importInput,
+              createdAt: new Date().toISOString(),
+            };
+            writeAztecStoredAccount(importedAccount);
+            applyAztecAccountConfig(importedAccount);
+            await stopEthConnection();
+            await ensureAztecConnection(terminal);
+            setStep(TerminalPromptStep.FETCHING_ETH_DATA);
+            return;
+          }
+        }
+
+        terminal.current?.println('Generating a new Aztec account...');
+        const [generated] = await generateSchnorrAccounts(1);
+        if (!generated) {
+          terminal.current?.println('Failed to generate account. Try again.', TerminalTextStyle.Red);
+          await advanceStateFromCompatibilityPassed(terminal);
+          return;
+        }
+        const generatedAccount: AztecStoredAccount = {
+          secret: generated.secret.toString(),
+          salt: generated.salt.toString(),
+          signingKey: generated.signingKey.toString(),
+          createdAt: new Date().toISOString(),
+        };
+        writeAztecStoredAccount(generatedAccount);
+        applyAztecAccountConfig(generatedAccount);
+        terminal.current?.println('Aztec account created. Please back up these keys:', TerminalTextStyle.Text);
+        terminal.current?.println(`ACCOUNT_SECRET=${generatedAccount.secret}`);
+        terminal.current?.println(`ACCOUNT_SALT=${generatedAccount.salt}`);
+        terminal.current?.println(`ACCOUNT_SIGNING_KEY=${generatedAccount.signingKey}`);
+        terminal.current?.println('');
+        terminal.current?.println('Press ENTER to continue.', TerminalTextStyle.Text);
+        await terminal.current?.getInput();
+        await stopEthConnection();
+        await ensureAztecConnection(terminal);
         setStep(TerminalPromptStep.FETCHING_ETH_DATA);
         return;
       }
@@ -347,7 +578,14 @@ export function GameLandingPage({ match, location }: RouteComponentProps<{ contr
         }
       }
     },
-    [isLobby, isAztec, ethConnection, selectedAddress]
+    [
+      isLobby,
+      isAztec,
+      ethConnection,
+      selectedAddress,
+      ensureAztecConnection,
+      advanceStateFromAztecImportAccount,
+    ]
   );
 
   const advanceStateFromDisplayAccounts = useCallback(
@@ -452,6 +690,7 @@ export function GameLandingPage({ match, location }: RouteComponentProps<{ contr
     },
     [ethConnection]
   );
+
 
   const advanceStateFromAccountSet = useCallback(
     async (terminal: React.MutableRefObject<TerminalHandle | undefined>) => {
@@ -938,7 +1177,7 @@ export function GameLandingPage({ match, location }: RouteComponentProps<{ contr
 
   const advanceState = useCallback(
     async (terminal: React.MutableRefObject<TerminalHandle | undefined>) => {
-      if (step === TerminalPromptStep.NONE && ethConnection) {
+      if (step === TerminalPromptStep.NONE && (ethConnection || isAztec)) {
         await advanceStateFromNone(terminal);
       } else if (step === TerminalPromptStep.COMPATIBILITY_CHECKS_PASSED) {
         await advanceStateFromCompatibilityPassed(terminal);
@@ -994,6 +1233,7 @@ export function GameLandingPage({ match, location }: RouteComponentProps<{ contr
       advanceStateFromNoHomePlanet,
       advanceStateFromNone,
       ethConnection,
+      isAztec,
     ]
   );
 

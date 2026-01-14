@@ -18,6 +18,7 @@ import darkforestArtifactImport from "../../../../../../packages/contracts/targe
 import nftArtifactImport from "../../../../../../packages/contracts/darkforest_nft-NFT.json";
 
 const SPONSORED_FPC_SALT = new Fr(0);
+const ZERO_ADDRESS = AztecAddress.fromBigInt(0n);
 
 type ArtifactSource = string | NoirCompiledContract | undefined;
 
@@ -138,6 +139,43 @@ function parseAddress(value: string, label: string) {
 function logStep(log: ClientLogFn | undefined, message: string, data?: Record<string, unknown>) {
     if (!log) return;
     log(message, data);
+}
+
+const isExistingNullifierError = (error: unknown) => {
+    const message = (error as Error)?.message ?? String(error ?? "");
+    return message.includes("Existing nullifier");
+};
+
+async function ensureAccountDeployed(
+    node: ReturnType<typeof createAztecNodeClient>,
+    account: AccountManager,
+    fee: SponsoredFeePaymentMethod | undefined,
+    log?: ClientLogFn
+) {
+    const onChain = await node.getContract(account.address);
+    if (onChain) {
+        logStep(log, "Account already deployed.", { address: account.address.toString() });
+        return;
+    }
+    logStep(log, "Deploying Aztec account...", { address: account.address.toString() });
+    try {
+        const deployMethod = await account.getDeployMethod();
+        const sent = await deployMethod.send(
+            fee ? { from: ZERO_ADDRESS, fee: { paymentMethod: fee } } : { from: ZERO_ADDRESS }
+        );
+        const txHash = sent.getTxHash ? await sent.getTxHash() : sent.txHash;
+        logStep(log, "Account deploy submitted.", { txHash });
+        await sent.wait({ timeout: 120000 });
+        logStep(log, "Account deployed.", { address: account.address.toString(), txHash });
+    } catch (error) {
+        if (isExistingNullifierError(error)) {
+            logStep(log, "Account deploy already seen. Continuing.", {
+                address: account.address.toString(),
+            });
+            return;
+        }
+        throw error;
+    }
 }
 
 async function resolveAccount(
@@ -264,6 +302,22 @@ export async function connectDarkForest(
 
     const account = await resolveAccount(wallet, config.account, log);
 
+    const sponsoredAddress = await resolveSponsoredFpc(
+        wallet,
+        node,
+        config.sponsoredFpcAddress,
+        log
+    );
+    let sponsoredFee: SponsoredFeePaymentMethod | undefined;
+    if (sponsoredAddress) {
+        sponsoredFee = new SponsoredFeePaymentMethod(sponsoredAddress);
+        logStep(log, "Sponsored fees enabled.");
+    } else {
+        logStep(log, "Sponsored fees disabled.");
+    }
+
+    await ensureAccountDeployed(node, account, sponsoredFee, log);
+
     const darkforestArtifactJson = await resolveArtifactJson(
         darkforestArtifactImport,
         "DarkForest"
@@ -310,20 +364,6 @@ export async function connectDarkForest(
             log
         );
         nftStorageSlots = getStorageSlots(nftArtifactJson, "NFT");
-    }
-
-    let sponsoredFee: SponsoredFeePaymentMethod | undefined;
-    const sponsoredAddress = await resolveSponsoredFpc(
-        wallet,
-        node,
-        config.sponsoredFpcAddress,
-        log
-    );
-    if (sponsoredAddress) {
-        sponsoredFee = new SponsoredFeePaymentMethod(sponsoredAddress);
-        logStep(log, "Sponsored fees enabled.");
-    } else {
-        logStep(log, "Sponsored fees disabled.");
     }
 
     const sendOptions = sponsoredFee

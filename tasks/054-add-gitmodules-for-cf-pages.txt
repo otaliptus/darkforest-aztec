@@ -1,0 +1,17 @@
+TASK 054 - Add .gitmodules to satisfy Cloudflare submodule checkout
+Status: Done (2026-01-14)
+
+Mission:
+Add a .gitmodules file so Cloudflare can resolve the three gitlink
+submodules under reference/ and stop failing the build.
+
+Scope:
+- Repo metadata only (.gitmodules).
+
+Plan:
+1) Create .gitmodules entries for reference/darkforest-local, reference/darkforest-v0.6, reference/noir.
+2) Ensure URLs match existing submodule origins.
+
+Acceptance criteria:
+- Cloudflare no longer errors "No url found for submodule path ..."
+- .gitmodules lists the three reference submodules with valid URLs.

@@ -1,0 +1,19 @@
+TASK 050 - Aztec account onboarding in client
+Status: Done (2026-01-14)
+
+Mission:
+Add an in-browser Aztec account create/import flow so hosted players can join
+without setting env vars or local CLI accounts.
+
+Scope:
+- Client-only changes (GameLandingPage + config wiring).
+
+Plan:
+1) Add localStorage-backed Aztec account persistence (create/import).
+2) Update Aztec onboarding flow to prompt for account choice in the terminal.
+3) Connect Aztec only after account is selected/created.
+
+Acceptance criteria:
+- If no account keys are configured, the client prompts to create/import an Aztec account.
+- Generated/imported keys persist in localStorage and are reused on reload.
+- Aztec connection uses the selected account and proceeds to game load.

@@ -1,0 +1,14 @@
+TASK 053 - Deploy contracts to Aztec devnet and capture addresses
+Status: Done (2026-01-14)
+
+Mission:
+Run the devnet deploy script using a fresh account, then report deployed
+DarkForest + NFT addresses for hosting.
+
+Scope:
+- Run deploy_devnet.js with ACCOUNT_MODE=random and Sponsored FPC.
+
+Acceptance criteria:
+- deploy_devnet.js completes without errors on devnet.
+- DarkForest + NFT contract addresses are recorded for the user.
+- apps/client/.env.local is updated with deployed addresses.

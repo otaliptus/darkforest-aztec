@@ -1,0 +1,20 @@
+TASK 049 - Devnet deployment runbook + hosting guidance
+Status: Done (2026-01-14)
+
+Mission:
+Write a proper devnet deployment + hosting runbook (docs/devnet.md) aligned with current Aztec devnet docs
+and our repo scripts, including gas sponsorship and player access options.
+
+Scope:
+- Docs only (devnet runbook + summary plan).
+
+Plan:
+1) Update docs/devnet.md with current devnet constants, deploy steps, gas sponsorship, and hosting guidance.
+2) Update devnet-deployment-plan.md to match the new runbook and remove stale values.
+
+Acceptance criteria:
+- docs/devnet.md includes a step-by-step devnet deploy flow using deploy_devnet.js.
+- docs/devnet.md clearly explains Sponsored FPC usage and fallback fee options.
+- docs/devnet.md explains that ticker is local-only; devnet blocks advance automatically.
+- docs/devnet.md includes hosting guidance + player access options (local dev vs hosted).
+- devnet-deployment-plan.md does not contradict the runbook.

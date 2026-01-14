@@ -1,0 +1,9 @@
+[submodule "reference/darkforest-local"]
+	path = reference/darkforest-local
+	url = https://github.com/otaliptus/darkforest-local.git
+[submodule "reference/darkforest-v0.6"]
+	path = reference/darkforest-v0.6
+	url = https://github.com/darkforest-eth/darkforest-v0.6
+[submodule "reference/noir"]
+	path = reference/noir
+	url = https://github.com/noir-lang/noir
