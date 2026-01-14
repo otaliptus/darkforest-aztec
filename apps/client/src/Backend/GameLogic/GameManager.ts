@@ -3412,10 +3412,15 @@ class GameManager extends EventEmitter {
         (arrival) => !this.resolvingArrivals.has(arrival.eventId)
       );
       if (pending.length === 0) continue;
+      // Skip planets with in-flight moves or upgrades - these actions call
+      // process_pending_arrivals on-chain, so arrivals will resolve as a side-effect
       const inflightMoves = this.getUnconfirmedMoves().filter(
         (tx) => tx.intent.from === planetId || tx.intent.to === planetId
       );
-      if (inflightMoves.length > 0) {
+      const inflightUpgrades = this.getUnconfirmedUpgrades().filter(
+        (tx) => tx.intent.locationId === planetId
+      );
+      if (inflightMoves.length > 0 || inflightUpgrades.length > 0) {
         continue;
       }
 
@@ -3521,13 +3526,20 @@ class GameManager extends EventEmitter {
       detailedLogger.log('game', 'resolve_arrival.summary', { label, message, ...meta });
       this.terminal.current?.println(message, style);
     };
+    // Skip planets with in-flight moves or upgrades - these actions call
+    // process_pending_arrivals on-chain, so arrivals will resolve as a side-effect
     const inflightMoves = this.getUnconfirmedMoves().filter(
       (tx) => tx.intent.from === arrival.toPlanet || tx.intent.to === arrival.toPlanet
     );
-    if (inflightMoves.length > 0) {
-      const inflightTxs = inflightMoves
-        .map((tx) => `${tx.id}:${formatLocation(tx.intent.from)}->${formatLocation(tx.intent.to)}`)
-        .sort();
+    const inflightUpgrades = this.getUnconfirmedUpgrades().filter(
+      (tx) => tx.intent.locationId === arrival.toPlanet
+    );
+    const totalInflight = inflightMoves.length + inflightUpgrades.length;
+    if (totalInflight > 0) {
+      const inflightTxs = [
+        ...inflightMoves.map((tx) => `move:${tx.id}:${formatLocation(tx.intent.from)}->${formatLocation(tx.intent.to)}`),
+        ...inflightUpgrades.map((tx) => `upgrade:${tx.id}:${formatLocation(tx.intent.locationId)}`),
+      ].sort();
       const inflightKey = inflightTxs.join('|');
       const previousKey = this.arrivalResolveInflightSkips.get(arrival.eventId);
       if (previousKey !== inflightKey) {
@@ -3536,7 +3548,7 @@ class GameManager extends EventEmitter {
           fromPlanet: formatLocation(arrival.fromPlanet),
           toPlanet: formatLocation(arrival.toPlanet),
           currentBlock: this.getCurrentBlockNumber(),
-          inflightCount: inflightMoves.length,
+          inflightCount: totalInflight,
           inflightTxs,
         });
       }
