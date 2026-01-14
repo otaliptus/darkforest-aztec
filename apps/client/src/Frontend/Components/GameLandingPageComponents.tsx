@@ -1,5 +1,6 @@
 import React, { Dispatch, SetStateAction, useLayoutEffect } from 'react';
 import styled, { css } from 'styled-components';
+import { PatienceDisclaimer } from './PatienceDisclaimer';
 import dfstyles from '../Styles/dfstyles';
 import UIEmitter, { UIEmitterEvent } from '../Utils/UIEmitter';
 
@@ -77,10 +78,16 @@ const StyledTerminalWrapper = styled.div<{
 export function TerminalWrapper({ children, initRender, terminalEnabled }: LandingWrapperProps) {
   return (
     <StyledTerminalWrapper initRender={initRender} terminalEnabled={terminalEnabled}>
+      {initRender === InitRenderState.NONE && <TerminalDisclaimer />}
       {children}
     </StyledTerminalWrapper>
   );
 }
+
+const TerminalDisclaimer = styled(PatienceDisclaimer)`
+  margin: 0 0 1.25em 0;
+  align-self: flex-start;
+`;
 
 const StyledTerminalToggler = styled.div<{ terminalEnabled: boolean }>`
   position: absolute;

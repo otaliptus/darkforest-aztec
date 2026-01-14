@@ -77,12 +77,12 @@ const BASE_CONFIG = {
   perlin_mirror_y: false,
   init_perlin_min: 0,
   init_perlin_max: 33,
-  world_radius: 10000,
+  world_radius: 9000,
   spawn_rim_area: 0,
   location_reveal_cooldown: 0,
-  time_factor_hundredths: 100,
-  planet_rarity: 1,
-  max_location_id: deriveMaxLocationId(1),
+  time_factor_hundredths: 1200000,
+  planet_rarity: 2,
+  max_location_id: deriveMaxLocationId(2),
 };
 
 const DEFAULT_INIT = { x: 990, y: 0, radius: 1000 };

@@ -1,0 +1,19 @@
+TASK 064 - Tune map density and travel speed defaults
+
+Mission:
+Slightly reduce planet density and base planet health, shrink the world size a bit, and make travel times near-instant by increasing the time factor defaults.
+
+Scope:
+- Adjust default deploy configs for world radius, planet rarity, and time factor.
+- Reduce default population cap/growth arrays in contract and client constants to keep parity.
+- Keep other mechanics unchanged.
+
+Plan:
+1) Update deploy defaults (local/devnet + df-local helper) for radius, planet rarity, and time factor.
+2) Scale down PLANET_DEFAULT_POP_CAP and PLANET_DEFAULT_POP_GROWTH by ~10% in contract + client.
+3) Recompile contracts to refresh artifacts.
+
+Acceptance criteria:
+- deploy_local.js and deploy_devnet.js default world_radius is 9000, planet_rarity is 2, time_factor_hundredths is 1200000; deploy_local no longer forces a lower tiny-map time factor.
+- scripts/df-local.sh defaults are radius 180, planet rarity 16, time factor 1200000.
+- PLANET_DEFAULT_POP_CAP and PLANET_DEFAULT_POP_GROWTH are 10% lower in packages/contracts/src/main.nr and apps/client/src/Backend/Aztec/constants.ts.

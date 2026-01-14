@@ -1,34 +1,29 @@
 # Dark Forest on Aztec
 
-This workspace is the Aztec port target. Reference repos live under `reference/`:
+A faithful Dark Forest v0.6 port to Aztec using Noir contracts + the classic
+React client. This repository was built solo in ~2 weeks as a rapid prototype
+sprint (for fun) in January 2026, and now serves as the foundation for a
+full, production-grade port.
 
-- `reference/darkforest-v0.6`: Canonical v0.6 contracts, circuits, and client.
-- `reference/darkforest-local`: Runnable local Dark Forest for behavior reference.
-- `reference/aztec-starter`: Aztec/Noir starter project reference.
-- `reference/noir`: Noir language/toolchain reference.
+## Quick links
 
-See `docs/PROJECT_MAP.md` for active vs reference directories.
+- `docs/PROJECT_MAP.md`: active vs reference directories
+- `docs/devnet.md`: local + devnet deployment runbook
+- `docs/giga-truth-report.md`: current status and parity gaps
+- `docs/action-call-graphs.md`: client -> Aztec call graphs
+- `docs/performance.md`: turn-time notes and benchmarks
 
-## Reports
+## Repo layout (active)
 
-- `docs/giga-truth-report.md`: Current architecture + implemented vs missing report.
-- `docs/action-call-graphs.md`: Call graphs for each on-chain action and client flow.
-- `docs/devnet.md`: Local/devnet deployment runbook + troubleshooting.
-- `docs/performance.md`: Turn-time benchmark notes.
+- `packages/contracts`: Aztec Noir contracts + scripts/tests
+- `packages/nft`: Aztec-native NFT contract for artifacts
+- `packages/shared`: shared TS types/constants
+- `packages/df-*`: local TS packages used by the client
+- `apps/client`: React web client
 
-## LLM tooling
+Reference-only (do not build/run): `reference/*`
 
-- `docs/oracle_bundle.md`: Bundle repo context into a single prompt file for GPT Pro.
-
-## Workspace Layout
-
-- `packages/contracts`: Aztec Noir contracts + tests.
-- `packages/shared`: Shared TypeScript types/constants.
-- `apps/client`: React web client.
-
-## Quick Start (Local)
-
-From repo root:
+## Quick start (local dev)
 
 ```bash
 yarn install
@@ -36,23 +31,60 @@ yarn contracts:compile
 yarn contracts:test:nr
 ```
 
-Client:
+Start a local Aztec network:
+
+```bash
+aztec start --local-network --node --sequencer --pxe --archiver
+```
+
+Deploy to local and write `apps/client/.env.local`:
+
+```bash
+node packages/contracts/scripts/deploy_local.js --write-env --overwrite-env
+```
+
+Run the client:
 
 ```bash
 yarn client:dev
 ```
 
-### Client config (local)
-
-Create `apps/client/.env.local` with:
+Optional local ticker (local only):
 
 ```bash
-VITE_DARKFOREST_ADDRESS=0x...
-VITE_NFT_ADDRESS=0x...
-VITE_AZTEC_NODE_URL=http://localhost:8080
+node packages/contracts/scripts/watch_blocks.js --tick
 ```
 
-Optional overrides (defaults match contract tests):
+## Devnet deploy (summary)
+
+See `docs/devnet.md` for the full runbook. Short version:
+
+```bash
+export AZTEC_NODE_URL=https://next.devnet.aztec-labs.com/
+export SPONSORED_FPC_ADDRESS=0x1586f476995be97f07ebd415340a14be48dc28c6c661cc6bdddb80ae790caa4e
+export PROVER_ENABLED=true
+
+node packages/contracts/scripts/deploy_devnet.js --write-env --overwrite-env
+```
+
+Notes:
+- Devnet has fees and no pre-deployed accounts.
+- Ticker is not needed on devnet (blocks advance automatically).
+
+## Client configuration
+
+The client reads Vite env vars at build time. For local dev, create
+`apps/client/.env.local` with:
+
+```bash
+VITE_AZTEC_NODE_URL=http://localhost:8080
+VITE_DARKFOREST_ADDRESS=0x...
+VITE_NFT_ADDRESS=0x...
+VITE_SPONSORED_FPC_ADDRESS=0x...   # optional on local, recommended on devnet
+VITE_PROVER_ENABLED=true
+```
+
+Optional overrides (these are filled in by the deploy scripts):
 
 ```bash
 VITE_PLANETHASH_KEY=42
@@ -67,10 +99,48 @@ VITE_REVEAL_X=123
 VITE_REVEAL_Y=456
 ```
 
-### Playable client workflow
+## Hosting (Cloudflare Pages)
 
-1. Deploy contracts and set `VITE_DARKFOREST_ADDRESS` (and `VITE_NFT_ADDRESS` for artifact ownership).
-2. Run `yarn client:dev` and connect the wallet.
-3. Use **Track Coordinates** to add locations to the galaxy (or use `init_player` / `reveal_location`).
-4. Select a location from the galaxy or list, then use actions like **move**, **upgrade**, **prospect**, **find artifact**, **trade**, or **activate**.
-5. The client reads public storage live; tracked locations persist in localStorage.
+Build command:
+
+```bash
+yarn client:build
+```
+
+Output directory:
+
+```
+apps/client/dist
+```
+
+Set these env vars in the Pages build environment:
+
+- `VITE_AZTEC_NODE_URL`
+- `VITE_DARKFOREST_ADDRESS`
+- `VITE_NFT_ADDRESS`
+- `VITE_SPONSORED_FPC_ADDRESS`
+- `VITE_PROVER_ENABLED=true`
+
+Reminder: Vite env vars are baked in at build time. If you change them, trigger
+another build.
+
+## Accounts and keys (devnet)
+
+Devnet has no pre-deployed accounts. The deploy scripts can generate keys for
+local use. For a hosted multiplayer experience, the client will need an in-app
+account create/import flow (planned work). See `docs/devnet.md` for details.
+
+## Performance (turn-time)
+
+Use the local benchmark helper:
+
+```bash
+PROVER_ENABLED=true node packages/contracts/scripts/bench_move.js --deploy
+```
+
+The script prints `move_ms`, which tracks end-to-end turn time.
+
+## License
+
+MIT (new code). Any reused Dark Forest components remain under LGPL with
+attribution.

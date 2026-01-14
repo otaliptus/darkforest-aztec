@@ -3,6 +3,7 @@ import { useHistory } from 'react-router-dom';
 import styled from 'styled-components';
 import { CLIENT_CONFIG } from '../../Backend/Aztec/config';
 import { Btn } from '../Components/Btn';
+import { PatienceDisclaimer } from '../Components/PatienceDisclaimer';
 import { Spacer } from '../Components/CoreUI';
 import dfstyles from '../Styles/dfstyles';
 
@@ -61,6 +62,8 @@ export default function LandingPage() {
                 Enter Game
               </Btn>
             </ButtonWrapper>
+            <Spacer height={12} />
+            <LandingDisclaimer />
           </Header>
         </MainContentContainer>
       </Page>
@@ -82,6 +85,10 @@ const PrettyOverlayGradient = styled.div`
 
 const Header = styled.div`
   text-align: center;
+`;
+
+const LandingDisclaimer = styled(PatienceDisclaimer)`
+  margin-top: 4px;
 `;
 
 const MainContentContainer = styled.div`
