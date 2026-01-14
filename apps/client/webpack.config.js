@@ -76,6 +76,10 @@ const CLIENT_ENV = Object.fromEntries(
 for (const [key, value] of Object.entries(process.env)) {
   if (key.startsWith('VITE_') && value !== undefined) {
     CLIENT_ENV[key] = value;
+    const baseKey = key.slice('VITE_'.length);
+    if (process.env[baseKey] === undefined && Object.prototype.hasOwnProperty.call(ENV_DEFAULTS, baseKey)) {
+      CLIENT_ENV[baseKey] = value;
+    }
   }
 }
 
