@@ -6,6 +6,8 @@ const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 dotenv.config({ path: path.join(__dirname, '.env.local') });
 dotenv.config();
 
+const isProd = process.env.NODE_ENV !== 'development';
+
 const resolvePackage = require('resolve-package-path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
@@ -87,8 +89,8 @@ module.exports = {
     clean: true,
   },
 
-  // Enable sourcemaps for debugging webpack's output.
-  devtool: 'source-map',
+  // Disable production sourcemaps to keep asset sizes under Pages limits.
+  devtool: isProd ? false : 'source-map',
   devServer: {
     port: 8081,
     historyApiFallback: true,
@@ -208,4 +210,11 @@ module.exports = {
       ],
     }),
   ],
+  optimization: {
+    runtimeChunk: 'single',
+    splitChunks: {
+      chunks: 'all',
+      maxSize: 20 * 1024 * 1024,
+    },
+  },
 };

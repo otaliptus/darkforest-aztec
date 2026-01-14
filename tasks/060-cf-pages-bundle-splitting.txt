@@ -1,0 +1,17 @@
+TASK 060 - Cloudflare Pages bundle size limit
+Status: Done (2026-01-14)
+
+Mission:
+Ensure Cloudflare Pages build output respects the 25 MiB per-file limit by
+splitting the client bundle and disabling production source maps.
+
+Scope:
+- apps/client/webpack.config.js
+
+Plan:
+1) Add webpack splitChunks + runtimeChunk with a maxSize below 25 MiB.
+2) Disable production source maps to avoid oversized .map assets.
+
+Acceptance criteria:
+- No emitted JS asset exceeds 25 MiB in production build.
+- Cloudflare Pages asset validation passes.
