@@ -1,4 +1,5 @@
 TASK 006 - Earliest-arrival guard for resolve-by-ID
+Status: Done (2026-01-14)
 
 Mission:
 Prevent out-of-order resolution when resolving by arrival ID.

@@ -929,6 +929,35 @@ unconstrained fn test_apply_arrival_captures_unowned_planet() {
         )
     );
 
+    let home_location_id = expected_location_id(INIT_X, INIT_Y);
+    let mut home_speed: u64 = 0;
+    let home_speed_ref = &mut home_speed;
+    env.public_context_at(contract_address, |context| {
+        let home_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().planets.slot,
+            home_location_id,
+        );
+        *home_speed_ref = context.storage_read(home_slot + 10);
+    });
+
+    let mut travel_time = (CAPTURE_DIST_MAX * 100) / home_speed;
+    if travel_time == 0 {
+        travel_time = 1;
+    }
+    let mut advance_blocks = travel_time + 20;
+    assert(advance_blocks <= MAX_ADVANCE_BLOCKS);
+    for i in 0..MAX_ADVANCE_BLOCKS {
+        if (i as u64) < advance_blocks {
+            env.call_private(
+                player,
+                DarkForest::at(contract_address).reveal_location(
+                    (5000 + (i as u64)) as Field,
+                    0,
+                )
+            );
+        }
+    }
+
     env.call_private(
         player,
         DarkForest::at(contract_address).resolve_arrival(1)
@@ -1057,6 +1086,187 @@ unconstrained fn test_resolve_planet_arrivals_batch() {
         let planet_two_owner = context.storage_read(planet_two_slot + 1);
         assert_eq(planet_one_owner, player);
         assert_eq(planet_two_owner, player);
+    });
+}
+
+#[test(should_fail)]
+unconstrained fn test_fail_resolve_arrival_out_of_order() {
+    let (mut env, contract_address) = utils::setup();
+    let player = env.create_light_account();
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).init_player(
+            INIT_X,
+            INIT_Y,
+            INIT_RADIUS,
+        )
+    );
+
+    let home_location_id = expected_location_id(INIT_X, INIT_Y);
+    let mut home_speed: u64 = 0;
+    let home_speed_ref = &mut home_speed;
+    env.public_context_at(contract_address, |context| {
+        let home_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().planets.slot,
+            home_location_id,
+        );
+        *home_speed_ref = context.storage_read(home_slot + 10);
+    });
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).move(
+            INIT_X,
+            INIT_Y,
+            CAPTURE_X_2,
+            CAPTURE_Y_2,
+            utils::WORLD_RADIUS,
+            SEARCH_MAX_DIST,
+            MOVE_POP_MOVED,
+            0,
+            0,
+            false,
+        )
+    );
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).move(
+            INIT_X,
+            INIT_Y,
+            CAPTURE_X_2,
+            CAPTURE_Y_2,
+            utils::WORLD_RADIUS,
+            SEARCH_MAX_DIST,
+            MOVE_POP_MOVED,
+            0,
+            0,
+            false,
+        )
+    );
+
+    let mut travel_time = (SEARCH_MAX_DIST * 100) / home_speed;
+    if travel_time == 0 {
+        travel_time = 1;
+    }
+    let mut advance_blocks = travel_time + 20;
+    assert(advance_blocks <= MAX_ADVANCE_BLOCKS);
+    for i in 0..MAX_ADVANCE_BLOCKS {
+        if (i as u64) < advance_blocks {
+            env.call_private(
+                player,
+                DarkForest::at(contract_address).reveal_location(
+                    (7000 + (i as u64)) as Field,
+                    0,
+                )
+            );
+        }
+    }
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).resolve_arrival(2)
+    );
+}
+
+#[test]
+unconstrained fn test_resolve_arrival_in_order_allows_next() {
+    let (mut env, contract_address) = utils::setup();
+    let player = env.create_light_account();
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).init_player(
+            INIT_X,
+            INIT_Y,
+            INIT_RADIUS,
+        )
+    );
+
+    let home_location_id = expected_location_id(INIT_X, INIT_Y);
+    let mut home_speed: u64 = 0;
+    let home_speed_ref = &mut home_speed;
+    env.public_context_at(contract_address, |context| {
+        let home_slot = derive_storage_slot_in_map(
+            DarkForest::storage_layout().planets.slot,
+            home_location_id,
+        );
+        *home_speed_ref = context.storage_read(home_slot + 10);
+    });
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).move(
+            INIT_X,
+            INIT_Y,
+            CAPTURE_X_2,
+            CAPTURE_Y_2,
+            utils::WORLD_RADIUS,
+            SEARCH_MAX_DIST,
+            MOVE_POP_MOVED,
+            0,
+            0,
+            false,
+        )
+    );
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).move(
+            INIT_X,
+            INIT_Y,
+            CAPTURE_X_2,
+            CAPTURE_Y_2,
+            utils::WORLD_RADIUS,
+            SEARCH_MAX_DIST,
+            MOVE_POP_MOVED,
+            0,
+            0,
+            false,
+        )
+    );
+
+    let mut travel_time = (SEARCH_MAX_DIST * 100) / home_speed;
+    if travel_time == 0 {
+        travel_time = 1;
+    }
+    let mut advance_blocks = travel_time + 20;
+    assert(advance_blocks <= MAX_ADVANCE_BLOCKS);
+    for i in 0..MAX_ADVANCE_BLOCKS {
+        if (i as u64) < advance_blocks {
+            env.call_private(
+                player,
+                DarkForest::at(contract_address).reveal_location(
+                    (8000 + (i as u64)) as Field,
+                    0,
+                )
+            );
+        }
+    }
+
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).resolve_arrival(1)
+    );
+    env.call_private(
+        player,
+        DarkForest::at(contract_address).resolve_arrival(2)
+    );
+
+    env.public_context_at(contract_address, |context| {
+        let arrival_slot_one = derive_storage_slot_in_map(
+            DarkForest::storage_layout().arrivals.slot,
+            1,
+        );
+        let arrival_slot_two = derive_storage_slot_in_map(
+            DarkForest::storage_layout().arrivals.slot,
+            2,
+        );
+        let arrival_one_meta = context.storage_read(arrival_slot_one + 4);
+        let arrival_two_meta = context.storage_read(arrival_slot_two + 4);
+        assert_eq(arrival_one_meta, 0);
+        assert_eq(arrival_two_meta, 0);
     });
 }
 

@@ -2160,6 +2160,25 @@ pub contract DarkForest {
         let is_arrival = config_hash == 0;
         if is_arrival {
             let arrival_id = move_config as u64;
+            let arrival_key = arrival_id as Field;
+            let arrival = self.storage.arrivals.at(arrival_key).read();
+            assert(arrival.arrival_block() != 0);
+            let arrival_list = self.storage.planet_arrivals.at(arrival.to_planet).read();
+            let mut earliest_block: u32 = 0xFFFF_FFFF;
+            let mut earliest_id: u64 = 0;
+            for i in 0..12 {
+                let candidate_id = arrival_list.get(i);
+                if candidate_id != 0 {
+                    let candidate =
+                        self.storage.arrivals.at(candidate_id as Field).read();
+                    let candidate_block = candidate.arrival_block();
+                    if (candidate_block != 0) & (candidate_block < earliest_block) {
+                        earliest_block = candidate_block;
+                        earliest_id = candidate_id;
+                    }
+                }
+            }
+            assert(earliest_id == arrival_id);
             self.internal.execute_arrival(arrival_id);
         } else {
             let stored = self.storage.config_hash_spacetype.read();
