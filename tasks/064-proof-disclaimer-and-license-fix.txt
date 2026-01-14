@@ -1,0 +1,12 @@
+Title: Add proof-disabled disclaimer + fix README license mention
+
+Context
+- User wants a disclaimer about proofs-disabled gameplay, rationale, and steps to run with proofs.
+- User wants the README to reference the proper MIT license.
+
+Acceptance Criteria
+- Update grant_proposal_submission.md with a clear disclaimer about proof-disabled gameplay, why it exists, and how to run with proofs enabled.
+- Fix README license section to correctly reference MIT (and remove incorrect text).
+
+Out of Scope
+- Code changes outside documentation.

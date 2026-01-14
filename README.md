@@ -142,5 +142,6 @@ The script prints `move_ms`, which tracks end-to-end turn time.
 
 ## License
 
-MIT (new code). Any reused Dark Forest components remain under LGPL with
-attribution.
+MIT for original code in this repo; see `LICENSE`.
+Bundled Dark Forest components remain under their original LGPL licenses
+(see `packages/df-*/LICENSE` and `reference/*`).

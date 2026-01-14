@@ -37,11 +37,20 @@ flows, and hardening the UX and tests to meet the grant’s non-negotiables.
 - Local devnet benchmark (2026-01-08): `init_player` ~36.9s, `move` ~37.5s
   end-to-end with proofs enabled (post warm-up).
 
+**Proofs-disabled mode (dev default)**
+- The client defaults to `PROVER_ENABLED=false` for faster iteration and to
+  avoid first-proof warm-up cost. This mode is useful for UI/logic work but is
+  **not** acceptable for the grant’s proof requirements or the <60s KPI.
+- To run with proofs:
+  1) Set `PROVER_ENABLED=true` (or `VITE_PROVER_ENABLED=true` for a built client).
+  2) Deploy with the normal scripts (local or devnet) and keep the env var set.
+  3) Use `node packages/contracts/scripts/bench_move.js --deploy` to confirm
+     turn-time; see `docs/performance.md` and `docs/devnet.md` for details.
+
 **Known gaps / deviations vs v0.6**
 - Missing or disabled: capture zones, planet transfer, hats/cosmetics, withdraw
   silver, rewards/score, whitelist, admin facets, global pause, mint period,
   debug helpers, planet createdAt.
-- Client defaults to `PROVER_ENABLED=false` (dev convenience, not final).
 - Arrivals require explicit `resolve_arrival` txs (client handles this).
 - No event/indexer; client reads public storage directly.
 
