@@ -57,6 +57,7 @@ export interface RendererGameContext extends DiagnosticUpdater {
   getLocationOfPlanet(planetId: LocationId): WorldLocation | undefined;
   getPlanetWithId(planetId: LocationId | undefined): Planet | undefined;
   getAccount(): EthAddress | undefined;
+  getEthConnection(): { getCurrentBlockNumber(): number };
   getAllVoyages(): QueuedArrival[];
   getPlayer(address?: EthAddress): Player | undefined;
   getUnconfirmedMoves(): Transaction<UnconfirmedMove>[];

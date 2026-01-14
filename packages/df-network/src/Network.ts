@@ -191,7 +191,7 @@ export function makeProvider(rpcUrl: string): providers.JsonRpcProvider {
 export function assertProperlySigned(message: SignedMessage<unknown>): void {
   const preSigned = stringify(message.message);
 
-  if (!verifySignature(preSigned, message.signature as string, message.sender)) {
+  if (!preSigned || !verifySignature(preSigned, message.signature as string, message.sender)) {
     throw new Error(`failed to verify: ${message}`);
   }
 }

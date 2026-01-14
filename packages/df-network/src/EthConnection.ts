@@ -360,6 +360,9 @@ export class EthConnection {
     }
 
     const stringified = stringify(obj);
+    if (stringified === undefined) {
+      throw new Error('failed to stringify message');
+    }
     const signature = await this.signMessage(stringified);
 
     return {

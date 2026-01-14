@@ -14,7 +14,7 @@ import { MAX_TEST_ACCOUNTS } from "../config";
 import type { OnChainConfig, PerlinConfig } from "./types";
 import { getStorageSlots, readGameConfig, type StorageSlots } from "./storage";
 
-import darkforestArtifactImport from "../../../../../../packages/contracts/target/darkforest_contract-DarkForest.json";
+import darkforestArtifactImport from "../../../../../../packages/contracts/darkforest_contract-DarkForest.json";
 import nftArtifactImport from "../../../../../../packages/contracts/darkforest_nft-NFT.json";
 
 const SPONSORED_FPC_SALT = new Fr(0);
